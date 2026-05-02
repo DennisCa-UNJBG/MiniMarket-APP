@@ -1,0 +1,6 @@
+# Base de datos SQLite local
+inventario.db
+
+# Dependencias de Node.js
+node_modules/
+package-lock.json
