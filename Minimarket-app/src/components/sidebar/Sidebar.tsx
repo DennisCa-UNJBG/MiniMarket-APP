@@ -1,12 +1,31 @@
 import { Store, Sun, Moon } from 'lucide-react';
 import { useSidebar } from '../../contexts/SidebarContext';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { SidebarItem } from './SidebarItem';
 import { mainNavItems, bottomNavItems } from '../../config/navigation';
 
 export function Sidebar() {
   const { isCollapsed, toggleSidebar } = useSidebar();
   const { theme, toggleTheme } = useTheme();
+  const { user } = useAuth();
+
+  // Filtramos los items de navegación según el rol del usuario
+  const filterItems = (items: typeof mainNavItems) => {
+    return items.filter(item => {
+      if (!item.requiredPermission) return true; // Visible para todos si no hay restricciones
+      if (!user || !user.permisos) return false;
+      
+      // El permiso '*' otorga acceso total (usado por Administradores)
+      if (user.permisos.includes('*')) return true;
+      
+      // Verificar si tiene el permiso específico
+      return user.permisos.includes(item.requiredPermission);
+    });
+  };
+
+  const filteredMainItems = filterItems(mainNavItems);
+  const filteredBottomItems = filterItems(bottomNavItems);
 
   return (
     <aside
@@ -54,7 +73,7 @@ export function Sidebar() {
             Menú principal
           </p>
         )}
-        {mainNavItems.map((item) => (
+        {filteredMainItems.map((item) => (
           <SidebarItem
             key={item.to}
             icon={item.icon}
@@ -68,7 +87,7 @@ export function Sidebar() {
 
       {/* ── Sección inferior ── */}
       <div className="px-3 py-4 border-t border-gray-200 dark:border-gray-700 space-y-0.5 flex-shrink-0">
-        {bottomNavItems.map((item) => (
+        {filteredBottomItems.map((item) => (
           <SidebarItem
             key={item.to}
             icon={item.icon}

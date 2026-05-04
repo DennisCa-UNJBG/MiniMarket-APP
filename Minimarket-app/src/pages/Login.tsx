@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Package2, Lock, User, ArrowRight } from 'lucide-react';
 import { authService, type UserData } from '../services/authService';
 import { notificationService } from '../services/notificationService';
@@ -18,6 +18,14 @@ export function Login({ onLogin }: LoginProps) {
   const [account, setAccount] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Enfocar el input de cuenta al montar el componente
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -106,6 +114,7 @@ export function Login({ onLogin }: LoginProps) {
                 placeholder="Usuario de personal"
                 icon={<User size={18} />}
                 required
+                ref={inputRef}
                 value={account}
                 onChange={(e) => setAccount(e.target.value)}
               />
