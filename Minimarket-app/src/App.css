@@ -1,5 +1,28 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /* 
-  App.css - Estilos personalizados globales
-  Tailwind CSS maneja el reset, utilidades y modo oscuro/claro.
-  Agrega aquí solo estilos que no puedas lograr con clases de Tailwind.
+  Variables de Tema para componentes que no soportan Tailwind directo (como SweetAlert2)
+  Esto permite que la lógica sea SOLID y no dependa de colores hardcodeados.
 */
+:root {
+  --swal-bg: #ffffff;
+  --swal-color: #1f2937;
+  --bg-main: #e5e7eb; /* gray-200 */
+}
+
+.dark {
+  --swal-bg: #1f2937;
+  --swal-color: #ffffff;
+  --bg-main: #111827; /* gray-900 */
+}
+
+/* Estilos base globales */
+body {
+  @apply bg-gray-50 text-gray-900 transition-colors duration-200;
+}
+
+.dark body {
+  @apply bg-gray-900 text-gray-100;
+}

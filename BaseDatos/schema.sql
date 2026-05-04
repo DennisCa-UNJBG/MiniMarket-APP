@@ -125,8 +125,8 @@ CREATE TABLE IF NOT EXISTS boletas (
 -- Insertar roles básicos
 INSERT OR IGNORE INTO roles (id, nombre, descripcion, permisos) VALUES 
 (1, 'Administrador', 'Acceso total al sistema', '["*"]'),
-(2, 'Cajero', 'Realiza ventas y visualiza productos', '["pos", "ver_productos", "ver_boletas"]'),
-(3, 'Almacén', 'Gestiona inventario, compras y kardex', '["ingresar_compra", "ver_kardex", "editar_producto"]');
+(2, 'Cajero', 'Realiza ventas y visualiza productos', '["pos", "ventas", "productos", "clientes"]'),
+(3, 'Almacén', 'Gestiona inventario, compras y kardex', '["inventario", "productos", "compras", "kardex"]');
 
 -- Insertar un usuario administrador inicial 
 -- (Nota: la contraseña "admin" deberá ser reemplazada por un hash en producción)

@@ -1,7 +1,12 @@
 import { useState } from 'react';
 import { Search, Plus, Minus, Trash2, ShoppingBag, Receipt, ArrowLeft, CreditCard, Banknote } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import Swal from 'sweetalert2';
+import { notificationService } from '../services/notificationService';
+import { Button } from '../components/ui/Button';
+import { Card } from '../components/ui/Card';
+import { Input } from '../components/ui/Input';
+import { Modal } from '../components/ui/Modal';
+import { Badge } from '../components/ui/Badge';
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 interface Product {
@@ -88,14 +93,16 @@ export function NuevaVenta() {
       {/* ── Encabezado POS ─────────────────────────────────────────────────── */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 p-4 flex items-center justify-between z-10 shrink-0">
         <div className="flex items-center gap-3">
-          <button 
+          <Button 
+            variant="ghost" 
+            size="sm"
             onClick={() => navigate('/ventas')}
-            className="p-2 rounded-xl text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            className="p-2"
           >
             <ArrowLeft size={20} />
-          </button>
+          </Button>
           <div>
-            <h1 className="text-xl font-bold text-gray-800 dark:text-white">Punto de Venta</h1>
+            <h1 className="text-xl font-bold text-gray-800 dark:text-white leading-tight">Punto de Venta</h1>
             <p className="text-xs text-gray-500 dark:text-gray-400">Caja #1 • Cajero: Admin</p>
           </div>
         </div>
@@ -104,14 +111,13 @@ export function NuevaVenta() {
             <p className="text-xs text-gray-500 dark:text-gray-400">Total acumulado</p>
             <p className="text-lg font-bold text-indigo-600 dark:text-indigo-400">S/ {total.toFixed(2)}</p>
           </div>
-          <button 
+          <Button 
             disabled={cart.length === 0}
             onClick={() => setShowCheckout(true)}
-            className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:hover:bg-indigo-600 text-white font-medium rounded-xl transition-all shadow-sm flex items-center gap-2"
+            icon={<Receipt size={18} />}
           >
-            <Receipt size={18} />
             <span className="hidden sm:inline">Cobrar</span>
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -123,16 +129,12 @@ export function NuevaVenta() {
           
           {/* Búsqueda y Categorías */}
           <div className="p-4 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 shrink-0 space-y-3">
-            <div className="relative">
-              <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Buscar por código de barras o nombre del producto..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 text-sm border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
-              />
-            </div>
+            <Input
+              placeholder="Buscar por código de barras o nombre del producto..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              icon={<Search size={18} />}
+            />
             
             {/* Scroll horizontal de categorías */}
             <div className="flex overflow-x-auto pb-1 gap-2 no-scrollbar">
@@ -156,23 +158,24 @@ export function NuevaVenta() {
           <div className="flex-1 overflow-y-auto p-4">
             <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4">
               {filteredCatalog.map(product => (
-                <button
+                <Card
                   key={product.id}
                   onClick={() => addToCart(product)}
-                  className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-500/50 transition-all text-left flex flex-col h-full group"
+                  hoverable
+                  className="p-4 text-left flex flex-col h-full group"
                 >
                   <div className="w-full h-24 bg-gray-50 dark:bg-gray-700/50 rounded-xl mb-3 flex items-center justify-center text-gray-300 dark:text-gray-600 group-hover:scale-105 transition-transform">
                     <ShoppingBag size={32} />
                   </div>
                   <div className="flex-1">
-                    <p className="text-xs font-medium text-indigo-600 dark:text-indigo-400 mb-1">{product.category}</p>
+                    <Badge label={product.category} variant="indigo" className="mb-1" />
                     <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 leading-tight mb-2 line-clamp-2">{product.name}</p>
                   </div>
                   <div className="flex items-end justify-between mt-auto pt-2">
                     <p className="text-lg font-bold text-gray-900 dark:text-white">S/ {product.price.toFixed(2)}</p>
                     <p className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">{product.stock} disp.</p>
                   </div>
-                </button>
+                </Card>
               ))}
             </div>
             {filteredCatalog.length === 0 && (
@@ -190,9 +193,10 @@ export function NuevaVenta() {
           <div className="p-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800">
             <h2 className="font-semibold text-gray-800 dark:text-white flex items-center justify-between">
               <span>Ticket Actual</span>
-              <span className="text-xs px-2 py-1 bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-400 rounded-full">
-                {cart.reduce((sum, item) => sum + item.quantity, 0)} ítems
-              </span>
+              <Badge 
+                label={`${cart.reduce((sum, item) => sum + item.quantity, 0)} ítems`} 
+                variant="indigo" 
+              />
             </h2>
           </div>
 
@@ -215,21 +219,25 @@ export function NuevaVenta() {
                       <p className="text-xs text-gray-500 dark:text-gray-400">S/ {item.product.price.toFixed(2)} c/u</p>
                       
                       <div className="flex items-center gap-1.5 bg-gray-100 dark:bg-gray-900 p-1 rounded-lg">
-                        <button 
+                        <Button 
+                          variant="ghost"
+                          size="sm"
                           onClick={() => item.quantity === 1 ? removeFromCart(item.product.id) : updateQuantity(item.product.id, -1)}
-                          className="w-6 h-6 flex items-center justify-center bg-white dark:bg-gray-700 rounded shadow-sm text-gray-600 dark:text-gray-300 hover:text-indigo-600 transition-colors"
+                          className="w-6 h-6 p-0 min-h-0 bg-white dark:bg-gray-700"
                         >
                           {item.quantity === 1 ? <Trash2 size={12} className="text-red-500" /> : <Minus size={12} />}
-                        </button>
+                        </Button>
                         <span className="w-6 text-center text-xs font-bold text-gray-800 dark:text-white">
                           {item.quantity}
                         </span>
-                        <button 
+                        <Button 
+                          variant="ghost"
+                          size="sm"
                           onClick={() => updateQuantity(item.product.id, 1)}
-                          className="w-6 h-6 flex items-center justify-center bg-white dark:bg-gray-700 rounded shadow-sm text-gray-600 dark:text-gray-300 hover:text-indigo-600 transition-colors"
+                          className="w-6 h-6 p-0 min-h-0 bg-white dark:bg-gray-700"
                         >
                           <Plus size={12} />
-                        </button>
+                        </Button>
                       </div>
                     </div>
                   </li>
@@ -253,13 +261,17 @@ export function NuevaVenta() {
               <span className="text-2xl font-black text-indigo-600 dark:text-indigo-400">S/ {total.toFixed(2)}</span>
             </div>
             
-            <button 
+            <Button 
               disabled={cart.length === 0}
               onClick={() => setShowCheckout(true)}
-              className="w-full py-3.5 mt-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 disabled:text-gray-500 dark:disabled:bg-gray-700 dark:disabled:text-gray-500 text-white font-bold rounded-xl transition-all shadow-md shadow-indigo-200 dark:shadow-none flex justify-center items-center gap-2 text-lg"
+              fullWidth
+              size="lg"
+              className="mt-2"
+              icon={<ArrowLeft size={20} className="rotate-180" />}
+              iconPosition="right"
             >
-              Cobrar <ArrowLeft size={20} className="rotate-180" />
-            </button>
+              Cobrar
+            </Button>
           </div>
 
         </div>
@@ -267,94 +279,87 @@ export function NuevaVenta() {
 
       {/* ── Modal de Cobro (Checkout) ──────────────────────────────────────── */}
       {showCheckout && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-md">
-          <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="bg-indigo-600 p-6 text-center text-white">
+        <Modal 
+          title="Completar Venta" 
+          onClose={() => setShowCheckout(false)}
+          maxWidth="md"
+        >
+          <div className="-mx-6 -mt-5 mb-6">
+            <div className="bg-indigo-600 p-8 text-center text-white">
               <p className="text-indigo-200 text-sm font-medium mb-1">Monto a cobrar</p>
               <p className="text-4xl font-black">S/ {total.toFixed(2)}</p>
             </div>
+          </div>
             
-            <div className="p-6 space-y-6">
-              
-              {/* Métodos de pago */}
-              <div className="grid grid-cols-2 gap-3">
-                <button className="flex flex-col items-center justify-center gap-2 p-3 rounded-xl border-2 border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 font-semibold transition-colors">
-                  <Banknote size={24} />
-                  <span>Efectivo</span>
-                </button>
-                <button className="flex flex-col items-center justify-center gap-2 p-3 rounded-xl border-2 border-gray-100 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-indigo-300 transition-colors">
-                  <CreditCard size={24} />
-                  <span>Tarjeta / Yape</span>
-                </button>
-              </div>
-
-              {/* Input Efectivo */}
-              <div className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400 block mb-2">Monto recibido (S/)</label>
-                  <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">S/</span>
-                    <input 
-                      type="number" 
-                      autoFocus
-                      value={amountPaid}
-                      onChange={(e) => setAmountPaid(e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 text-xl font-bold border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-400 transition" 
-                      placeholder="0.00" 
-                    />
-                  </div>
-                </div>
-
-                {/* Vuelto */}
-                <div className={`p-4 rounded-xl flex justify-between items-center transition-colors ${
-                  paidNumber >= total 
-                    ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800' 
-                    : 'bg-gray-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400 border border-gray-100 dark:border-gray-800'
-                }`}>
-                  <span className="font-semibold">Vuelto:</span>
-                  <span className="text-2xl font-black">S/ {change.toFixed(2)}</span>
-                </div>
-              </div>
-
+          <div className="space-y-6">
+            {/* Métodos de pago */}
+            <div className="grid grid-cols-2 gap-3">
+              <Button 
+                variant="secondary" 
+                className="flex-col h-auto py-4 border-2 border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400"
+                icon={<Banknote size={24} />}
+              >
+                <span>Efectivo</span>
+              </Button>
+              <Button 
+                variant="secondary" 
+                className="flex-col h-auto py-4 border-2 border-transparent"
+                icon={<CreditCard size={24} />}
+              >
+                <span>Tarjeta / Yape</span>
+              </Button>
             </div>
 
-            <div className="p-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex gap-3">
-              <button 
+            {/* Input Efectivo */}
+            <div className="space-y-4">
+              <Input
+                label="Monto recibido (S/)"
+                type="number"
+                autoFocus
+                value={amountPaid}
+                onChange={(e) => setAmountPaid(e.target.value)}
+                icon={<span className="text-gray-400 font-bold">S/</span>}
+                placeholder="0.00"
+                className="text-xl font-bold"
+              />
+
+              {/* Vuelto */}
+              <div className={`p-4 rounded-xl flex justify-between items-center transition-colors ${
+                paidNumber >= total 
+                  ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800' 
+                  : 'bg-gray-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400 border border-gray-100 dark:border-gray-800'
+              }`}>
+                <span className="font-semibold">Vuelto:</span>
+                <span className="text-2xl font-black">S/ {change.toFixed(2)}</span>
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <Button 
+                variant="secondary" 
                 onClick={() => setShowCheckout(false)}
-                className="flex-1 py-3 text-gray-600 dark:text-gray-300 font-semibold hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl transition-colors"
+                fullWidth
               >
                 Volver
-              </button>
-              <button 
+              </Button>
+              <Button 
                 disabled={paidNumber < total}
                 onClick={() => {
                   setShowCheckout(false);
-                  
-                  Swal.fire({
-                    title: '¡Venta completada!',
-                    text: `El cambio es de S/ ${change.toFixed(2)}`,
-                    icon: 'success',
-                    confirmButtonText: 'Aceptar',
-                    confirmButtonColor: '#4f46e5', // indigo-600
-                    background: document.documentElement.classList.contains('dark') ? '#1f2937' : '#ffffff',
-                    color: document.documentElement.classList.contains('dark') ? '#ffffff' : '#1f2937',
-                    customClass: {
-                      popup: 'rounded-2xl',
-                      confirmButton: 'px-4 py-2 rounded-xl text-sm font-medium'
-                    }
-                  }).then(() => {
+                  notificationService.success('¡Venta completada!', `El cambio es de S/ ${change.toFixed(2)}`).then(() => {
                     setCart([]);
                     setAmountPaid('');
                     navigate('/ventas');
                   });
                 }}
-                className="flex-[2] py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 disabled:cursor-not-allowed text-white font-bold rounded-xl transition-colors shadow-md shadow-indigo-200 dark:shadow-none"
+                fullWidth
+                className="flex-[2]"
               >
                 Confirmar Pago
-              </button>
+              </Button>
             </div>
           </div>
-        </div>
+        </Modal>
       )}
     </div>
   );
