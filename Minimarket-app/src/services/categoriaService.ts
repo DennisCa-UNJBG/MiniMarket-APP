@@ -47,5 +47,15 @@ export const categoriaService = {
         [estado, id]
       );
     });
+  },
+
+  async update(id: number, nombre: string, color: string): Promise<void> {
+    return withDb(async () => {
+      const db = await getDb();
+      await db.execute(
+        'UPDATE categorias SET nombre = ?, color = ? WHERE id = ?',
+        [nombre, color, id]
+      );
+    });
   }
 };
