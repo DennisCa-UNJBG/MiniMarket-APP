@@ -1,36 +1,18 @@
-import { useState } from 'react';
-import { Search, Plus, Filter, Edit2, Trash2, AlertTriangle } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Search, Plus, Filter, AlertTriangle, ArrowUpRight, History } from 'lucide-react';
 import { DataTable, type TableColumn } from '../components/ui/DataTable';
 import { Badge } from '../components/ui/Badge';
 import { PageHeader } from '../components/ui/PageHeader';
 import { Modal } from '../components/ui/Modal';
+import { productoService, type Product } from '../services/productoService';
+import { inventarioService } from '../services/inventarioService';
+import { notificationService } from '../services/notificationService';
+import { useAuth } from '../contexts/AuthContext';
 
 type StockStatus = 'ok' | 'low' | 'out';
 
-interface Product {
-  id: number;
-  code: string;
-  name: string;
-  category: string;
-  stock: number;
-  minStock: number;
-  buyPrice: number;
-  sellPrice: number;
-}
-
-const products: Product[] = [
-  { id: 1, code: 'P001', name: 'Arroz Costeño 1kg',       category: 'Abarrotes', stock: 120, minStock: 20, buyPrice: 2.80, sellPrice: 3.50 },
-  { id: 2, code: 'P002', name: 'Aceite Primor 1L',         category: 'Abarrotes', stock: 8,   minStock: 15, buyPrice: 5.50, sellPrice: 7.00 },
-  { id: 3, code: 'P003', name: 'Leche Gloria 400g',        category: 'Lácteos',   stock: 0,   minStock: 10, buyPrice: 3.20, sellPrice: 4.00 },
-  { id: 4, code: 'P004', name: 'Azúcar Rubia 1kg',         category: 'Abarrotes', stock: 75,  minStock: 20, buyPrice: 2.40, sellPrice: 3.00 },
-  { id: 5, code: 'P005', name: 'Inka Kola 1.5L',           category: 'Bebidas',   stock: 36,  minStock: 12, buyPrice: 3.80, sellPrice: 5.00 },
-  { id: 6, code: 'P006', name: 'Jabón Bolívar',            category: 'Limpieza',  stock: 5,   minStock: 10, buyPrice: 1.20, sellPrice: 1.80 },
-  { id: 7, code: 'P007', name: 'Papel Higiénico Elite x4', category: 'Limpieza',  stock: 22,  minStock: 8,  buyPrice: 4.50, sellPrice: 6.00 },
-  { id: 8, code: 'P008', name: 'Pan de Molde Bimbo',       category: 'Panadería', stock: 14,  minStock: 5,  buyPrice: 4.20, sellPrice: 5.50 },
-];
-
 function getStatus(stock: number, minStock: number): StockStatus {
-  if (stock === 0) return 'out';
+  if (stock <= 0) return 'out';
   if (stock < minStock) return 'low';
   return 'ok';
 }
@@ -41,177 +23,186 @@ const statusBadge: Record<StockStatus, { label: string; variant: 'emerald' | 'am
   out: { label: 'Sin stock',  variant: 'red'     },
 };
 
-// Definición de columnas — una sola vez, reutilizable
-const columns: TableColumn<Product>[] = [
-  {
-    key: 'code',
-    header: 'Código',
-    render: (row) => (
-      <span className="font-mono text-xs text-gray-500 dark:text-gray-400">{row.code}</span>
-    ),
-  },
-  {
-    key: 'name',
-    header: 'Producto',
-    render: (row) => (
-      <span className="font-medium text-gray-800 dark:text-white">{row.name}</span>
-    ),
-  },
-  { key: 'category', header: 'Categoría' },
-  {
-    key: 'stock',
-    header: 'Stock',
-    align: 'right',
-    render: (row) => {
-      const status = getStatus(row.stock, row.minStock);
-      return (
-        <div className="flex items-center justify-end gap-1.5">
-          {status === 'low' && <AlertTriangle size={13} className="text-amber-500" />}
-          <span className={`font-semibold ${status === 'out' ? 'text-red-500' : 'text-gray-800 dark:text-white'}`}>
-            {row.stock}
-          </span>
-        </div>
-      );
-    },
-  },
-  {
-    key: 'buyPrice',
-    header: 'P. Compra',
-    align: 'right',
-    render: (row) => <span className="text-gray-600 dark:text-gray-300">S/ {row.buyPrice.toFixed(2)}</span>,
-  },
-  {
-    key: 'sellPrice',
-    header: 'P. Venta',
-    align: 'right',
-    render: (row) => <span className="font-medium text-gray-800 dark:text-white">S/ {row.sellPrice.toFixed(2)}</span>,
-  },
-  {
-    key: 'status',
-    header: 'Estado',
-    align: 'center',
-    render: (row) => {
-      const { label, variant } = statusBadge[getStatus(row.stock, row.minStock)];
-      return <Badge label={label} variant={variant} />;
-    },
-  },
-  {
-    key: 'acciones',
-    header: '',
-    align: 'right',
-    render: () => (
-      <div className="flex items-center gap-1 justify-end">
-        <button className="p-1.5 rounded-lg hover:bg-indigo-50 dark:hover:bg-gray-700 text-gray-400 hover:text-indigo-600 transition-colors">
-          <Edit2 size={14} />
-        </button>
-        <button className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-gray-700 text-gray-400 hover:text-red-500 transition-colors">
-          <Trash2 size={14} />
-        </button>
-      </div>
-    ),
-  },
-];
-
 export function Inventario() {
+  const { user } = useAuth();
+  const [products, setProducts] = useState<Product[]>([]);
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [loading, setLoading] = useState(false);
+  
+  // Estado para el formulario de ingreso
+  const [form, setForm] = useState({
+    productoId: '',
+    cantidad: '',
+    precioCompra: '',
+    referencia: ''
+  });
+  const [catSearch, setCatSearch] = useState('');
+  const [showProductList, setShowProductList] = useState(false);
+  const qtyInputRef = useRef<HTMLInputElement>(null);
+
+  const loadProducts = async () => {
+    setLoading(true);
+    try {
+      const data = await productoService.getAll(true);
+      setProducts(data);
+    } catch (error) {
+      notificationService.error('Error', 'No se pudieron cargar los productos');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadProducts();
+  }, []);
+
+  useEffect(() => {
+    if (showModal && form.productoId) {
+       setTimeout(() => qtyInputRef.current?.focus(), 100);
+    }
+  }, [showModal, form.productoId]);
+
+  const handleRegistrarIngreso = async () => {
+    if (!form.productoId || !form.cantidad || !form.precioCompra) {
+      notificationService.warning('Campos incompletos', 'Por favor completa los datos obligatorios.');
+      return;
+    }
+
+    try {
+      await inventarioService.registrarIngreso({
+        producto_id: parseInt(form.productoId),
+        usuario_id: user?.id || 1,
+        cantidad: parseFloat(form.cantidad),
+        precio_compra: parseFloat(form.precioCompra),
+        referencia: form.referencia
+      });
+
+      notificationService.success('Ingreso registrado', 'El stock ha sido actualizado correctamente.');
+      setShowModal(false);
+      setForm({ productoId: '', cantidad: '', precioCompra: '', referencia: '' });
+      setCatSearch('');
+      loadProducts();
+    } catch (error) {
+      notificationService.error('Error', 'No se pudo registrar el ingreso de mercadería.');
+    }
+  };
+
+  const columns: TableColumn<Product>[] = [
+    {
+      key: 'codigo_barras',
+      header: 'Código',
+      render: (row) => <span className="font-mono text-xs text-gray-500 dark:text-gray-400">{row.codigo_barras}</span>,
+    },
+    {
+      key: 'nombre',
+      header: 'Producto',
+      render: (row) => <span className="font-medium text-gray-800 dark:text-white">{row.nombre}</span>,
+    },
+    { key: 'categoria_nombre', header: 'Categoría', render: (row) => <Badge label={row.categoria_nombre || 'General'} variant="indigo" /> },
+    {
+      key: 'stock_actual',
+      header: 'Stock',
+      align: 'right',
+      render: (row) => {
+        const status = getStatus(row.stock_actual, row.stock_minimo);
+        return (
+          <div className="flex items-center justify-end gap-1.5">
+            {status === 'low' && <AlertTriangle size={13} className="text-amber-500" />}
+            <span className={`font-semibold ${status === 'out' ? 'text-red-500' : 'text-gray-800 dark:text-white'}`}>
+              {row.stock_actual} {row.unidad_medida}
+            </span>
+          </div>
+        );
+      },
+    },
+    {
+      key: 'precio_compra',
+      header: 'Último Costo',
+      align: 'right',
+      render: (row) => <span className="text-gray-600 dark:text-gray-300">S/ {(row.precio_compra || 0).toFixed(2)}</span>,
+    },
+    {
+      key: 'status',
+      header: 'Estado',
+      align: 'center',
+      render: (row) => {
+        const { label, variant } = statusBadge[getStatus(row.stock_actual, row.stock_minimo)];
+        return <Badge label={label} variant={variant} />;
+      },
+    },
+    {
+      key: 'acciones',
+      header: '',
+      align: 'right',
+      render: (row) => (
+        <button 
+          onClick={() => {
+            setForm({ ...form, productoId: row.id.toString(), precioCompra: (row.precio_compra || '').toString() });
+            setCatSearch(row.nombre);
+            setShowModal(true);
+          }}
+          className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors"
+        >
+          <Plus size={14} /> Ingreso
+        </button>
+      ),
+    },
+  ];
 
   const filtered = products.filter(
     (p) =>
-      p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.code.toLowerCase().includes(search.toLowerCase())
+      p.nombre.toLowerCase().includes(search.toLowerCase()) ||
+      p.codigo_barras.toLowerCase().includes(search.toLowerCase())
   );
+
+  const inputCls = 'w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition';
 
   return (
     <div className="space-y-5">
       <PageHeader
-        title="Inventario"
-        subtitle={`${products.length} productos registrados`}
-        action={
-          <button
-            id="add-product-btn"
-            onClick={() => setShowModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-xl transition-colors shadow-sm shadow-indigo-200 dark:shadow-none"
-          >
-            <Plus size={16} /> Agregar producto
-          </button>
-        }
+        title="Control de Inventario"
+        subtitle="Monitoreo de existencias y niveles de stock"
       />
 
-      {/* Búsqueda y filtros */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm">
+          <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase">Total Productos</p>
+          <p className="text-2xl font-bold text-gray-800 dark:text-white mt-1">{products.length}</p>
+        </div>
+        <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm">
+          <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase">Stock Bajo</p>
+          <p className="text-2xl font-bold text-amber-500 mt-1">{products.filter(p => getStatus(p.stock_actual, p.stock_minimo) === 'low').length}</p>
+        </div>
+        <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm">
+          <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase">Sin Stock</p>
+          <p className="text-2xl font-bold text-red-500 mt-1">{products.filter(p => p.stock_actual <= 0).length}</p>
+        </div>
+      </div>
+
       <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 flex gap-3 flex-wrap shadow-sm">
         <div className="relative flex-1 min-w-[200px]">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
-            id="search-products"
             type="text"
-            placeholder="Buscar por nombre o código..."
+            placeholder="Buscar producto por nombre o código..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
           />
         </div>
         <button className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-          <Filter size={15} /> Filtrar
+          <Filter size={15} /> Filtros
         </button>
       </div>
 
-      {/* ✅ Tabla reutilizable con paginación */}
       <DataTable
-        columns={columns}
+        columns={columns.filter(c => c.key !== 'acciones')}
         data={filtered}
         keyExtractor={(row) => row.id}
-        emptyMessage="No se encontraron productos."
-        defaultPageSize={5}
+        emptyMessage="No se encontraron productos en el inventario."
+        defaultPageSize={10}
       />
-      {showModal && (
-        <Modal title="Agregar producto al inventario" onClose={() => setShowModal(false)} maxWidth="lg">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Código</label>
-              <input className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition" placeholder="Ej. P009" />
-            </div>
-             <div className="col-span-2 flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Producto</label>
-              <input className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition" placeholder="Nombre..." />
-            </div>
-            <div className="col-span-2 flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Categoría</label>
-              <select className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition">
-                <option value="Abarrotes">Abarrotes</option>
-                <option value="Lácteos">Lácteos</option>
-                <option value="Bebidas">Bebidas</option>
-                <option value="Limpieza">Limpieza</option>
-                <option value="Panadería">Panadería</option>
-              </select>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Stock Actual</label>
-              <input type="number" className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition" placeholder="0" />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Stock Mínimo</label>
-              <input type="number" className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition" placeholder="0" />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-gray-500 dark:text-gray-400">P. Compra (S/)</label>
-              <input type="number" step="0.01" className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition" placeholder="0.00" />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-gray-500 dark:text-gray-400">P. Venta (S/)</label>
-              <input type="number" step="0.01" className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition" placeholder="0.00" />
-            </div>
-          </div>
-          <div className="flex justify-end gap-3 mt-6">
-            <button onClick={() => setShowModal(false)} className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-              Cancelar
-            </button>
-            <button onClick={() => setShowModal(false)} className="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl transition-colors">
-              Guardar producto
-            </button>
-          </div>
-        </Modal>
-      )}
     </div>
   );
 }
