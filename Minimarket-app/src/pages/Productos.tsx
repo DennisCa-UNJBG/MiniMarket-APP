@@ -1,103 +1,91 @@
-import { useState } from 'react';
-import { Plus, Edit2, Trash2, Tag, Package, Search } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Package, Tag, Plus, Search, Edit2, PowerOff, Filter, ArrowUpDown, MoreHorizontal, LayoutGrid, List as ListIcon, RefreshCcw } from 'lucide-react';
 import { DataTable, type TableColumn } from '../components/ui/DataTable';
 import { Badge } from '../components/ui/Badge';
 import { Modal } from '../components/ui/Modal';
+import { categoriaService, type Category } from '../services/categoriaService';
+import { productoService, type Product } from '../services/productoService';
+import { notificationService } from '../services/notificationService';
 
-// ── Tipos ─────────────────────────────────────────────────────────────────────
-interface Category {
-  id: number;
-  name: string;
-  color: string;
-  productCount: number;
-}
+// ── Datos de ejemplo (Eliminados en favor de la DB) ──────────────────────────
 
-interface Product {
-  id: number;
-  code: string;
-  name: string;
-  category: string;
-  unit: string;
-  buyPrice: number;
-  sellPrice: number;
-  minStock: number;
-}
-
-// ── Datos de ejemplo ───────────────────────────────────────────────────────────
-const initialCategories: Category[] = [
-  { id: 1, name: 'Abarrotes',  color: 'bg-amber-500',   productCount: 45 },
-  { id: 2, name: 'Bebidas',    color: 'bg-sky-500',      productCount: 18 },
-  { id: 3, name: 'Lácteos',    color: 'bg-blue-400',     productCount: 12 },
-  { id: 4, name: 'Limpieza',   color: 'bg-emerald-500',  productCount: 22 },
-  { id: 5, name: 'Panadería',  color: 'bg-orange-400',   productCount: 8  },
-  { id: 6, name: 'Snacks',     color: 'bg-purple-500',   productCount: 15 },
-];
-
-const initialProducts: Product[] = [
-  { id: 1, code: 'P001', name: 'Arroz Costeño 1kg',       category: 'Abarrotes', unit: 'bolsa',   buyPrice: 2.80,  sellPrice: 3.50,  minStock: 20 },
-  { id: 2, code: 'P002', name: 'Aceite Primor 1L',         category: 'Abarrotes', unit: 'botella', buyPrice: 5.50,  sellPrice: 7.00,  minStock: 15 },
-  { id: 3, code: 'P003', name: 'Leche Gloria 400g',        category: 'Lácteos',   unit: 'tarro',   buyPrice: 3.20,  sellPrice: 4.00,  minStock: 10 },
-  { id: 4, code: 'P004', name: 'Inka Kola 1.5L',           category: 'Bebidas',   unit: 'botella', buyPrice: 3.80,  sellPrice: 5.00,  minStock: 12 },
-  { id: 5, code: 'P005', name: 'Jabón Bolívar',            category: 'Limpieza',  unit: 'unidad',  buyPrice: 1.20,  sellPrice: 1.80,  minStock: 10 },
-];
+// ── Helpers ───────────────────────────────────────────────────────────────────
+const getRandomColor = () => {
+  const letters = '0123456789ABCDEF';
+  let color = '#';
+  for (let i = 0; i < 6; i++) {
+    color += letters[Math.floor(Math.random() * 16)];
+  }
+  return color;
+};
 
 const units = ['unidad', 'kg', 'bolsa', 'botella', 'tarro', 'litro', 'caja', 'paquete'];
-
-const colorOptions = [
-  { label: 'Ámbar',    value: 'bg-amber-500'   },
-  { label: 'Cielo',    value: 'bg-sky-500'     },
-  { label: 'Azul',     value: 'bg-blue-400'    },
-  { label: 'Verde',    value: 'bg-emerald-500' },
-  { label: 'Naranja',  value: 'bg-orange-400'  },
-  { label: 'Morado',   value: 'bg-purple-500'  },
-  { label: 'Rosa',     value: 'bg-pink-500'    },
-  { label: 'Rojo',     value: 'bg-red-500'     },
-];
 
 // (El componente Modal fue extraído a src/components/ui/Modal.tsx)
 
 // ── Pestaña Productos ──────────────────────────────────────────────────────────
 function TabProductos({ categories }: { categories: Category[] }) {
-  const [products, setProducts] = useState<Product[]>(initialProducts);
+  const [products, setProducts] = useState<Product[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [search, setSearch] = useState('');
-  const [form, setForm] = useState({ code: '', name: '', category: '', unit: 'unidad', buyPrice: '', sellPrice: '', minStock: '' });
+  const [form, setForm] = useState({ code: '', name: '', categoryId: '', unit: 'unidad', buyPrice: '', sellPrice: '', minStock: '' });
 
-  const handleSave = () => {
-    if (!form.name || !form.category) return;
-    const next: Product = {
-      id: Date.now(),
-      code: form.code || `P${String(products.length + 1).padStart(3, '0')}`,
-      name: form.name,
-      category: form.category,
-      unit: form.unit,
-      buyPrice: parseFloat(form.buyPrice) || 0,
-      sellPrice: parseFloat(form.sellPrice) || 0,
-      minStock: parseInt(form.minStock) || 0,
-    };
-    setProducts([...products, next]);
-    setForm({ code: '', name: '', category: '', unit: 'unidad', buyPrice: '', sellPrice: '', minStock: '' });
-    setShowModal(false);
+  const loadProducts = async () => {
+    const data = await productoService.getAll();
+    setProducts(data);
   };
 
-  const handleDelete = (id: number) => setProducts(products.filter((p) => p.id !== id));
+  useEffect(() => {
+    loadProducts();
+  }, []);
+
+  const handleSave = async () => {
+    if (!form.name || !form.categoryId) {
+      notificationService.warning('Campos incompletos', 'Por favor, completa todos los campos obligatorios.');
+      return;
+    }
+    try {
+      await productoService.create({
+        codigo_barras: form.code,
+        nombre: form.name,
+        categoria_id: parseInt(form.categoryId),
+        unidad_medida: form.unit,
+        precio_compra: parseFloat(form.buyPrice) || 0,
+        precio_venta: parseFloat(form.sellPrice) || 0,
+        stock_minimo: parseFloat(form.minStock) || 0,
+        stock_actual: 0 
+      });
+      notificationService.success('Producto guardado', 'El producto se ha registrado correctamente.');
+      setForm({ code: '', name: '', categoryId: '', unit: 'unidad', buyPrice: '', sellPrice: '', minStock: '' });
+      setShowModal(false);
+      loadProducts();
+    } catch (error) {
+      console.error(error);
+      notificationService.error('Error al guardar', 'Ocurrió un problema al guardar el producto.');
+    }
+  };
+
+  const handleDeactivate = async (id: number) => {
+    await productoService.updateStatus(id, 'inactivo');
+    loadProducts();
+  };
 
   const inputCls = 'w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition';
 
   const columns: TableColumn<Product>[] = [
-    { key: 'code', header: 'Código', render: (row) => <span className="font-mono text-xs text-gray-500 dark:text-gray-400">{row.code}</span> },
-    { key: 'name', header: 'Nombre', render: (row) => <span className="font-medium text-gray-800 dark:text-white">{row.name}</span> },
-    { key: 'category', header: 'Categoría', render: (row) => <Badge label={row.category} variant="indigo" /> },
-    { key: 'unit', header: 'Unidad' },
-    { key: 'buyPrice', header: 'P. Compra', align: 'right', render: (row) => <span className="text-gray-600 dark:text-gray-300">S/ {row.buyPrice.toFixed(2)}</span> },
-    { key: 'sellPrice', header: 'P. Venta', align: 'right', render: (row) => <span className="font-medium text-gray-800 dark:text-white">S/ {row.sellPrice.toFixed(2)}</span> },
-    { key: 'minStock', header: 'Stock mín.', align: 'center' },
+    { key: 'codigo_barras', header: 'Código', render: (row) => <span className="font-mono text-xs text-gray-500 dark:text-gray-400">{row.codigo_barras}</span> },
+    { key: 'nombre', header: 'Nombre', render: (row) => <span className="font-medium text-gray-800 dark:text-white">{row.nombre}</span> },
+    { key: 'categoria_nombre', header: 'Categoría', render: (row) => <Badge label={row.categoria_nombre || 'Sin cat.'} variant="indigo" /> },
+    { key: 'unidad_medida', header: 'Unidad' },
+    { key: 'precio_compra', header: 'P. Compra', align: 'right', render: (row) => <span className="text-gray-600 dark:text-gray-300">S/ {(row.precio_compra || 0).toFixed(2)}</span> },
+    { key: 'precio_venta', header: 'P. Venta', align: 'right', render: (row) => <span className="font-medium text-gray-800 dark:text-white">S/ {(row.precio_venta || 0).toFixed(2)}</span> },
+    { key: 'stock_minimo', header: 'Stock mín.', align: 'center' },
     {
       key: 'acciones', header: '', align: 'right',
       render: (row) => (
         <div className="flex items-center gap-1 justify-end">
           <button className="p-1.5 rounded-lg hover:bg-indigo-50 dark:hover:bg-gray-700 text-gray-400 hover:text-indigo-600 transition-colors"><Edit2 size={14} /></button>
-          <button onClick={() => handleDelete(row.id)} className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-gray-700 text-gray-400 hover:text-red-500 transition-colors"><Trash2 size={14} /></button>
+          <button onClick={() => handleDeactivate(row.id)} className="p-1.5 rounded-lg hover:bg-orange-50 dark:hover:bg-gray-700 text-gray-400 hover:text-orange-500 transition-colors"><PowerOff size={14} /></button>
         </div>
       ),
     },
@@ -105,8 +93,8 @@ function TabProductos({ categories }: { categories: Category[] }) {
 
   const filteredProducts = products.filter(
     (p) =>
-      p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.code.toLowerCase().includes(search.toLowerCase())
+      p.nombre.toLowerCase().includes(search.toLowerCase()) ||
+      p.codigo_barras.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -162,9 +150,9 @@ function TabProductos({ categories }: { categories: Category[] }) {
             </div>
             <div className="col-span-2 flex flex-col gap-1.5">
               <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Categoría *</label>
-              <select className={inputCls} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
+              <select className={inputCls} value={form.categoryId} onChange={(e) => setForm({ ...form, categoryId: e.target.value })}>
                 <option value="">Seleccionar categoría...</option>
-                {categories.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
+                {categories.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
               </select>
             </div>
             <div className="flex flex-col gap-1.5">
@@ -195,16 +183,48 @@ function TabProductos({ categories }: { categories: Category[] }) {
 }
 
 // ── Pestaña Categorías ─────────────────────────────────────────────────────────
-function TabCategorias() {
-  const [categories, setCategories] = useState<Category[]>(initialCategories);
+function TabCategorias({ onUpdate }: { onUpdate: () => void }) {
+  const [categories, setCategories] = useState<Category[]>([]);
   const [showModal, setShowModal] = useState(false);
-  const [form, setForm] = useState({ name: '', color: 'bg-amber-500' });
+  const [form, setForm] = useState({ name: '', color: getRandomColor() });
 
-  const handleSave = () => {
-    if (!form.name.trim()) return;
-    setCategories([...categories, { id: Date.now(), name: form.name, color: form.color, productCount: 0 }]);
-    setForm({ name: '', color: 'bg-amber-500' });
-    setShowModal(false);
+  const loadCategories = async () => {
+    const data = await categoriaService.getAll(false);
+    setCategories(data);
+  };
+
+  const activeCategories = categories.filter(c => c.estado === 'activo');
+  const inactiveCategories = categories.filter(c => c.estado === 'inactivo');
+
+  useEffect(() => {
+    loadCategories();
+  }, []);
+
+  const handleSave = async () => {
+    if (!form.name.trim()) {
+      notificationService.warning('Campo incompleto', 'Por favor, ingresa un nombre para la categoría.');
+      return;
+    }
+    try {
+      await categoriaService.create(form.name.trim(), form.color);
+      notificationService.success('Categoría creada', 'La categoría se ha registrado correctamente.');
+      setForm({ name: '', color: getRandomColor() });
+      setShowModal(false);
+      await loadCategories();
+      onUpdate(); 
+    } catch (error: any) {
+      console.error(error);
+      const msg = error.message?.includes('UNIQUE') 
+        ? 'Ya existe una categoría con ese nombre.' 
+        : 'Ocurrió un problema al crear la categoría.';
+      notificationService.error('Error al crear', msg);
+    }
+  };
+
+  const handleDeactivate = async (id: number) => {
+    await categoriaService.updateStatus(id, 'inactivo');
+    loadCategories();
+    onUpdate();
   };
 
   return (
@@ -213,7 +233,10 @@ function TabCategorias() {
         <p className="text-sm text-gray-500 dark:text-gray-400">{categories.length} categorías registradas</p>
         <button
           id="add-category-btn"
-          onClick={() => setShowModal(true)}
+          onClick={() => {
+            setForm({ name: '', color: getRandomColor() });
+            setShowModal(true);
+          }}
           className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-xl transition-colors"
         >
           <Plus size={15} /> Nueva categoría
@@ -221,13 +244,13 @@ function TabCategorias() {
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4">
-        {categories.map((cat) => (
+        {activeCategories.map((cat) => (
           <div key={cat.id} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-5 flex flex-col gap-3 hover:shadow-md transition-shadow">
-            <div className={`${cat.color} w-10 h-10 rounded-xl flex items-center justify-center`}>
+            <div style={{ backgroundColor: cat.color }} className={`w-10 h-10 rounded-xl flex items-center justify-center`}>
               <Tag size={18} className="text-white" />
             </div>
             <div>
-              <p className="font-semibold text-gray-800 dark:text-white">{cat.name}</p>
+              <p className="font-semibold text-gray-800 dark:text-white">{cat.nombre}</p>
               <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{cat.productCount} productos</p>
             </div>
             <div className="flex gap-1 pt-1 border-t border-gray-100 dark:border-gray-700">
@@ -235,15 +258,52 @@ function TabCategorias() {
                 <Edit2 size={12} /> Editar
               </button>
               <button
-                onClick={() => setCategories(categories.filter((c) => c.id !== cat.id))}
-                className="flex-1 flex items-center justify-center gap-1 py-1.5 text-xs text-red-500 hover:bg-red-50 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                onClick={() => handleDeactivate(cat.id)}
+                className="flex-1 flex items-center justify-center gap-1 py-1.5 text-xs text-orange-500 hover:bg-orange-50 dark:hover:bg-gray-700 rounded-lg transition-colors"
               >
-                <Trash2 size={12} /> Eliminar
+                <PowerOff size={12} /> Desactivar
               </button>
             </div>
           </div>
         ))}
       </div>
+
+      {inactiveCategories.length > 0 && (
+        <div className="mt-12">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700"></div>
+            <h3 className="text-sm font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">Categorías desactivadas</h3>
+            <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700"></div>
+          </div>
+          
+          <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4 opacity-70">
+            {inactiveCategories.map((cat) => (
+              <div key={cat.id} className="bg-gray-50 dark:bg-gray-800/40 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 p-5 flex flex-col gap-3">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-gray-200 dark:bg-gray-700">
+                  <Tag size={18} className="text-gray-400 dark:text-gray-500" />
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-500 dark:text-gray-400">{cat.nombre}</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{cat.productCount} productos</p>
+                </div>
+                <div className="flex gap-1 pt-1 border-t border-gray-100 dark:border-gray-700">
+                  <button 
+                    onClick={async () => {
+                      await categoriaService.updateStatus(cat.id, 'activo');
+                      notificationService.success('Categoría reactivada');
+                      loadCategories();
+                      onUpdate();
+                    }}
+                    className="flex-1 flex items-center justify-center gap-1 py-1.5 text-xs text-green-600 dark:text-green-500 hover:bg-green-50 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                  >
+                    <RefreshCcw size={12} /> Activar
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {showModal && (
         <Modal title="Nueva categoría" onClose={() => setShowModal(false)}>
@@ -259,20 +319,19 @@ function TabCategorias() {
             </div>
             <div className="flex flex-col gap-2">
               <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Color de la categoría</label>
-              <div className="flex flex-wrap gap-2">
-                {colorOptions.map((c) => (
-                  <button
-                    key={c.value}
-                    title={c.label}
-                    onClick={() => setForm({ ...form, color: c.value })}
-                    className={`w-8 h-8 rounded-lg ${c.value} transition-transform hover:scale-110 ${form.color === c.value ? 'ring-2 ring-offset-2 ring-indigo-500 scale-110' : ''}`}
-                  />
-                ))}
+              <div className="flex items-center gap-3">
+                <input
+                  type="color"
+                  value={form.color}
+                  onChange={(e) => setForm({ ...form, color: e.target.value })}
+                  className="w-1/2 h-10 rounded-lg cursor-pointer bg-transparent border-0"
+                />
+                <span className="text-sm font-mono text-gray-600 dark:text-gray-400 uppercase">{form.color}</span>
               </div>
             </div>
             {/* Preview */}
             <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
-              <div className={`${form.color} w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0`}>
+              <div style={{ backgroundColor: form.color }} className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0`}>
                 <Tag size={16} className="text-white" />
               </div>
               <div>
@@ -300,7 +359,16 @@ type Tab = 'productos' | 'categorias';
 
 export function Productos() {
   const [activeTab, setActiveTab] = useState<Tab>('productos');
-  const [categories] = useState<Category[]>(initialCategories);
+  const [categories, setCategories] = useState<Category[]>([]);
+
+  const loadCategories = async () => {
+    const data = await categoriaService.getAll();
+    setCategories(data);
+  };
+
+  useEffect(() => {
+    loadCategories();
+  }, []);
 
   const tabs: { key: Tab; label: string; icon: React.ElementType }[] = [
     { key: 'productos',  label: 'Productos',   icon: Package },
@@ -337,7 +405,7 @@ export function Productos() {
 
       {/* Contenido de la pestaña activa */}
       {activeTab === 'productos'  && <TabProductos categories={categories} />}
-      {activeTab === 'categorias' && <TabCategorias />}
+      {activeTab === 'categorias' && <TabCategorias onUpdate={loadCategories} />}
     </div>
   );
 }

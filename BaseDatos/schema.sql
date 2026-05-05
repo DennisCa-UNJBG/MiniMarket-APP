@@ -31,7 +31,9 @@ CREATE TABLE IF NOT EXISTS usuarios (
 -- 4. Categorias
 CREATE TABLE IF NOT EXISTS categorias (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    nombre TEXT NOT NULL UNIQUE
+    nombre TEXT NOT NULL UNIQUE,
+    color TEXT,
+    estado TEXT DEFAULT 'activo' -- 'activo' o 'inactivo'
 );
 
 -- 5. Productos
@@ -43,6 +45,7 @@ CREATE TABLE IF NOT EXISTS productos (
     unidad_medida TEXT,
     stock_minimo REAL DEFAULT 0,
     stock_actual REAL DEFAULT 0,
+    estado TEXT DEFAULT 'activo', -- 'activo' o 'inactivo'
     FOREIGN KEY (categoria_id) REFERENCES categorias (id)
 );
 
@@ -169,3 +172,10 @@ VALUES (
         'activo'
     );
 -- Contraseña: admin
+
+-- 12. Datos iniciales de categorías
+INSERT OR IGNORE INTO categorias (nombre, color) VALUES 
+('Abarrotes', '#f59e0b'),
+('Bebidas', '#0ea5e9'),
+('Lácteos', '#60a5fa'),
+('Limpieza', '#10b981');

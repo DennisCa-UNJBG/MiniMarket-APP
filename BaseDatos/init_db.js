@@ -6,11 +6,17 @@ const sqlite3 = require('sqlite3').verbose();
 
 // Rutas a los archivos
 const schemaPath = path.join(__dirname, 'schema.sql');
-const dbPath = path.join(__dirname, 'inventario.db');
+const dbPath = path.join(__dirname, '../Minimarket-app/src-tauri/database/inventario.db');
 
 console.log("Iniciando la creación de la base de datos con Node/npm...");
 
 try {
+    // Si existe el archivo, lo eliminamos para asegurar una creación limpia
+    if (fs.existsSync(dbPath)) {
+        fs.unlinkSync(dbPath);
+        console.log("Archivo previo eliminado.");
+    }
+
     // Leemos el archivo SQL
     const schema = fs.readFileSync(schemaPath, 'utf8');
 
@@ -21,6 +27,8 @@ try {
             return;
         }
 
+        console.log("Conectado a SQLite. Ejecutando schema...");
+        
         // Ejecutamos el script completo
         db.exec(schema, (err) => {
             if (err) {
@@ -30,7 +38,10 @@ try {
             }
             
             // Cerramos la conexión
-            db.close();
+            db.close((err) => {
+                if (err) console.error("Error al cerrar la DB:", err.message);
+                else console.log("Conexión cerrada.");
+            });
         });
     });
 
