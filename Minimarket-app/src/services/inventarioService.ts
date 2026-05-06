@@ -102,6 +102,76 @@ export const inventarioService = {
   },
 
   /**
+   * Obtiene los movimientos del kardex para un producto específico
+   */
+  async getMovimientosPorProducto(productoId: number): Promise<any[]> {
+    return withDb(async () => {
+      const db = await getDb();
+      return db.select(`
+        SELECT k.*, p.nombre as producto_nombre, u.nombre_completo as usuario_nombre
+        FROM kardex k
+        JOIN productos p ON k.producto_id = p.id
+        JOIN usuarios u ON k.usuario_id = u.id
+        WHERE k.producto_id = ?
+        ORDER BY k.fecha DESC
+      `, [productoId]);
+    });
+  },
+
+  /**
+   * Obtiene todos los movimientos realizados en el día actual
+   */
+  async getMovimientosDia(): Promise<any[]> {
+    return withDb(async () => {
+      const db = await getDb();
+      return db.select(`
+        SELECT k.*, p.nombre as producto_nombre, u.nombre_completo as usuario_nombre
+        FROM kardex k
+        JOIN productos p ON k.producto_id = p.id
+        JOIN usuarios u ON k.usuario_id = u.id
+        WHERE date(k.fecha) = date('now', 'localtime')
+        ORDER BY k.fecha DESC
+      `);
+    });
+  },
+
+  /**
+   * Obtiene movimientos filtrados por producto y/o rango de fechas
+   */
+  async getMovimientosFiltrados(filters: { productoId?: number, fechaInicio?: string, fechaFin?: string }): Promise<any[]> {
+    return withDb(async () => {
+      const db = await getDb();
+      let query = `
+        SELECT k.*, p.nombre as producto_nombre, u.nombre_completo as usuario_nombre
+        FROM kardex k
+        JOIN productos p ON k.producto_id = p.id
+        JOIN usuarios u ON k.usuario_id = u.id
+        WHERE 1=1
+      `;
+      const params: any[] = [];
+
+      if (filters.productoId) {
+        query += " AND k.producto_id = ? ";
+        params.push(filters.productoId);
+      }
+
+      if (filters.fechaInicio) {
+        query += " AND date(k.fecha) >= date(?) ";
+        params.push(filters.fechaInicio);
+      }
+
+      if (filters.fechaFin) {
+        query += " AND date(k.fecha) <= date(?) ";
+        params.push(filters.fechaFin);
+      }
+
+      query += " ORDER BY k.fecha DESC ";
+      
+      return db.select(query, params);
+    });
+  },
+
+  /**
    * Obtiene el historial de cabeceras de compras
    */
   async getCompras(limit = 50): Promise<any[]> {
