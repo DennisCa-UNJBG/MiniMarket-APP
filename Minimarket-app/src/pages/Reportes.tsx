@@ -1,108 +1,154 @@
-import { TrendingUp, TrendingDown, Package, ShoppingCart, Calendar } from 'lucide-react';
-
-const topProducts = [
-  { name: 'Arroz Costeño 1kg',  sales: 320, revenue: 1120.00 },
-  { name: 'Inka Kola 1.5L',     sales: 210, revenue: 1050.00 },
-  { name: 'Aceite Primor 1L',   sales: 185, revenue: 1295.00 },
-  { name: 'Azúcar Rubia 1kg',   sales: 160, revenue:  480.00 },
-  { name: 'Pan de Molde Bimbo', sales: 140, revenue:  770.00 },
-];
-
-const monthlySales = [
-  { month: 'Ene', amount: 32400 },
-  { month: 'Feb', amount: 28900 },
-  { month: 'Mar', amount: 41200 },
-  { month: 'Abr', amount: 38700 },
-  { month: 'May', amount: 48200 },
-];
-
-const maxAmount = Math.max(...monthlySales.map((m) => m.amount));
+import { useState, useEffect } from 'react';
+import { TrendingUp, Package, ShoppingCart, Calendar, Info, Download } from 'lucide-react';
+import { reporteService, type TopProduct, type MonthlyRevenue, type ReportKPIs } from '../services/reporteService';
+import { Badge } from '../components/ui/Badge';
+import { notificationService } from '../lib/notifications';
+import { ReporteDocumento } from '../components/shared/ReporteDocumento';
+import { VentasBarChart, RankingProductos } from '../components/reportes/ReportComponents';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 export function Reportes() {
+  const [topProducts, setTopProducts] = useState<TopProduct[]>([]);
+  const [monthlySales, setMonthlySales] = useState<MonthlyRevenue[]>([]);
+  const [kpis, setKpis] = useState<ReportKPIs | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const loadData = async () => {
+    try {
+      const [tp, ms, k] = await Promise.all([
+        reporteService.getTopProducts(),
+        reporteService.getMonthlyRevenue(),
+        reporteService.getKPIs()
+      ]);
+      setTopProducts(tp);
+      setMonthlySales(ms);
+      setKpis(k);
+    } catch (error) {
+      notificationService.error('Error', 'No se pudieron cargar los reportes');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const handleExportPDF = async () => {
+    const element = document.getElementById('reporte-pdf-content');
+    if (!element) return;
+
+    try {
+      notificationService.info('Procesando', 'Generando documento PDF...');
+      
+      const canvas = await html2canvas(element, {
+        scale: 3, // Muy alta calidad
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff'
+      });
+      
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`Reporte_Rendimiento_${new Date().toISOString().split('T')[0]}.pdf`);
+      
+      notificationService.success('Completado', 'Reporte descargado correctamente');
+    } catch (error) {
+      console.error(error);
+      notificationService.error('Error', 'No se pudo generar el reporte PDF');
+    }
+  };
+
+  if (loading) return (
+    <div className="flex items-center justify-center h-[60vh]">
+      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600"></div>
+    </div>
+  );
+
+  const kpiCards = kpis ? [
+    { label: 'Ingresos del mes',   value: `S/ ${kpis.revenue.toFixed(2)}`, change: `${kpis.revenueChange >= 0 ? '+' : ''}${kpis.revenueChange.toFixed(1)}%`, up: kpis.revenueChange >= 0, icon: TrendingUp,   color: 'bg-indigo-500' },
+    { label: 'Productos vendidos', value: kpis.productsSold,      change: `Mes actual`,  up: true,  icon: Package,      color: 'bg-emerald-500' },
+    { label: 'N° de ventas',       value: kpis.salesCount,        change: `${kpis.salesCountChange >= 0 ? '+' : ''}${kpis.salesCountChange.toFixed(1)}%`,  up: kpis.salesCountChange >= 0,  icon: ShoppingCart, color: 'bg-sky-500' },
+    { label: 'Gasto Promedio por Cliente',   value: `S/ ${kpis.salesCount > 0 ? (kpis.revenue / kpis.salesCount).toFixed(2) : '0.00'}`, change: 'Ingreso Total / N° Ventas', up: true, icon: Info, color: 'bg-amber-500' },
+  ] : [];
+
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h2 className="text-xl font-bold text-gray-800 dark:text-white">Reportes</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Resumen de rendimiento del negocio</p>
+          <h2 className="text-2xl font-black text-gray-800 dark:text-white tracking-tight">Reportes de Rendimiento</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Análisis detallado de tus ventas y productos</p>
         </div>
-        <div className="flex items-center gap-2 px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-sm text-gray-600 dark:text-gray-300">
-          <Calendar size={15} />
-          <span>Mayo 2026</span>
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={handleExportPDF}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-bold rounded-xl hover:bg-indigo-700 transition shadow-lg shadow-indigo-200 dark:shadow-none"
+          >
+            <Download size={16} />
+            Exportar PDF
+          </button>
+          <div className="flex items-center gap-2 px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-xs font-bold text-gray-600 dark:text-gray-300">
+            <Calendar size={14} />
+            <span>{new Date().toLocaleDateString('es-PE', { month: 'long', year: 'numeric' }).toUpperCase()}</span>
+          </div>
         </div>
       </div>
 
       {/* KPI cards */}
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-        {[
-          { label: 'Ingresos del mes',   value: 'S/ 48,200', change: '+12%', up: true,  icon: TrendingUp,   color: 'bg-indigo-500' },
-          { label: 'Productos vendidos', value: '1,015',      change: '+8%',  up: true,  icon: Package,      color: 'bg-emerald-500' },
-          { label: 'N° de ventas',       value: '342',        change: '+5%',  up: true,  icon: ShoppingCart, color: 'bg-sky-500' },
-          { label: 'Devoluciones',       value: '3',          change: '-2',   up: false, icon: TrendingDown, color: 'bg-rose-500' },
-        ].map(({ label, value, change, up, icon: Icon, color }) => (
-          <div key={label} className="bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-100 dark:border-gray-700 shadow-sm">
-            <div className={`${color} w-9 h-9 rounded-xl flex items-center justify-center mb-3`}>
-              <Icon size={18} className="text-white" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        {kpiCards.map(({ label, value, change, up, icon: Icon, color }) => (
+          <div key={label} className="bg-white dark:bg-gray-800 rounded-3xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
+            <div className={`${color} w-10 h-10 rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-${color.split('-')[1]}-100 dark:shadow-none`}>
+              <Icon size={20} className="text-white" />
             </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{label}</p>
-            <p className="text-xl font-bold text-gray-800 dark:text-white">{value}</p>
-            <span className={`text-xs font-semibold ${up ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'}`}>
-              {change} vs. mes anterior
-            </span>
+            <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1">{label}</p>
+            <p className="text-2xl font-black text-gray-800 dark:text-white">{value}</p>
+            <div className="flex items-center gap-1 mt-2">
+              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${up ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20' : 'bg-red-50 text-red-500 dark:bg-red-900/20'}`}>
+                {change}
+              </span>
+              <span className="text-[10px] text-gray-400 font-medium italic">vs. mes anterior</span>
+            </div>
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-        {/* Gráfico de ventas mensuales (barras CSS) */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-6">
-          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-5">Ventas mensuales (S/)</h3>
-          <div className="flex items-end gap-3 h-36">
-            {monthlySales.map(({ month, amount }) => {
-              const heightPct = Math.round((amount / maxAmount) * 100);
-              return (
-                <div key={month} className="flex-1 flex flex-col items-center gap-1.5">
-                  <span className="text-[10px] text-gray-500 dark:text-gray-400 font-medium">
-                    {(amount / 1000).toFixed(0)}k
-                  </span>
-                  <div
-                    className="w-full bg-indigo-500 rounded-t-lg transition-all duration-500 hover:bg-indigo-600"
-                    style={{ height: `${heightPct}%` }}
-                  />
-                  <span className="text-[10px] text-gray-400 dark:text-gray-500">{month}</span>
-                </div>
-              );
-            })}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        {/* Gráfico de ventas mensuales */}
+        <div className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm p-6">
+          <div className="flex items-center justify-between mb-8">
+            <h3 className="text-lg font-bold text-gray-800 dark:text-white">Ingresos Mensuales</h3>
+            <Badge label="Últimos 6 meses" variant="indigo" />
+          </div>
+          <div className="h-64 w-full">
+            <VentasBarChart data={monthlySales} />
           </div>
         </div>
 
         {/* Top productos */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-6">
-          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-5">Productos más vendidos</h3>
-          <div className="space-y-3">
-            {topProducts.map((p, i) => {
-              const pct = Math.round((p.sales / topProducts[0].sales) * 100);
-              return (
-                <div key={p.name}>
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="text-gray-700 dark:text-gray-200 font-medium">
-                      <span className="text-gray-400 dark:text-gray-500 mr-1.5">#{i + 1}</span>
-                      {p.name}
-                    </span>
-                    <span className="text-gray-500 dark:text-gray-400">{p.sales} uds.</span>
-                  </div>
-                  <div className="h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-indigo-500 rounded-full transition-all duration-500"
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
+        <div className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm p-6">
+          <div className="flex items-center justify-between mb-8">
+            <h3 className="text-lg font-bold text-gray-800 dark:text-white">Ranking de Productos</h3>
+            <Badge label="Top 5 Vendidos" variant="emerald" />
           </div>
+          <RankingProductos products={topProducts} />
         </div>
       </div>
+
+      {/* Componente oculto para exportación a PDF */}
+      {kpis && (
+        <ReporteDocumento 
+          id="reporte-pdf-content"
+          kpis={kpis}
+          topProducts={topProducts}
+          monthlySales={monthlySales}
+        />
+      )}
     </div>
   );
 }
