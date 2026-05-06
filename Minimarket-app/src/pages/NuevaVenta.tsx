@@ -7,51 +7,53 @@ import { Card } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
 import { Badge } from '../components/ui/Badge';
-
-// ── Tipos ─────────────────────────────────────────────────────────────────────
-interface Product {
-  id: number;
-  name: string;
-  category: string;
-  price: number;
-  stock: number;
-  image?: string; // Para un diseño más premium
-}
+import { productoService, type Product } from '../services/productoService';
+import { categoriaService, type Category } from '../services/categoriaService';
+import { ventaService } from '../services/ventaService';
+import { useAuth } from '../contexts/AuthContext';
+import { useEffect } from 'react';
 
 interface CartItem {
   product: Product;
   quantity: number;
 }
 
-// ── Datos de ejemplo ───────────────────────────────────────────────────────────
-const catalog: Product[] = [
-  { id: 1, name: 'Arroz Costeño 1kg',      category: 'Abarrotes', price: 3.50, stock: 120 },
-  { id: 2, name: 'Aceite Primor 1L',        category: 'Abarrotes', price: 7.00, stock: 45 },
-  { id: 3, name: 'Leche Gloria 400g',       category: 'Lácteos',   price: 4.00, stock: 80 },
-  { id: 4, name: 'Azúcar Rubia 1kg',        category: 'Abarrotes', price: 3.00, stock: 75 },
-  { id: 5, name: 'Inka Kola 1.5L',          category: 'Bebidas',   price: 5.00, stock: 36 },
-  { id: 6, name: 'Coca Cola 1.5L',          category: 'Bebidas',   price: 5.50, stock: 40 },
-  { id: 7, name: 'Pan de Molde Bimbo',      category: 'Panadería', price: 5.50, stock: 14 },
-  { id: 8, name: 'Galletas Oreo',           category: 'Snacks',    price: 1.50, stock: 50 },
-  { id: 9, name: 'Yogurt Gloria Fresa 1L',  category: 'Lácteos',   price: 6.50, stock: 25 },
-];
-
-const categories = ['Todos', 'Abarrotes', 'Bebidas', 'Lácteos', 'Snacks', 'Panadería'];
-
 export function NuevaVenta() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [search, setSearch] = useState('');
-  const [activeCategory, setActiveCategory] = useState('Todos');
+  const [activeCategory, setActiveCategory] = useState<number | 'Todos'>('Todos');
   const [cart, setCart] = useState<CartItem[]>([]);
   
   // Checkout Modal
   const [showCheckout, setShowCheckout] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<'EFECTIVO' | 'TARJETA'>('EFECTIVO');
   const [amountPaid, setAmountPaid] = useState('');
 
+  const loadData = async () => {
+    try {
+      const [prods, cats] = await Promise.all([
+        productoService.getAll(true),
+        categoriaService.getAll()
+      ]);
+      setProducts(prods);
+      setCategories(cats);
+    } catch (error) {
+      notificationService.error('Error', 'No se pudieron cargar los datos.');
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
   // ── Lógica del Catálogo ───────────────────────────────────────────────────────
-  const filteredCatalog = catalog.filter(p => {
-    const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase());
-    const matchesCategory = activeCategory === 'Todos' || p.category === activeCategory;
+  const filteredCatalog = products.filter(p => {
+    const matchesSearch = p.nombre.toLowerCase().includes(search.toLowerCase()) || 
+                         (p.codigo_barras && p.codigo_barras.toLowerCase().includes(search.toLowerCase()));
+    const matchesCategory = activeCategory === 'Todos' || p.categoria_id === activeCategory;
     return matchesSearch && matchesCategory;
   });
 
@@ -84,7 +86,7 @@ export function NuevaVenta() {
     setCart(prev => prev.filter(item => item.product.id !== id));
   };
 
-  const total = cart.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
+  const total = cart.reduce((sum, item) => sum + ((item.product.precio_venta || 0) * item.quantity), 0);
   const paidNumber = parseFloat(amountPaid) || 0;
   const change = Math.max(0, paidNumber - total);
 
@@ -103,7 +105,7 @@ export function NuevaVenta() {
           </Button>
           <div>
             <h1 className="text-xl font-bold text-gray-800 dark:text-white leading-tight">Punto de Venta</h1>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Caja #1 • Cajero: Admin</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Caja #1 • Cajero: {user?.nombre_completo || 'Admin'}</p>
           </div>
         </div>
         <div className="flex items-center gap-4">
@@ -130,7 +132,7 @@ export function NuevaVenta() {
           {/* Búsqueda y Categorías */}
           <div className="p-4 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 shrink-0 space-y-3">
             <Input
-              placeholder="Buscar por código de barras o nombre del producto..."
+              placeholder="Buscar por código o nombre del producto..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               icon={<Search size={18} />}
@@ -138,17 +140,27 @@ export function NuevaVenta() {
             
             {/* Scroll horizontal de categorías */}
             <div className="flex overflow-x-auto pb-1 gap-2 no-scrollbar">
-              {categories.map(cat => (
                 <button
-                  key={cat}
-                  onClick={() => setActiveCategory(cat)}
+                  onClick={() => setActiveCategory('Todos')}
                   className={`px-4 py-1.5 text-sm font-medium rounded-full whitespace-nowrap transition-colors ${
-                    activeCategory === cat 
+                    activeCategory === 'Todos' 
                       ? 'bg-gray-800 text-white dark:bg-gray-100 dark:text-gray-900' 
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
                   }`}
                 >
-                  {cat}
+                  Todos
+                </button>
+              {categories.map(cat => (
+                <button
+                  key={cat.id}
+                  onClick={() => setActiveCategory(cat.id)}
+                  className={`px-4 py-1.5 text-sm font-medium rounded-full whitespace-nowrap transition-colors ${
+                    activeCategory === cat.id 
+                      ? 'bg-gray-800 text-white dark:bg-gray-100 dark:text-gray-900' 
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+                  }`}
+                >
+                  {cat.nombre}
                 </button>
               ))}
             </div>
@@ -160,20 +172,27 @@ export function NuevaVenta() {
               {filteredCatalog.map(product => (
                 <Card
                   key={product.id}
-                  onClick={() => addToCart(product)}
+                  onClick={() => (product.stock_actual || 0) > 0 ? addToCart(product) : notificationService.warning('Sin Stock', 'Este producto no tiene existencias.')}
                   hoverable
-                  className="p-4 text-left flex flex-col h-full group"
+                  className={`p-4 text-left flex flex-col h-full group ${(product.stock_actual || 0) <= 0 ? 'opacity-60 grayscale-[0.5]' : ''}`}
                 >
-                  <div className="w-full h-24 bg-gray-50 dark:bg-gray-700/50 rounded-xl mb-3 flex items-center justify-center text-gray-300 dark:text-gray-600 group-hover:scale-105 transition-transform">
+                  <div className="w-full h-24 bg-gray-50 dark:bg-gray-700/50 rounded-xl mb-3 flex items-center justify-center text-gray-300 dark:text-gray-600 group-hover:scale-105 transition-transform relative overflow-hidden">
                     <ShoppingBag size={32} />
+                    {(product.stock_actual || 0) <= 0 && (
+                      <div className="absolute inset-0 bg-red-500/10 flex items-center justify-center">
+                        <span className="bg-red-600 text-white text-[10px] font-black px-2 py-1 rounded-lg uppercase tracking-tighter shadow-lg">Agotado</span>
+                      </div>
+                    )}
                   </div>
                   <div className="flex-1">
-                    <Badge label={product.category} variant="indigo" className="mb-1" />
-                    <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 leading-tight mb-2 line-clamp-2">{product.name}</p>
+                    <Badge label={product.categoria_nombre || 'General'} variant="indigo" className="mb-1" />
+                    <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 leading-tight mb-2 line-clamp-2">{product.nombre}</p>
                   </div>
                   <div className="flex items-end justify-between mt-auto pt-2">
-                    <p className="text-lg font-bold text-gray-900 dark:text-white">S/ {product.price.toFixed(2)}</p>
-                    <p className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">{product.stock} disp.</p>
+                    <p className="text-lg font-bold text-gray-900 dark:text-white">S/ {(product.precio_venta || 0).toFixed(2)}</p>
+                    <p className={`text-[10px] font-medium ${product.stock_actual <= (product.stock_minimo || 0) ? 'text-amber-500' : 'text-gray-400 dark:text-gray-500'}`}>
+                      {product.stock_actual} {product.unidad_medida}
+                    </p>
                   </div>
                 </Card>
               ))}
@@ -212,31 +231,33 @@ export function NuevaVenta() {
                 {cart.map(item => (
                   <li key={item.product.id} className="p-3 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors group">
                     <div className="flex justify-between items-start mb-2">
-                      <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">{item.product.name}</span>
-                      <span className="text-sm font-bold text-gray-900 dark:text-white">S/ {(item.product.price * item.quantity).toFixed(2)}</span>
+                      <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">{item.product.nombre}</span>
+                      <span className="text-sm font-bold text-gray-900 dark:text-white">S/ {((item.product.precio_venta || 0) * item.quantity).toFixed(2)}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <p className="text-xs text-gray-500 dark:text-gray-400">S/ {item.product.price.toFixed(2)} c/u</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">S/ {(item.product.precio_venta || 0).toFixed(2)} c/u</p>
                       
-                      <div className="flex items-center gap-1.5 bg-gray-100 dark:bg-gray-900 p-1 rounded-lg">
+                      <div className="flex items-center gap-1.5 bg-gray-100 dark:bg-gray-900/50 p-1 rounded-lg border border-gray-200/50 dark:border-gray-700">
                         <Button 
-                          variant="ghost"
+                          variant="secondary"
                           size="sm"
                           onClick={() => item.quantity === 1 ? removeFromCart(item.product.id) : updateQuantity(item.product.id, -1)}
-                          className="w-6 h-6 p-0 min-h-0 bg-white dark:bg-gray-700"
+                          className="w-8 h-8 p-0 px-0 min-h-0 bg-white dark:bg-gray-700 shadow-sm border border-gray-200 dark:border-gray-600 hover:border-indigo-400 dark:hover:border-indigo-500"
+                          title={item.quantity === 1 ? "Eliminar del carrito" : "Disminuir cantidad"}
                         >
-                          {item.quantity === 1 ? <Trash2 size={12} className="text-red-500" /> : <Minus size={12} />}
+                          {item.quantity === 1 ? <Trash2 size={16} className="text-red-500" /> : <Minus size={18} strokeWidth={3} className="text-gray-800 dark:text-white" />}
                         </Button>
-                        <span className="w-6 text-center text-xs font-bold text-gray-800 dark:text-white">
+                        <span className="w-10 text-center text-base font-black text-gray-900 dark:text-white">
                           {item.quantity}
                         </span>
                         <Button 
-                          variant="ghost"
+                          variant="secondary"
                           size="sm"
                           onClick={() => updateQuantity(item.product.id, 1)}
-                          className="w-6 h-6 p-0 min-h-0 bg-white dark:bg-gray-700"
+                          className="w-8 h-8 p-0 px-0 min-h-0 bg-white dark:bg-gray-700 shadow-sm border-2 border-gray-200 dark:border-gray-600 hover:border-indigo-500 dark:hover:border-indigo-400 active:bg-gray-100"
+                          title="Aumentar cantidad"
                         >
-                          <Plus size={12} />
+                          <Plus size={18} strokeWidth={3} className="text-gray-800 dark:text-white" />
                         </Button>
                       </div>
                     </div>
@@ -296,24 +317,26 @@ export function NuevaVenta() {
             <div className="grid grid-cols-2 gap-3">
               <Button 
                 variant="secondary" 
-                className="flex-col h-auto py-4 border-2 border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400"
+                onClick={() => setPaymentMethod('EFECTIVO')}
+                className={`flex-col h-auto py-4 border-2 transition-all ${paymentMethod === 'EFECTIVO' ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400' : 'border-transparent opacity-60'}`}
                 icon={<Banknote size={24} />}
               >
                 <span>Efectivo</span>
               </Button>
               <Button 
                 variant="secondary" 
-                className="flex-col h-auto py-4 border-2 border-transparent"
+                onClick={() => setPaymentMethod('TARJETA')}
+                className={`flex-col h-auto py-4 border-2 transition-all ${paymentMethod === 'TARJETA' ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400' : 'border-transparent opacity-60'}`}
                 icon={<CreditCard size={24} />}
               >
                 <span>Tarjeta / Yape</span>
               </Button>
             </div>
 
-            {/* Input Efectivo */}
+            {/* Input de Monto - Siempre visible */}
             <div className="space-y-4">
               <Input
-                label="Monto recibido (S/)"
+                label={paymentMethod === 'EFECTIVO' ? "Monto recibido (S/)" : "Monto recibido en App/Tarjeta (S/)"}
                 type="number"
                 autoFocus
                 value={amountPaid}
@@ -323,14 +346,14 @@ export function NuevaVenta() {
                 className="text-xl font-bold"
               />
 
-              {/* Vuelto */}
+              {/* Vuelto / Estado del Pago */}
               <div className={`p-4 rounded-xl flex justify-between items-center transition-colors ${
                 paidNumber >= total 
                   ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800' 
                   : 'bg-gray-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400 border border-gray-100 dark:border-gray-800'
               }`}>
-                <span className="font-semibold">Vuelto:</span>
-                <span className="text-2xl font-black">S/ {change.toFixed(2)}</span>
+                <span className="font-semibold">{paidNumber >= total ? 'Vuelto:' : 'Pendiente:'}</span>
+                <span className="text-2xl font-black">S/ {Math.abs(change).toFixed(2)}</span>
               </div>
             </div>
 
@@ -343,14 +366,29 @@ export function NuevaVenta() {
                 Volver
               </Button>
               <Button 
-                disabled={paidNumber < total}
-                onClick={() => {
-                  setShowCheckout(false);
-                  notificationService.success('¡Venta completada!', `El cambio es de S/ ${change.toFixed(2)}`).then(() => {
+                disabled={paymentMethod === 'EFECTIVO' && paidNumber < total}
+                onClick={async () => {
+                  try {
+                    const ventaData = {
+                      usuario_id: user?.id || 1,
+                      total,
+                      metodo_pago: paymentMethod,
+                      items: cart.map(i => ({
+                        producto_id: i.product.id,
+                        cantidad: i.quantity,
+                        precio_unitario: i.product.precio_venta || 0
+                      }))
+                    };
+                    
+                    await ventaService.registrarVenta(ventaData);
+                    setShowCheckout(false);
+                    await notificationService.successWithConfirm('¡Venta completada!', `Vuelto: S/ ${change.toFixed(2)}`);
                     setCart([]);
                     setAmountPaid('');
-                    navigate('/ventas');
-                  });
+                    loadData(); // Recargar stock
+                  } catch (error) {
+                    notificationService.error('Error', 'No se pudo procesar la venta.');
+                  }
                 }}
                 fullWidth
                 className="flex-[2]"

@@ -44,6 +44,12 @@ pub fn run() {
                     FOREIGN KEY (usuario_id) REFERENCES usuarios (id)
                   );",
             kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 4,
+            description: "add_metodo_pago_to_ventas",
+            sql: "ALTER TABLE ventas ADD COLUMN metodo_pago TEXT DEFAULT 'EFECTIVO';",
+            kind: MigrationKind::Up,
         }
     ];
 

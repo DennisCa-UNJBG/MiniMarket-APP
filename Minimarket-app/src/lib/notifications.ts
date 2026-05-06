@@ -33,6 +33,18 @@ export const notificationService = {
     });
   },
 
+  successWithConfirm(title: string, text?: string) {
+    return Swal.fire({
+      title,
+      text,
+      icon: 'success',
+      confirmButtonText: 'Aceptar',
+      confirmButtonColor: '#4f46e5',
+      ...getSwalTheme(),
+      customClass: { popup: 'rounded-2xl', confirmButton: 'px-4 py-2 rounded-xl' },
+    });
+  },
+
   warning(title: string, text?: string) {
     return Swal.fire({
       title,
