@@ -192,8 +192,8 @@ export function Compras() {
       header: 'Fecha',
       render: (row) => (
         <div className="flex flex-col">
-          <span className="text-sm text-gray-800 dark:text-gray-200">{new Date(row.fecha).toLocaleDateString()}</span>
-          <span className="text-[10px] text-gray-400">{new Date(row.fecha).toLocaleTimeString()}</span>
+          <span className="text-sm text-gray-800 dark:text-gray-200">{new Date(row.fecha + " UTC").toLocaleDateString()}</span>
+          <span className="text-[10px] text-gray-400">{new Date(row.fecha + " UTC").toLocaleTimeString()}</span>
         </div>
       )
     },

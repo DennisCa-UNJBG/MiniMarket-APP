@@ -129,7 +129,7 @@ export const inventarioService = {
         FROM kardex k
         JOIN productos p ON k.producto_id = p.id
         JOIN usuarios u ON k.usuario_id = u.id
-        WHERE date(k.fecha) = date('now', 'localtime')
+        WHERE date(k.fecha, 'localtime') = date('now', 'localtime')
         ORDER BY k.fecha DESC
       `);
     });
@@ -156,12 +156,12 @@ export const inventarioService = {
       }
 
       if (filters.fechaInicio) {
-        query += " AND date(k.fecha) >= date(?) ";
+        query += " AND date(k.fecha, 'localtime') >= date(?) ";
         params.push(filters.fechaInicio);
       }
 
       if (filters.fechaFin) {
-        query += " AND date(k.fecha) <= date(?) ";
+        query += " AND date(k.fecha, 'localtime') <= date(?) ";
         params.push(filters.fechaFin);
       }
 

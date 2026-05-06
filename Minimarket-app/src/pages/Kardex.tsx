@@ -26,7 +26,9 @@ const columns: TableColumn<any>[] = [
     render: (row) => (
       <div className="flex items-center gap-2">
         <Calendar size={14} className="text-gray-400" />
-        <span className="text-sm text-gray-600 dark:text-gray-400">{new Date(row.fecha).toLocaleString()}</span>
+        <span className="text-sm text-gray-600 dark:text-gray-400">
+          {new Date(row.fecha + " UTC").toLocaleString()}
+        </span>
       </div>
     ),
   },
