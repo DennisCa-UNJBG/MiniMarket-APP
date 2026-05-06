@@ -1,5 +1,5 @@
 import { ConnectionError } from './errors';
-import { notificationService } from '../services/notificationService';
+import { notificationService } from './notifications';
 
 /**
  * Envuelve cualquier llamada a un servicio de base de datos.

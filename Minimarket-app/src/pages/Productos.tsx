@@ -5,7 +5,7 @@ import { Badge } from '../components/ui/Badge';
 import { Modal } from '../components/ui/Modal';
 import { categoriaService, type Category } from '../services/categoriaService';
 import { productoService, type Product } from '../services/productoService';
-import { notificationService } from '../services/notificationService';
+import { notificationService } from '../lib/notifications';
 
 // ── Datos de ejemplo (Eliminados en favor de la DB) ──────────────────────────
 
@@ -111,9 +111,9 @@ function TabProductos({ categories }: { categories: Category[] }) {
     { key: 'nombre', header: 'Nombre', render: (row) => <span className="font-medium text-gray-800 dark:text-white">{row.nombre}</span> },
     { key: 'categoria_nombre', header: 'Categoría', render: (row) => <Badge label={row.categoria_nombre || 'Sin cat.'} variant="indigo" /> },
     { key: 'unidad_medida', header: 'Unidad' },
-    { key: 'precio_compra', header: 'P. Compra', align: 'right', render: (row) => <span className="text-gray-600 dark:text-gray-300">S/ {(row.precio_compra || 0).toFixed(2)}</span> },
-    { key: 'precio_venta', header: 'P. Venta', align: 'right', render: (row) => <span className="font-medium text-gray-800 dark:text-white">S/ {(row.precio_venta || 0).toFixed(2)}</span> },
-    { key: 'stock_minimo', header: 'Stock mín.', align: 'center' },
+    { key: 'precio_compra', header: 'Precio Compra', align: 'right', render: (row) => <span className="text-gray-600 dark:text-gray-300">S/ {(row.precio_compra || 0).toFixed(2)}</span> },
+    { key: 'precio_venta', header: 'Precio Venta', align: 'right', render: (row) => <span className="font-medium text-gray-800 dark:text-white">S/ {(row.precio_venta || 0).toFixed(2)}</span> },
+    { key: 'stock_minimo', header: 'Stock Mínimo', align: 'center' },
     {
       key: 'acciones', header: '', align: 'right',
       render: (row) => (
@@ -313,7 +313,7 @@ function TabProductos({ categories }: { categories: Category[] }) {
               <input type="number" step="0.01" className={inputCls} placeholder="0.00" value={form.sellPrice} onChange={(e) => setForm({ ...form, sellPrice: e.target.value })} />
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Stock mínimo</label>
+              <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Stock mínimo <span>(Para pedidos)</span></label>
               <input type="number" className={inputCls} placeholder="0" value={form.minStock} onChange={(e) => setForm({ ...form, minStock: e.target.value })} />
             </div>
           </div>

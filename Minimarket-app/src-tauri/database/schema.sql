@@ -126,8 +126,8 @@ CREATE TABLE IF NOT EXISTS boletas (
 -- =========================================================
 
 -- Insertar roles básicos
-INSERT OR IGNORE INTO
-    roles (
+INSERT
+    OR IGNORE INTO roles (
         id,
         nombre,
         descripcion,
@@ -154,8 +154,8 @@ VALUES (
 
 -- Insertar un usuario administrador inicial
 -- (Nota: la contraseña "admin" deberá ser reemplazada por un hash en producción)
-INSERT OR IGNORE INTO
-    usuarios (
+INSERT
+    OR IGNORE INTO usuarios (
         id,
         username,
         password_hash,
@@ -174,8 +174,9 @@ VALUES (
 -- Contraseña: admin
 
 -- 12. Datos iniciales de categorías
-INSERT OR IGNORE INTO categorias (nombre, color) VALUES 
-('Abarrotes', '#f59e0b'),
-('Bebidas', '#0ea5e9'),
-('Lácteos', '#60a5fa'),
-('Limpieza', '#10b981');
+INSERT
+    OR IGNORE INTO categorias (nombre, color)
+VALUES ('Abarrotes', '#f59e0b'),
+    ('Bebidas', '#0ea5e9'),
+    ('Lácteos', '#60a5fa'),
+    ('Limpieza', '#10b981');

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Search, Plus, Minus, Trash2, ShoppingBag, Receipt, ArrowLeft, CreditCard, Banknote } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { notificationService } from '../services/notificationService';
+import { notificationService } from '../lib/notifications';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';

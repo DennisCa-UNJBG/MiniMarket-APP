@@ -1,13 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
-import { Search, Plus, Filter, AlertTriangle, ArrowUpRight, History } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Search, Filter, AlertTriangle } from 'lucide-react';
 import { DataTable, type TableColumn } from '../components/ui/DataTable';
 import { Badge } from '../components/ui/Badge';
 import { PageHeader } from '../components/ui/PageHeader';
-import { Modal } from '../components/ui/Modal';
 import { productoService, type Product } from '../services/productoService';
-import { inventarioService } from '../services/inventarioService';
-import { notificationService } from '../services/notificationService';
-import { useAuth } from '../contexts/AuthContext';
+import { notificationService } from '../lib/notifications';
 
 type StockStatus = 'ok' | 'low' | 'out';
 
@@ -24,22 +21,9 @@ const statusBadge: Record<StockStatus, { label: string; variant: 'emerald' | 'am
 };
 
 export function Inventario() {
-  const { user } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [search, setSearch] = useState('');
-  const [showModal, setShowModal] = useState(false);
   const [loading, setLoading] = useState(false);
-  
-  // Estado para el formulario de ingreso
-  const [form, setForm] = useState({
-    productoId: '',
-    cantidad: '',
-    precioCompra: '',
-    referencia: ''
-  });
-  const [catSearch, setCatSearch] = useState('');
-  const [showProductList, setShowProductList] = useState(false);
-  const qtyInputRef = useRef<HTMLInputElement>(null);
 
   const loadProducts = async () => {
     setLoading(true);
@@ -56,37 +40,6 @@ export function Inventario() {
   useEffect(() => {
     loadProducts();
   }, []);
-
-  useEffect(() => {
-    if (showModal && form.productoId) {
-       setTimeout(() => qtyInputRef.current?.focus(), 100);
-    }
-  }, [showModal, form.productoId]);
-
-  const handleRegistrarIngreso = async () => {
-    if (!form.productoId || !form.cantidad || !form.precioCompra) {
-      notificationService.warning('Campos incompletos', 'Por favor completa los datos obligatorios.');
-      return;
-    }
-
-    try {
-      await inventarioService.registrarIngreso({
-        producto_id: parseInt(form.productoId),
-        usuario_id: user?.id || 1,
-        cantidad: parseFloat(form.cantidad),
-        precio_compra: parseFloat(form.precioCompra),
-        referencia: form.referencia
-      });
-
-      notificationService.success('Ingreso registrado', 'El stock ha sido actualizado correctamente.');
-      setShowModal(false);
-      setForm({ productoId: '', cantidad: '', precioCompra: '', referencia: '' });
-      setCatSearch('');
-      loadProducts();
-    } catch (error) {
-      notificationService.error('Error', 'No se pudo registrar el ingreso de mercadería.');
-    }
-  };
 
   const columns: TableColumn<Product>[] = [
     {
@@ -130,24 +83,7 @@ export function Inventario() {
         const { label, variant } = statusBadge[getStatus(row.stock_actual, row.stock_minimo)];
         return <Badge label={label} variant={variant} />;
       },
-    },
-    {
-      key: 'acciones',
-      header: '',
-      align: 'right',
-      render: (row) => (
-        <button 
-          onClick={() => {
-            setForm({ ...form, productoId: row.id.toString(), precioCompra: (row.precio_compra || '').toString() });
-            setCatSearch(row.nombre);
-            setShowModal(true);
-          }}
-          className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors"
-        >
-          <Plus size={14} /> Ingreso
-        </button>
-      ),
-    },
+    }
   ];
 
   const filtered = products.filter(
@@ -156,7 +92,6 @@ export function Inventario() {
       p.codigo_barras.toLowerCase().includes(search.toLowerCase())
   );
 
-  const inputCls = 'w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition';
 
   return (
     <div className="space-y-5">

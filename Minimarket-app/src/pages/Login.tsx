@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Package2, Lock, User, ArrowRight } from 'lucide-react';
 import { authService, type UserData } from '../services/authService';
-import { notificationService } from '../services/notificationService';
+import { notificationService } from '../lib/notifications';
 import { AuthError } from '../lib/errors';
 import { withDb } from '../lib/withDb';
 

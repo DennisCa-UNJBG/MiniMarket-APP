@@ -26,10 +26,10 @@ export const notificationService = {
       title,
       text,
       icon: 'success',
-      confirmButtonText: 'Aceptar',
-      confirmButtonColor: '#4f46e5',
+      timer: 1500,
+      showConfirmButton: false,
       ...getSwalTheme(),
-      customClass: { popup: 'rounded-2xl', confirmButton: 'px-4 py-2 rounded-xl' },
+      customClass: { popup: 'rounded-2xl' },
     });
   },
 
