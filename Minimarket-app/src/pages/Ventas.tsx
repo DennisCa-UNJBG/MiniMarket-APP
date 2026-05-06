@@ -1,69 +1,80 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShoppingCart, Plus, Receipt, TrendingUp, DollarSign } from 'lucide-react';
+import { ShoppingCart, Plus, Receipt, TrendingUp, DollarSign, Calendar, Clock, User, CreditCard, Banknote, Printer } from 'lucide-react';
 import { DataTable, type TableColumn } from '../components/ui/DataTable';
 import { PageHeader } from '../components/ui/PageHeader';
+import { Badge } from '../components/ui/Badge';
+import { Modal } from '../components/ui/Modal';
+import { ventaService } from '../services/ventaService';
+import { Voucher } from '../components/shared/Voucher';
 
-interface Sale {
-  id: string;
-  date: string;
-  time: string;
-  cashier: string;
-  items: number;
-  total: number;
-  paid: number;
-}
-
-const sales: Sale[] = [
-  { id: 'V-0045', date: '03/05/2026', time: '08:32', cashier: 'Admin', items: 5, total: 24.50, paid: 30.00 },
-  { id: 'V-0044', date: '03/05/2026', time: '08:15', cashier: 'Admin', items: 2, total: 8.00,  paid: 10.00 },
-  { id: 'V-0043', date: '03/05/2026', time: '07:58', cashier: 'Admin', items: 8, total: 52.80, paid: 60.00 },
-  { id: 'V-0042', date: '02/05/2026', time: '18:40', cashier: 'Admin', items: 3, total: 15.00, paid: 15.00 },
-  { id: 'V-0041', date: '02/05/2026', time: '17:25', cashier: 'Admin', items: 6, total: 37.20, paid: 40.00 },
-  { id: 'V-0040', date: '02/05/2026', time: '12:10', cashier: 'Admin', items: 1, total: 5.50,  paid: 10.00 },
-];
-
-const summaryCards = [
-  { label: 'Ventas de hoy',   value: 'S/ 85.30', sub: '3 transacciones',   icon: ShoppingCart, color: 'bg-indigo-500' },
-  { label: 'Total del mes',   value: 'S/ 3,420', sub: '+12% vs. mes ant.', icon: TrendingUp,   color: 'bg-emerald-500' },
-  { label: 'Ticket promedio', value: 'S/ 28.43', sub: 'Por venta',          icon: DollarSign,   color: 'bg-sky-500' },
-];
-
-// Definición de columnas — se declara una sola vez
-const columns: TableColumn<Sale>[] = [
+const getColumns = (onViewDetail: (sale: any) => void): TableColumn<any>[] => [
   {
     key: 'id',
     header: 'N° Venta',
     render: (row) => (
-      <span className="font-mono text-xs font-semibold text-indigo-600 dark:text-indigo-400">{row.id}</span>
+      <span className="font-mono text-xs font-bold text-indigo-600 dark:text-indigo-400">
+        #{row.id.toString().padStart(5, '0')}
+      </span>
     ),
   },
-  { key: 'date',    header: 'Fecha'  },
-  { key: 'time',    header: 'Hora'   },
-  { key: 'cashier', header: 'Cajero' },
-  { key: 'items',   header: 'Ítems', align: 'center' },
+  { 
+    key: 'fecha',    
+    header: 'Fecha / Hora',
+    render: (row) => (
+      <div className="flex flex-col">
+        <span className="text-xs font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+          <Calendar size={10} /> {new Date(row.fecha + " UTC").toLocaleDateString()}
+        </span>
+        <span className="text-[10px] text-gray-400 flex items-center gap-1">
+          <Clock size={10} /> {new Date(row.fecha + " UTC").toLocaleTimeString()}
+        </span>
+      </div>
+    )
+  },
+  { 
+    key: 'usuario_nombre', 
+    header: 'Cajero',
+    render: (row) => (
+      <span className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-1">
+        <User size={12} /> {row.usuario_nombre}
+      </span>
+    )
+  },
+  {
+    key: 'metodo_pago',
+    header: 'Pago',
+    render: (row) => (
+      <div className="flex items-center gap-1">
+        {row.metodo_pago === 'EFECTIVO' ? <Banknote size={12} className="text-emerald-500" /> : <CreditCard size={12} className="text-blue-500" />}
+        <span className="text-[10px] font-bold uppercase tracking-wider">{row.metodo_pago}</span>
+      </div>
+    )
+  },
+  { 
+    key: 'items_count',   
+    header: 'Ítems', 
+    align: 'center',
+    render: (row) => <Badge label={row.items_count} variant="indigo" />
+  },
   {
     key: 'total',
     header: 'Total',
     align: 'right',
     render: (row) => (
-      <span className="font-semibold text-gray-800 dark:text-white">S/ {row.total.toFixed(2)}</span>
-    ),
-  },
-  {
-    key: 'vuelto',
-    header: 'Vuelto',
-    align: 'right',
-    render: (row) => (
-      <span className="text-gray-500 dark:text-gray-400">S/ {(row.paid - row.total).toFixed(2)}</span>
+      <span className="font-bold text-gray-900 dark:text-white">S/ {row.total.toFixed(2)}</span>
     ),
   },
   {
     key: 'acciones',
     header: '',
-    render: () => (
-      <button className="flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400 hover:underline px-2 py-1 rounded-lg hover:bg-indigo-50 dark:hover:bg-gray-700 transition-colors">
-        <Receipt size={13} /> Boleta
+    align: 'right',
+    render: (row) => (
+      <button 
+        onClick={() => onViewDetail(row)}
+        className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-tighter text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 px-2 py-1.5 rounded-lg border border-indigo-100 dark:border-indigo-800 transition-all"
+      >
+        <Receipt size={13} /> Ver Boleta
       </button>
     ),
   },
@@ -71,9 +82,51 @@ const columns: TableColumn<Sale>[] = [
 
 export function Ventas() {
   const navigate = useNavigate();
+  const [sales, setSales] = useState<any[]>([]);
+  const [resumen, setResumen] = useState({ total: 0, count: 0 });
   const [search, setSearch] = useState('');
+  const [selectedSale, setSelectedSale] = useState<any>(null);
+  const [saleDetails, setSaleDetails] = useState<any[]>([]);
 
-  const filtered = sales.filter((s) => s.id.toLowerCase().includes(search.toLowerCase()));
+  const loadData = async () => {
+    try {
+      const [data, res] = await Promise.all([
+        ventaService.getVentas(),
+        ventaService.getResumenHoy()
+      ]);
+      setSales(data);
+      setResumen(res);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const handleViewDetail = async (sale: any) => {
+    try {
+      const details = await ventaService.getVentaDetalles(sale.id);
+      setSaleDetails(details);
+      setSelectedSale(sale);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handlePrint = () => {
+    if (!selectedSale) return;
+    window.print();
+  };
+
+  const filtered = sales.filter((s) => s.id.toString().includes(search.toLowerCase()));
+
+  const summaryCards = [
+    { label: 'Ventas de hoy',   value: `S/ ${resumen.total.toFixed(2)}`, sub: `${resumen.count} transacciones`,   icon: ShoppingCart, color: 'bg-indigo-500' },
+    { label: 'Total Histórico', value: `S/ ${sales.reduce((acc, s) => acc + s.total, 0).toFixed(2)}`, sub: 'Cargadas en lista', icon: TrendingUp,   color: 'bg-emerald-500' },
+    { label: 'Ticket promedio', value: `S/ ${(resumen.total / (resumen.count || 1)).toFixed(2)}`, sub: 'Ventas de hoy', icon: DollarSign,   color: 'bg-sky-500' },
+  ];
 
   return (
     <div className="space-y-5">
@@ -123,11 +176,104 @@ export function Ventas() {
 
       {/* ✅ Tabla reutilizable — misma lógica, cero duplicación */}
       <DataTable
-        columns={columns}
+        columns={getColumns(handleViewDetail)}
         data={filtered}
         keyExtractor={(row) => row.id}
-        emptyMessage="No se encontraron ventas."
+        emptyMessage="No se encontraron ventas registradas."
       />
+
+      {/* Modal de Detalle de Venta */}
+      {selectedSale && (
+        <Modal
+          onClose={() => setSelectedSale(null)}
+          title={`Detalle de Venta #${selectedSale.id.toString().padStart(5, '0')}`}
+          maxWidth="lg"
+        >
+          <div className="space-y-6">
+            {/* Cabecera del Detalle */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-100 dark:border-gray-700">
+              <div>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Fecha</p>
+                <p className="text-xs font-semibold text-gray-700 dark:text-gray-200">{new Date(selectedSale.fecha + " UTC").toLocaleDateString()}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Hora</p>
+                <p className="text-xs font-semibold text-gray-700 dark:text-gray-200">{new Date(selectedSale.fecha + " UTC").toLocaleTimeString()}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Cajero</p>
+                <p className="text-xs font-semibold text-gray-700 dark:text-gray-200">{selectedSale.usuario_nombre}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Pago</p>
+                <Badge label={selectedSale.metodo_pago} variant={selectedSale.metodo_pago === 'EFECTIVO' ? 'emerald' : 'indigo'} />
+              </div>
+            </div>
+
+            {/* Tabla de Items */}
+            <div className="border border-gray-100 dark:border-gray-700 rounded-2xl overflow-hidden">
+              <table className="w-full text-left border-collapse">
+                <thead className="bg-gray-50 dark:bg-gray-700/50">
+                  <tr>
+                    <th className="px-4 py-2 text-[10px] font-bold text-gray-500 uppercase">Producto</th>
+                    <th className="px-4 py-2 text-[10px] font-bold text-gray-500 uppercase text-center">Cant.</th>
+                    <th className="px-4 py-2 text-[10px] font-bold text-gray-500 uppercase text-right">Precio</th>
+                    <th className="px-4 py-2 text-[10px] font-bold text-gray-500 uppercase text-right">Subtotal</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
+                  {saleDetails.map((det) => (
+                    <tr key={det.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-700/30 transition-colors">
+                      <td className="px-4 py-3 text-sm text-gray-800 dark:text-gray-200 font-medium">{det.producto_nombre}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 text-center">{det.cantidad} {det.unidad_medida}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 text-right">S/ {det.precio_unitario.toFixed(2)}</td>
+                      <td className="px-4 py-3 text-sm text-gray-900 dark:text-white font-bold text-right">S/ {det.subtotal.toFixed(2)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot className="bg-gray-50/50 dark:bg-gray-700/20">
+                  <tr>
+                    <td colSpan={3} className="px-4 py-2 text-right font-medium text-gray-500 text-xs italic">Subtotal items:</td>
+                    <td className="px-4 py-2 text-right text-sm font-bold text-gray-700 dark:text-gray-300">S/ {selectedSale.total.toFixed(2)}</td>
+                  </tr>
+                  <tr>
+                    <td colSpan={3} className="px-4 py-2 text-right font-medium text-gray-500 text-xs italic">Monto Pagado:</td>
+                    <td className="px-4 py-2 text-right text-sm font-bold text-emerald-600 dark:text-emerald-400">S/ {(selectedSale.monto_pagado || 0).toFixed(2)}</td>
+                  </tr>
+                  <tr>
+                    <td colSpan={3} className="px-4 py-2 text-right font-medium text-gray-500 text-xs italic">Vuelto entregado:</td>
+                    <td className="px-4 py-2 text-right text-sm font-bold text-orange-600 dark:text-orange-400">S/ {(selectedSale.vuelto || 0).toFixed(2)}</td>
+                  </tr>
+                  <tr className="bg-indigo-50/30 dark:bg-indigo-900/10">
+                    <td colSpan={3} className="px-4 py-4 text-right font-black text-gray-700 dark:text-gray-200 text-sm uppercase tracking-tighter">Total Final:</td>
+                    <td className="px-4 py-4 text-right text-xl font-black text-indigo-600 dark:text-indigo-400">S/ {selectedSale.total.toFixed(2)}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-700">
+              <button
+                onClick={() => setSelectedSale(null)}
+                className="px-6 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-sm font-bold rounded-xl transition-all"
+              >
+                Cerrar
+              </button>
+              <button
+                onClick={handlePrint}
+                className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl transition-all flex items-center gap-2 shadow-lg shadow-indigo-200 dark:shadow-none"
+              >
+                <Printer size={18} /> Imprimir Boleta
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Componente de Voucher (Solo visible al imprimir) */}
+      {selectedSale && (
+        <Voucher venta={selectedSale} detalles={saleDetails} />
+      )}
     </div>
   );
 }

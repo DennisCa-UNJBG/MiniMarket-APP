@@ -11,6 +11,8 @@ export interface VentaData {
   usuario_id: number;
   total: number;
   metodo_pago: string;
+  monto_pagado: number;
+  vuelto: number;
   items: VentaItem[];
   cliente_id?: number;
 }
@@ -29,8 +31,8 @@ export const ventaService = {
       
       // 1. Insertar Cabecera
       const resVenta = await db.execute(
-        `INSERT INTO ventas (usuario_id, total, metodo_pago) VALUES (?, ?, ?)`,
-        [venta.usuario_id, venta.total, venta.metodo_pago]
+        `INSERT INTO ventas (usuario_id, total, metodo_pago, monto_pagado, vuelto) VALUES (?, ?, ?, ?, ?)`,
+        [venta.usuario_id, venta.total, venta.metodo_pago, venta.monto_pagado, venta.vuelto]
       );
       
       const ventaId = resVenta.lastInsertId as number;
@@ -74,18 +76,53 @@ export const ventaService = {
   },
 
   /**
-   * Obtiene el historial de ventas
+   * Obtiene el historial de ventas con cantidad de items
    */
   async getVentas(limit = 50): Promise<any[]> {
     return withDb(async () => {
       const db = await getDb();
       return db.select(`
-        SELECT v.*, u.nombre_completo as usuario_nombre
+        SELECT 
+          v.*, 
+          u.nombre_completo as usuario_nombre,
+          (SELECT COUNT(*) FROM ventas_detalle WHERE venta_id = v.id) as items_count
         FROM ventas v
         JOIN usuarios u ON v.usuario_id = u.id
         ORDER BY v.fecha DESC
         LIMIT ?
       `, [limit]);
+    });
+  },
+
+  /**
+   * Obtiene los detalles de una venta específica
+   */
+  async getVentaDetalles(ventaId: number): Promise<any[]> {
+    return withDb(async () => {
+      const db = await getDb();
+      return db.select(`
+        SELECT vd.*, p.nombre as producto_nombre, p.unidad_medida
+        FROM ventas_detalle vd
+        JOIN productos p ON vd.producto_id = p.id
+        WHERE vd.venta_id = ?
+      `, [ventaId]);
+    });
+  },
+
+  /**
+   * Obtiene un resumen de las ventas de hoy
+   */
+  async getResumenHoy(): Promise<{ total: number, count: number }> {
+    return withDb(async () => {
+      const db = await getDb();
+      const result = await db.select<any[]>(`
+        SELECT 
+          COALESCE(SUM(total), 0) as total,
+          COUNT(*) as count
+        FROM ventas
+        WHERE date(fecha, 'localtime') = date('now', 'localtime')
+      `);
+      return result[0];
     });
   }
 };

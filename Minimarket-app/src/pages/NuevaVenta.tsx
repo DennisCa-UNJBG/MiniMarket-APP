@@ -373,6 +373,8 @@ export function NuevaVenta() {
                       usuario_id: user?.id || 1,
                       total,
                       metodo_pago: paymentMethod,
+                      monto_pagado: paidNumber,
+                      vuelto: change,
                       items: cart.map(i => ({
                         producto_id: i.product.id,
                         cantidad: i.quantity,

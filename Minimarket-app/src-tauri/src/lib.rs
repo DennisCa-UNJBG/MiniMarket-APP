@@ -50,6 +50,13 @@ pub fn run() {
             description: "add_metodo_pago_to_ventas",
             sql: "ALTER TABLE ventas ADD COLUMN metodo_pago TEXT DEFAULT 'EFECTIVO';",
             kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 5,
+            description: "add_pago_vuelto_to_ventas",
+            sql: "ALTER TABLE ventas ADD COLUMN monto_pagado REAL DEFAULT 0;
+                  ALTER TABLE ventas ADD COLUMN vuelto REAL DEFAULT 0;",
+            kind: MigrationKind::Up,
         }
     ];
 
