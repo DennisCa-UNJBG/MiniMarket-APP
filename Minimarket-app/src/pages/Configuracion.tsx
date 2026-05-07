@@ -264,7 +264,7 @@ export function Configuracion() {
           <h2 className="text-2xl font-black text-gray-800 dark:text-white tracking-tight">Configuración del Sistema</h2>
           <p className="text-sm text-gray-500 dark:text-gray-400">Administra los parámetros globales de tu minimarket.</p>
         </div>
-        <Badge label="Versión 1.0.2" variant="indigo" />
+        <Badge label="Versión 0.8.6" variant="indigo" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
