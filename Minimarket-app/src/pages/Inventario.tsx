@@ -123,7 +123,8 @@ export function Inventario() {
             placeholder="Buscar producto por nombre o código..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
+            disabled={loading}
+            className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition disabled:opacity-50"
           />
         </div>
         <button className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
@@ -135,7 +136,7 @@ export function Inventario() {
         columns={columns.filter(c => c.key !== 'acciones')}
         data={filtered}
         keyExtractor={(row) => row.id}
-        emptyMessage="No se encontraron productos en el inventario."
+        emptyMessage={loading ? "Consultando base de datos..." : "No se encontraron productos en el inventario."}
         defaultPageSize={10}
       />
     </div>

@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Store, Database, Bell, Save, Shield } from 'lucide-react';
+import { invoke } from '@tauri-apps/api/core';
+import { Store, Database, Bell, Save, Shield, Server, RefreshCw } from 'lucide-react';
 import { Badge } from '../components/ui/Badge';
 import { notificationService } from '../lib/notifications';
 import { databaseService } from '../services/databaseService';
 import { preferenciasService, type AppPreferences } from '../services/preferenciasService';
+import { sucursalService, type SucursalConfig } from '../services/sucursalService';
+import { syncService } from '../services/syncService';
 
 function Section({ icon: Icon, title, description, children }: { icon: React.ElementType; title: string; description: string; children: React.ReactNode }) {
   return (
@@ -42,16 +45,31 @@ function Field({ label, defaultValue, type = 'text', placeholder }: { label: str
 
 export function Configuracion() {
   const [loading, setLoading] = useState(false);
+  const [testingConnection, setTestingConnection] = useState(false);
   const [dbStats, setDbStats] = useState<{ size: number; path: string }>({ size: 0, path: 'Cargando...' });
   const [prefs, setPrefs] = useState<AppPreferences>(preferenciasService.get());
+  const [sucursal, setSucursal] = useState<SucursalConfig>({
+    sucursal_id: '',
+    nombre_sucursal: '',
+    api_url_central: ''
+  });
+  const [isCentral, setIsCentral] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
-  const loadStats = async () => {
+  const loadData = async () => {
     const stats = await databaseService.getDbStats();
     setDbStats(stats);
+    
+    const config = await sucursalService.getConfig();
+    if (config) setSucursal(config);
+
+    // Verificar si el servidor está corriendo (solo para saber si ocultar/mostrar opciones)
+    const running = await invoke<boolean>('is_server_running');
+    setIsCentral(running);
   };
 
   useEffect(() => {
-    loadStats();
+    loadData();
   }, []);
 
   const handleToggle = (key: keyof AppPreferences) => {
@@ -75,11 +93,74 @@ export function Configuracion() {
     }, 1000);
   };
 
+  const handleSucursalSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await sucursalService.saveConfig(sucursal);
+      notificationService.success('Sede Actualizada', 'Los datos de la sucursal se guardaron con éxito.');
+    } catch (error) {
+      notificationService.error('Error', 'No se pudo guardar la configuración de la sucursal.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTestConnection = async () => {
+    if (!sucursal.api_url_central) {
+      notificationService.error('Error', 'Ingresa una URL de central primero.');
+      return;
+    }
+    setTestingConnection(true);
+    try {
+      await sucursalService.testConnection(sucursal.api_url_central, sucursal.sucursal_id);
+      notificationService.success('Conexión Exitosa', 'La sede central está disponible y lista.');
+    } catch (error: any) {
+      notificationService.error('Conexión Fallida', error.message);
+    } finally {
+      setTestingConnection(false);
+    }
+  };
+
+
+  const handleSync = async () => {
+    if (isCentral) {
+      notificationService.info('Sede Principal', 'Las sedes principales no sincronizan productos de otros, solo los sirven.');
+      return;
+    }
+
+    setSyncing(true);
+    try {
+      notificationService.info('Sincronizando', 'Actualizando catálogo, usuarios y enviando ventas...');
+      
+      // 1. Enviar ventas pendientes
+      const { enviadas } = await syncService.pushSales();
+      
+      // 2. Enviar niveles de stock
+      await syncService.pushStockLevels();
+      
+      // 3. Descargar catálogo
+      const { creados: pCreados, actualizados: pActualizados } = await syncService.pullProducts();
+      
+      // 4. Descargar usuarios
+      const { creados: uCreados, actualizados: uActualizados } = await syncService.pullUsers();
+
+      notificationService.success(
+        'Sincronización Completa', 
+        `Se enviaron ${enviadas} ventas y el stock actual. Productos: +${pCreados}/~${pActualizados}. Usuarios: +${uCreados}/~${uActualizados}.`
+      );
+    } catch (error: any) {
+      notificationService.error('Error de Sincronización', error.message);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const handleOptimize = async () => {
     try {
       notificationService.info('Mantenimiento', 'Optimizando base de datos...');
       await databaseService.optimize();
-      await loadStats();
+      await loadData();
       notificationService.success('Completado', 'La base de datos ha sido optimizada.');
     } catch (error) {
       notificationService.error('Error', 'No se pudo optimizar la base de datos.');
@@ -120,6 +201,87 @@ export function Configuracion() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        
+        {/* Gestión de Sedes */}
+        <Section 
+          icon={Server} 
+          title="Sedes y Sincronización" 
+          description="Configura la identidad de esta sucursal y su conexión central."
+        >
+          <form onSubmit={handleSucursalSave} className="space-y-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">ID de Sede Único</label>
+                <input
+                  type="text"
+                  value={sucursal.sucursal_id}
+                  onChange={(e) => setSucursal({...sucursal, sucursal_id: e.target.value})}
+                  placeholder="Ej: SEDE-01"
+                  className="w-full px-4 py-2.5 text-sm font-medium border border-gray-100 dark:border-gray-700 rounded-2xl bg-gray-50/50 dark:bg-gray-900/50 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">Nombre de Sucursal</label>
+                <input
+                  type="text"
+                  value={sucursal.nombre_sucursal}
+                  onChange={(e) => setSucursal({...sucursal, nombre_sucursal: e.target.value})}
+                  placeholder="Ej: Sucursal Centro"
+                  className="w-full px-4 py-2.5 text-sm font-medium border border-gray-100 dark:border-gray-700 rounded-2xl bg-gray-50/50 dark:bg-gray-900/50 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">URL API Sede Central</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="url"
+                      value={sucursal.api_url_central}
+                      onChange={(e) => setSucursal({...sucursal, api_url_central: e.target.value})}
+                      placeholder="https://central.tu-negocio.com/api"
+                      className="flex-1 px-4 py-2.5 text-sm font-medium border border-gray-100 dark:border-gray-700 rounded-2xl bg-gray-50/50 dark:bg-gray-900/50 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                    />
+                    <button 
+                      type="button"
+                      onClick={handleTestConnection}
+                      disabled={testingConnection || isCentral}
+                      className="px-4 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-2xl hover:bg-indigo-100 transition-all disabled:opacity-50"
+                      title="Probar Conexión"
+                    >
+                      <RefreshCw size={18} className={testingConnection ? 'animate-spin' : ''} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Botón de Sincronización Manual */}
+              {!isCentral && (
+                <div className="sm:col-span-2">
+                  <button 
+                    type="button"
+                    onClick={handleSync}
+                    disabled={syncing || !sucursal.api_url_central}
+                    className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 text-sm font-bold rounded-2xl hover:bg-indigo-100 transition-all disabled:opacity-50 border border-indigo-100 dark:border-indigo-800"
+                  >
+                    <RefreshCw size={18} className={syncing ? 'animate-spin' : ''} />
+                    {syncing ? 'Sincronizando Catálogo...' : 'Sincronizar Productos desde Central'}
+                  </button>
+                  <p className="text-[10px] text-gray-400 mt-2 text-center italic">
+                    Descarga los últimos productos, categorías y precios de la sede central.
+                  </p>
+                </div>
+              )}
+            </div>
+            <button 
+              type="submit"
+              disabled={loading}
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-2xl transition-all shadow-lg shadow-indigo-200 dark:shadow-none disabled:opacity-50"
+            >
+              <Save size={18} />
+              {loading ? 'Guardando...' : 'Actualizar Datos de Sede'}
+            </button>
+          </form>
+        </Section>
         
         {/* Datos de la empresa */}
         <Section 

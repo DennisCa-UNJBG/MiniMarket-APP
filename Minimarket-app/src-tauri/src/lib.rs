@@ -1,7 +1,77 @@
-// Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
+mod api;
+
 use std::fs;
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Manager, State};
 use serde_json::json;
+use std::sync::Arc;
+use tokio::sync::Mutex;
+use axum::Router;
+use tower_http::cors::CorsLayer;
+use local_ip_address::local_ip;
+
+// Estado para controlar el servidor
+struct ServerState {
+    shutdown_tx: Mutex<Option<tokio::sync::oneshot::Sender<()>>>,
+    is_running: Mutex<bool>,
+}
+
+#[tauri::command]
+async fn get_local_ip() -> Result<String, String> {
+    local_ip()
+        .map(|ip| ip.to_string())
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn toggle_server(app_handle: AppHandle, state: State<'_, Arc<ServerState>>, active: bool) -> Result<bool, String> {
+    let mut is_running = state.is_running.lock().await;
+    let mut shutdown_tx = state.shutdown_tx.lock().await;
+
+    if active && !*is_running {
+        // Iniciar servidor
+        let (tx, rx) = tokio::sync::oneshot::channel::<()>();
+        *shutdown_tx = Some(tx);
+        *is_running = true;
+
+        let app_handle_clone = app_handle.clone();
+        
+        tokio::spawn(async move {
+            let app_dir = app_handle_clone.path().app_data_dir().unwrap();
+            let db_path = format!("sqlite:{}", app_dir.join("inventario.db").to_string_lossy());
+            
+            // Conexión a la DB para el servidor Axum
+            let pool = sqlx::SqlitePool::connect(&db_path).await.unwrap();
+
+            let app = api::create_router(pool)
+                .layer(CorsLayer::permissive());
+
+            let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await.unwrap();
+            
+            axum::serve(listener, app)
+                .with_graceful_shutdown(async {
+                    rx.await.ok();
+                })
+                .await
+                .unwrap();
+        });
+
+        Ok(true)
+    } else if !active && *is_running {
+        // Detener servidor
+        if let Some(tx) = shutdown_tx.take() {
+            let _ = tx.send(());
+        }
+        *is_running = false;
+        Ok(false)
+    } else {
+        Ok(*is_running)
+    }
+}
+
+#[tauri::command]
+async fn is_server_running(state: State<'_, Arc<ServerState>>) -> Result<bool, String> {
+    Ok(*state.is_running.lock().await)
+}
 
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -73,7 +143,6 @@ use tauri_plugin_sql::{Migration, MigrationKind};
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let migrations = vec![
-        // ... (tus migraciones existentes se mantienen igual)
         Migration {
             version: 1,
             description: "initial_schema",
@@ -122,18 +191,54 @@ pub fn run() {
             sql: "ALTER TABLE ventas ADD COLUMN monto_pagado REAL DEFAULT 0;
                   ALTER TABLE ventas ADD COLUMN vuelto REAL DEFAULT 0;",
             kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 6,
+            description: "multi_sede_support",
+            sql: "CREATE TABLE IF NOT EXISTS sucursales (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    codigo TEXT NOT NULL UNIQUE,
+                    nombre TEXT NOT NULL,
+                    direccion TEXT,
+                    ip_ultima_conexion TEXT,
+                    ultima_sincronizacion DATETIME,
+                    estado TEXT DEFAULT 'activo'
+                  );
+                  ALTER TABLE ventas ADD COLUMN sucursal_id TEXT;
+                  ALTER TABLE compras_ingresos ADD COLUMN sucursal_id TEXT;
+                  ALTER TABLE kardex ADD COLUMN sucursal_id TEXT;
+                  ALTER TABLE boletas ADD COLUMN sucursal_id TEXT;",
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 7,
+            description: "add_sucursal_to_users",
+            sql: "ALTER TABLE usuarios ADD COLUMN sucursal_id TEXT;",
+            kind: MigrationKind::Up,
         }
     ];
 
     tauri::Builder::default()
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_opener::init())
+        .manage(Arc::new(ServerState {
+            shutdown_tx: Mutex::new(None),
+            is_running: Mutex::new(false),
+        }))
         .plugin(
             tauri_plugin_sql::Builder::default()
                 .add_migrations("sqlite:inventario.db", migrations)
                 .build(),
         )
-        .invoke_handler(tauri::generate_handler![greet, get_db_stats, backup_database, reveal_in_explorer])
+        .invoke_handler(tauri::generate_handler![
+            greet, 
+            get_db_stats, 
+            backup_database, 
+            reveal_in_explorer,
+            get_local_ip,
+            toggle_server,
+            is_server_running
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
