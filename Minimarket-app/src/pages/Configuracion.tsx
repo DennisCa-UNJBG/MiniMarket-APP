@@ -3,6 +3,7 @@ import { Store, Database, Bell, Save, Shield } from 'lucide-react';
 import { Badge } from '../components/ui/Badge';
 import { notificationService } from '../lib/notifications';
 import { databaseService } from '../services/databaseService';
+import { preferenciasService, type AppPreferences } from '../services/preferenciasService';
 
 function Section({ icon: Icon, title, description, children }: { icon: React.ElementType; title: string; description: string; children: React.ReactNode }) {
   return (
@@ -42,6 +43,7 @@ function Field({ label, defaultValue, type = 'text', placeholder }: { label: str
 export function Configuracion() {
   const [loading, setLoading] = useState(false);
   const [dbStats, setDbStats] = useState<{ size: number; path: string }>({ size: 0, path: 'Cargando...' });
+  const [prefs, setPrefs] = useState<AppPreferences>(preferenciasService.get());
 
   const loadStats = async () => {
     const stats = await databaseService.getDbStats();
@@ -51,6 +53,18 @@ export function Configuracion() {
   useEffect(() => {
     loadStats();
   }, []);
+
+  const handleToggle = (key: keyof AppPreferences) => {
+    const updated = preferenciasService.toggle(key);
+    setPrefs(updated);
+  };
+
+  const handleUpdatePref = (key: keyof AppPreferences, value: any) => {
+    const current = preferenciasService.get();
+    const updated = { ...current, [key]: value };
+    preferenciasService.save(updated);
+    setPrefs(updated);
+  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -199,20 +213,48 @@ export function Configuracion() {
         >
           <div className="space-y-2">
             {[
-              { label: 'Alertas de Stock Crítico', desc: 'Notificar cuando un producto se agota.', active: true },
-              { label: 'Copia Automática', desc: 'Realizar respaldo al cerrar sesión.', active: false },
-              { label: 'Sonido en POS', desc: 'Activar sonido al escanear productos.', active: true },
-            ].map(({ label, desc, active }) => (
-              <div key={label} className="flex items-center justify-between py-3 border-b border-gray-50 dark:border-gray-700 last:border-0">
-                <div className="min-w-0 pr-4">
-                  <p className="text-sm font-bold text-gray-700 dark:text-gray-200 truncate">{label}</p>
-                  <p className="text-[10px] text-gray-400 dark:text-gray-500">{desc}</p>
+              { id: 'stockAlert', label: 'Alertas de Stock Crítico', desc: 'Notificar cuando un producto se agota.' },
+              { id: 'enableAutoLogout', label: 'Cierre de Sesión Automático', desc: 'Protege tu cuenta cerrando la sesión tras un periodo de inactividad (ratón, teclado o scroll).' },
+            ].map(({ id, label, desc }) => {
+              const active = prefs[id as keyof AppPreferences] as boolean;
+              return (
+                <div key={label} className="flex items-center justify-between py-3 border-b border-gray-50 dark:border-gray-700 last:border-0">
+                  <div className="min-w-0 pr-4">
+                    <p className="text-sm font-bold text-gray-700 dark:text-gray-200 truncate">{label}</p>
+                    <p className="text-[10px] text-gray-400 dark:text-gray-500">{desc}</p>
+                  </div>
+                  <button 
+                    onClick={() => handleToggle(id as keyof AppPreferences)}
+                    className={`w-10 h-5 rounded-full relative transition-colors ${active ? 'bg-indigo-500' : 'bg-gray-200 dark:bg-gray-700'}`}
+                  >
+                    <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-all ${active ? 'right-0.5' : 'left-0.5'}`} />
+                  </button>
                 </div>
-                <button className={`w-10 h-5 rounded-full relative transition-colors ${active ? 'bg-indigo-500' : 'bg-gray-200 dark:bg-gray-700'}`}>
-                  <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-all ${active ? 'right-0.5' : 'left-0.5'}`} />
-                </button>
+              );
+            })}
+
+            {/* Selector de minutos (Solo si está activo el cierre automático) */}
+            {prefs.enableAutoLogout && (
+              <div className="mt-4 p-4 bg-indigo-50/50 dark:bg-indigo-900/10 rounded-2xl border border-indigo-100/50 dark:border-indigo-900/20 animate-in zoom-in-95 duration-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-bold text-indigo-900 dark:text-indigo-300">Tiempo de Inactividad</p>
+                    <p className="text-[10px] text-indigo-700 dark:text-indigo-400">Minutos antes de desconectar</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input 
+                      type="number" 
+                      min="1" 
+                      max="1440"
+                      value={prefs.inactivityTimeout}
+                      onChange={(e) => handleUpdatePref('inactivityTimeout', parseInt(e.target.value) || 1)}
+                      className="w-16 px-2 py-1 text-center text-sm font-black bg-white dark:bg-gray-800 border border-indigo-200 dark:border-indigo-700 rounded-lg text-indigo-600 dark:text-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                    />
+                    <span className="text-xs font-bold text-indigo-400 uppercase tracking-widest">min</span>
+                  </div>
+                </div>
               </div>
-            ))}
+            )}
           </div>
         </Section>
 

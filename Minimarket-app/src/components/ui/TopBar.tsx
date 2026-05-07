@@ -1,8 +1,11 @@
-import { useLocation } from 'react-router-dom';
-import { Bell, User, LogOut } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { useLocation, Link } from 'react-router-dom';
+import { Bell, User, LogOut, AlertTriangle, Package } from 'lucide-react';
 import { mainNavItems, bottomNavItems } from '../../config/navigation';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button } from './Button';
+import { alertaService, type StockAlerta } from '../../services/alertaService';
+import { preferenciasService } from '../../services/preferenciasService';
 
 /** Obtiene el título de la página según la ruta activa */
 function usePageTitle(): string {
@@ -17,6 +20,37 @@ function usePageTitle(): string {
 export function TopBar() {
   const pageTitle = usePageTitle();
   const { user, logout } = useAuth();
+  const [alerts, setAlerts] = useState<StockAlerta[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const loadAlerts = async () => {
+    const prefs = preferenciasService.get();
+    if (prefs.stockAlert) {
+      const data = await alertaService.getLowStockAlerts();
+      setAlerts(data);
+    } else {
+      setAlerts([]);
+    }
+  };
+
+  useEffect(() => {
+    loadAlerts();
+    // Actualizar cada 5 minutos
+    const interval = setInterval(loadAlerts, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Cerrar dropdown al hacer clic fuera
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   return (
     <header className="h-14 flex-shrink-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-6">
@@ -28,15 +62,87 @@ export function TopBar() {
       {/* Acciones del lado derecho */}
       <div className="flex items-center gap-4">
         {/* Notificaciones */}
-        <button
-          id="notifications-btn"
-          aria-label="Notificaciones"
-          className="relative p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-        >
-          <Bell size={18} />
-          {/* Badge */}
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-indigo-500 rounded-full" />
-        </button>
+        <div className="relative" ref={dropdownRef}>
+          <button
+            id="notifications-btn"
+            aria-label="Notificaciones"
+            onClick={() => setShowDropdown(!showDropdown)}
+            className={`relative p-2 rounded-xl transition-all ${
+              showDropdown 
+                ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600' 
+                : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+            }`}
+          >
+            <Bell size={20} />
+            {alerts.length > 0 && (
+              <span className="absolute top-1 right-1 flex h-4 w-4">
+                <span className="relative inline-flex rounded-full h-4 w-4 bg-red-500 text-[9px] font-bold text-white items-center justify-center">
+                  {alerts.length}
+                </span>
+              </span>
+            )}
+          </button>
+
+          {/* Panel de Notificaciones Dropdown */}
+          {showDropdown && (
+            <div className="absolute right-0 mt-3 w-80 bg-white dark:bg-gray-800 rounded-3xl shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden z-50 animate-in slide-in-from-top-2 duration-200">
+              <div className="p-4 border-b border-gray-50 dark:border-gray-700/50 bg-gray-50/50 dark:bg-gray-800/50 flex items-center justify-between">
+                <h3 className="text-sm font-black text-gray-800 dark:text-white tracking-tight">Alertas de Inventario</h3>
+                <span className="text-[10px] font-bold px-2 py-0.5 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 rounded-full">
+                  {alerts.length} pendientes
+                </span>
+              </div>
+              
+              <div className="max-h-96 overflow-y-auto">
+                {alerts.length > 0 ? (
+                  <div className="divide-y divide-gray-50 dark:divide-gray-700/50">
+                    {alerts.map((alerta) => (
+                      <Link
+                        key={alerta.id}
+                        to="/inventario"
+                        onClick={() => setShowDropdown(false)}
+                        className="flex items-start gap-3 p-4 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors"
+                      >
+                        <div className="p-2 bg-amber-50 dark:bg-amber-900/20 rounded-xl text-amber-600 dark:text-amber-400 flex-shrink-0">
+                          <AlertTriangle size={16} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-bold text-gray-800 dark:text-gray-100 truncate">
+                            {alerta.nombre}
+                          </p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-[10px] font-medium text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-1.5 py-0.5 rounded-lg">
+                              Stock: {alerta.stock_actual}
+                            </span>
+                            <span className="text-[10px] text-gray-400 dark:text-gray-500">
+                              Mínimo: {alerta.stock_minimo}
+                            </span>
+                          </div>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-10 text-center">
+                    <div className="w-12 h-12 bg-gray-50 dark:bg-gray-700/50 rounded-2xl flex items-center justify-center mx-auto mb-3 text-gray-300 dark:text-gray-600">
+                      <Package size={24} />
+                    </div>
+                    <p className="text-sm font-bold text-gray-400 dark:text-gray-500">Todo en orden</p>
+                    <p className="text-[10px] text-gray-300 dark:text-gray-600 mt-1">No hay productos con stock bajo.</p>
+                  </div>
+                )}
+              </div>
+              
+              <Link 
+                to="/inventario" 
+                onClick={() => setShowDropdown(false)}
+                className="block p-4 text-center text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 border-t border-gray-50 dark:border-gray-700/50 transition-colors"
+              >
+                Ver todo el inventario
+              </Link>
+            </div>
+          )}
+        </div>
 
         {/* Info Usuario y Logout */}
         <div className="flex items-center gap-3 pl-4 border-l border-gray-100 dark:border-gray-700">

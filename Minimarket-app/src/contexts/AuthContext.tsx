@@ -1,5 +1,7 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import type { UserData } from '../services/authService';
+import { preferenciasService } from '../services/preferenciasService';
+import { notificationService } from '../lib/notifications';
 
 interface AuthContextType {
   user: UserData | null;
@@ -16,7 +18,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Intentar recuperar el usuario del localStorage al cargar la app
     const savedUser = localStorage.getItem('user');
     if (savedUser) {
       try {
@@ -28,6 +29,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     setIsLoading(false);
   }, []);
+
+  // Lógica de Cierre de Sesión Automático por Inactividad
+  useEffect(() => {
+    if (!user) return;
+
+    const prefs = preferenciasService.get();
+    if (!prefs.enableAutoLogout) return;
+
+    let timeoutId: number;
+
+    const resetTimer = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      
+      // Convertir minutos a milisegundos
+      const ms = prefs.inactivityTimeout * 60 * 1000;
+      
+      timeoutId = window.setTimeout(() => {
+        logout();
+        notificationService.info('Seguridad', 'Tu sesión se ha cerrado por inactividad.');
+      }, ms);
+    };
+
+    // Eventos que reinician el temporizador
+    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
+    
+    events.forEach(event => {
+      document.addEventListener(event, resetTimer);
+    });
+
+    // Iniciar el primer temporizador
+    resetTimer();
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      events.forEach(event => {
+        document.removeEventListener(event, resetTimer);
+      });
+    };
+  }, [user]);
 
   const login = (userData: UserData) => {
     setUser(userData);
