@@ -55,6 +55,7 @@ export function Configuracion() {
   });
   const [isCentral, setIsCentral] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
   const loadData = async () => {
     const stats = await databaseService.getDbStats();
@@ -98,25 +99,28 @@ export function Configuracion() {
     setLoading(true);
     try {
       await sucursalService.saveConfig(sucursal);
-      notificationService.success('Sede Actualizada', 'Los datos de la sucursal se guardaron con éxito.');
+      notificationService.success('Configuración de Sede Guardada', 'La identidad y conexión se actualizaron correctamente.');
+      loadData();
     } catch (error) {
-      notificationService.error('Error', 'No se pudo guardar la configuración de la sucursal.');
+      notificationService.error('Error', 'No se pudo guardar la configuración.');
     } finally {
       setLoading(false);
     }
   };
 
   const handleTestConnection = async () => {
-    if (!sucursal.api_url_central) {
-      notificationService.error('Error', 'Ingresa una URL de central primero.');
+    if (!sucursal.api_url_central || !sucursal.sucursal_id) {
+      notificationService.error('Configuración Incompleta', 'Ingresa el ID de Sede y la URL de la central.');
       return;
     }
     setTestingConnection(true);
     try {
       await sucursalService.testConnection(sucursal.api_url_central, sucursal.sucursal_id);
       notificationService.success('Conexión Exitosa', 'La sede central está disponible y lista.');
+      setConnectionStatus('success');
     } catch (error: any) {
       notificationService.error('Conexión Fallida', error.message);
+      setConnectionStatus('error');
     } finally {
       setTestingConnection(false);
     }
@@ -232,27 +236,42 @@ export function Configuracion() {
                 />
               </div>
               <div className="sm:col-span-2">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">URL API Sede Central</label>
-                  <div className="flex gap-2">
-                    <input
-                      type="url"
-                      value={sucursal.api_url_central}
-                      onChange={(e) => setSucursal({...sucursal, api_url_central: e.target.value})}
-                      placeholder="https://central.tu-negocio.com/api"
-                      className="flex-1 px-4 py-2.5 text-sm font-medium border border-gray-100 dark:border-gray-700 rounded-2xl bg-gray-50/50 dark:bg-gray-900/50 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
-                    />
-                    <button 
-                      type="button"
-                      onClick={handleTestConnection}
-                      disabled={testingConnection || isCentral}
-                      className="px-4 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-2xl hover:bg-indigo-100 transition-all disabled:opacity-50"
-                      title="Probar Conexión"
-                    >
-                      <RefreshCw size={18} className={testingConnection ? 'animate-spin' : ''} />
-                    </button>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">URL API Sede Central</label>
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <input
+                          type="url"
+                          value={sucursal.api_url_central}
+                          onChange={(e) => {
+                            setSucursal({...sucursal, api_url_central: e.target.value});
+                            setConnectionStatus('idle');
+                          }}
+                          placeholder="https://central.tu-negocio.com/api"
+                          className="w-full px-4 py-2.5 text-sm font-medium border border-gray-100 dark:border-gray-700 rounded-2xl bg-gray-50/50 dark:bg-gray-900/50 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                        />
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+                          {connectionStatus === 'success' && <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />}
+                          {connectionStatus === 'error' && <div className="w-2 h-2 rounded-full bg-red-500" />}
+                        </div>
+                      </div>
+                      <button 
+                        type="button"
+                        onClick={handleTestConnection}
+                        disabled={testingConnection || isCentral}
+                        className={`px-4 rounded-2xl transition-all disabled:opacity-50 border ${
+                          connectionStatus === 'success' 
+                            ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-800'
+                            : connectionStatus === 'error'
+                            ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-100 dark:border-red-800'
+                            : 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 border-indigo-100 dark:border-indigo-800'
+                        }`}
+                        title="Probar Conexión"
+                      >
+                        <RefreshCw size={18} className={testingConnection ? 'animate-spin' : ''} />
+                      </button>
+                    </div>
                   </div>
-                </div>
               </div>
 
               {/* Botón de Sincronización Manual */}
@@ -265,11 +284,18 @@ export function Configuracion() {
                     className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 text-sm font-bold rounded-2xl hover:bg-indigo-100 transition-all disabled:opacity-50 border border-indigo-100 dark:border-indigo-800"
                   >
                     <RefreshCw size={18} className={syncing ? 'animate-spin' : ''} />
-                    {syncing ? 'Sincronizando Catálogo...' : 'Sincronizar Productos desde Central'}
+                    {syncing ? 'Sincronizando...' : 'Sincronizar con Sede Central'}
                   </button>
-                  <p className="text-[10px] text-gray-400 mt-2 text-center italic">
-                    Descarga los últimos productos, categorías y precios de la sede central.
-                  </p>
+                  <div className="flex justify-between items-center mt-2 px-1">
+                    <p className="text-[10px] text-gray-400 italic">
+                      Descarga productos, usuarios y envía ventas.
+                    </p>
+                    {sucursal.ultima_sincronizacion && (
+                      <p className="text-[9px] font-bold text-indigo-400 uppercase tracking-tighter">
+                        Última: {new Date(sucursal.ultima_sincronizacion).toLocaleString()}
+                      </p>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
@@ -279,7 +305,7 @@ export function Configuracion() {
               className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-2xl transition-all shadow-lg shadow-indigo-200 dark:shadow-none disabled:opacity-50"
             >
               <Save size={18} />
-              {loading ? 'Guardando...' : 'Actualizar Datos de Sede'}
+              {loading ? 'Guardando...' : 'Guardar Identidad de Sede'}
             </button>
           </form>
         </Section>

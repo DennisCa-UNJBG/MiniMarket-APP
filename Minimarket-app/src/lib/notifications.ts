@@ -68,4 +68,24 @@ export const notificationService = {
       customClass: { popup: 'rounded-2xl' },
     });
   },
+
+  async confirm(title: string, text: string): Promise<boolean> {
+    const result = await Swal.fire({
+      title,
+      text,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, continuar',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#4f46e5',
+      cancelButtonColor: '#9ca3af',
+      ...getSwalTheme(),
+      customClass: {
+        popup: 'rounded-3xl',
+        confirmButton: 'px-6 py-2.5 rounded-xl font-bold',
+        cancelButton: 'px-6 py-2.5 rounded-xl font-bold'
+      },
+    });
+    return result.isConfirmed;
+  }
 };

@@ -5,6 +5,7 @@ export interface SucursalConfig {
   sucursal_id: string;
   nombre_sucursal: string;
   api_url_central: string;
+  ultima_sincronizacion?: string;
 }
 
 export const sucursalService = {
@@ -121,15 +122,15 @@ export const sucursalService = {
   },
 
   /**
-   * Elimina una sucursal
+   * Cambia el estado de una sucursal (activo/inactivo)
    */
-  async delete(id: number) {
+  async toggleEstado(id: number, nuevoEstado: 'activo' | 'inactivo') {
     try {
       const db = await getDb();
-      await db.execute('DELETE FROM sucursales WHERE id = $1', [id]);
+      await db.execute('UPDATE sucursales SET estado = $1 WHERE id = $2', [nuevoEstado, id]);
       return true;
     } catch (error) {
-      console.error('Error al eliminar sucursal:', error);
+      console.error('Error al cambiar estado de sucursal:', error);
       throw error;
     }
   }
