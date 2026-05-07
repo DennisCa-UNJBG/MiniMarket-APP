@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { Store, Database, Bell, Save, Shield, Server, RefreshCw } from 'lucide-react';
+import { Store, Database, Bell, Save, Shield, Server, RefreshCw, Eye, EyeOff } from 'lucide-react';
 import { Badge } from '../components/ui/Badge';
 import { notificationService } from '../lib/notifications';
 import { databaseService } from '../services/databaseService';
@@ -8,6 +8,8 @@ import { preferenciasService, type AppPreferences } from '../services/preferenci
 import { sucursalService, type SucursalConfig } from '../services/sucursalService';
 import { syncService } from '../services/syncService';
 import { negocioService, type DatosNegocio } from '../services/negocioService';
+import { useAuth } from '../contexts/AuthContext';
+import { authService } from '../services/authService';
 
 function Section({ icon: Icon, title, description, children }: { icon: React.ElementType; title: string; description: string; children: React.ReactNode }) {
   return (
@@ -31,21 +33,38 @@ function Section({ icon: Icon, title, description, children }: { icon: React.Ele
 }
 
 function Field({ label, value, onChange, type = 'text', placeholder }: { label: string; value: string; onChange: (val: string) => void; type?: string; placeholder?: string }) {
+  const [showPassword, setShowPassword] = useState(false);
+  const isPassword = type === 'password';
+  const inputType = isPassword ? (showPassword ? 'text' : 'password') : type;
+
   return (
     <div className="flex flex-col gap-1.5">
       <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">{label}</label>
-      <input
-        type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="w-full px-4 py-2.5 text-sm font-medium border border-gray-100 dark:border-gray-700 rounded-2xl bg-gray-50/50 dark:bg-gray-900/50 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
-      />
+      <div className="relative">
+        <input
+          type={inputType}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          className={`w-full px-4 py-2.5 text-sm font-medium border border-gray-100 dark:border-gray-700 rounded-2xl bg-gray-50/50 dark:bg-gray-900/50 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all ${isPassword ? 'pr-11' : ''}`}
+        />
+        {isPassword && (
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors"
+            title={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+          >
+            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+          </button>
+        )}
+      </div>
     </div>
   );
 }
 
 export function Configuracion() {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [testingConnection, setTestingConnection] = useState(false);
   const [dbStats, setDbStats] = useState<{ size: number; path: string }>({ size: 0, path: 'Cargando...' });
@@ -66,11 +85,10 @@ export function Configuracion() {
   const [syncing, setSyncing] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
-  // Estado para la sección de seguridad (temporal, no persistido aquí por ahora)
+  // Estado para la sección de seguridad
   const [securityData, setSecurityData] = useState({
-    username: 'admin',
-    currentPassword: '',
-    newPassword: ''
+    newPassword: '',
+    confirmPassword: ''
   });
 
   const loadData = async () => {
@@ -174,6 +192,37 @@ export function Configuracion() {
       notificationService.error('Error de Sincronización', error.message);
     } finally {
       setSyncing(false);
+    }
+  };
+
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+
+    if (!securityData.newPassword) {
+      notificationService.warning('Campo Incompleto', 'Debes ingresar la nueva contraseña.');
+      return;
+    }
+
+    if (securityData.newPassword !== securityData.confirmPassword) {
+      notificationService.error('Error', 'Las nuevas contraseñas no coinciden.');
+      return;
+    }
+
+    if (securityData.newPassword.length < 4) {
+      notificationService.warning('Contraseña muy corta', 'La nueva contraseña debe tener al menos 4 caracteres.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await authService.updatePassword(user.id, securityData.newPassword);
+      notificationService.success('Contraseña Actualizada', 'Tu acceso ha sido actualizado correctamente.');
+      setSecurityData({ newPassword: '', confirmPassword: '' });
+    } catch (error: any) {
+      notificationService.error('Error', error.message || 'No se pudo actualizar la contraseña.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -350,20 +399,29 @@ export function Configuracion() {
           title="Seguridad y Acceso" 
           description="Gestiona tus credenciales de administrador."
         >
-          <div className="space-y-5">
+          <form onSubmit={handleUpdatePassword} className="space-y-5">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field label="Usuario" value={securityData.username} onChange={val => setSecurityData({...securityData, username: val})} />
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">Usuario</label>
+                <input disabled value={user?.username || 'admin'} className="w-full px-4 py-2.5 text-sm font-medium border border-gray-100 dark:border-gray-700 rounded-2xl bg-gray-100 dark:bg-gray-800 text-gray-500 cursor-not-allowed" />
+              </div>
               <div className="flex flex-col gap-1.5">
                 <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">Rol del Sistema</label>
-                <input disabled value="Administrador" className="w-full px-4 py-2.5 text-sm font-medium border border-gray-100 dark:border-gray-700 rounded-2xl bg-gray-100 dark:bg-gray-800 text-gray-500 cursor-not-allowed" />
+                <input disabled value={user?.rol_id === 1 ? 'Administrador' : 'Cajero'} className="w-full px-4 py-2.5 text-sm font-medium border border-gray-100 dark:border-gray-700 rounded-2xl bg-gray-100 dark:bg-gray-800 text-gray-500 cursor-not-allowed" />
               </div>
-              <Field label="Contraseña Actual" value={securityData.currentPassword} onChange={val => setSecurityData({...securityData, currentPassword: val})} type="password" />
-              <Field label="Nueva Contraseña" value={securityData.newPassword} onChange={val => setSecurityData({...securityData, newPassword: val})} type="password" placeholder="Mínimo 8 caracteres" />
+              <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Field label="Nueva Contraseña" value={securityData.newPassword} onChange={val => setSecurityData({...securityData, newPassword: val})} type="password" placeholder="Nueva clave" />
+                <Field label="Confirmar Nueva" value={securityData.confirmPassword} onChange={val => setSecurityData({...securityData, confirmPassword: val})} type="password" placeholder="Repite clave" />
+              </div>
             </div>
-            <button className="w-full sm:w-auto px-6 py-2.5 bg-gray-800 dark:bg-gray-700 hover:bg-gray-900 text-white text-sm font-bold rounded-2xl transition-all">
-              Actualizar Credenciales
+            <button 
+              type="submit"
+              disabled={loading}
+              className="w-full sm:w-auto px-6 py-2.5 bg-gray-800 dark:bg-gray-700 hover:bg-gray-900 text-white text-sm font-bold rounded-2xl transition-all disabled:opacity-50"
+            >
+              {loading ? 'Actualizando...' : 'Actualizar Credenciales'}
             </button>
-          </div>
+          </form>
         </Section>
 
         {/* Base de Datos */}

@@ -63,6 +63,22 @@ export const authService = {
       };
     }
 
+
     throw new AuthError();
+  },
+
+  /**
+   * Actualiza la contraseña del usuario de forma directa
+   */
+  async updatePassword(userId: number, newPasswordPlain: string): Promise<boolean> {
+    try {
+      const db = await getDb();
+      const newHash = await this.hashPassword(newPasswordPlain);
+      await db.execute("UPDATE usuarios SET password_hash = $1 WHERE id = $2", [newHash, userId]);
+      return true;
+    } catch (error) {
+      console.error('Error al actualizar contraseña:', error);
+      throw error;
+    }
   }
 };
