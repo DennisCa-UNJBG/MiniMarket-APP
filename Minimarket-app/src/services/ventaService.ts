@@ -1,5 +1,6 @@
 import { getDb } from '../lib/db';
 import { withDb } from '../lib/withDb';
+import { sucursalService } from './sucursalService';
 
 export interface VentaItem {
   producto_id: number;
@@ -29,10 +30,14 @@ export const ventaService = {
     return withDb(async () => {
       const db = await getDb();
       
-      // 1. Insertar Cabecera
+      // 1. Obtener ID de sucursal local
+      const config = await sucursalService.getConfig();
+      const sucursalId = config?.sucursal_id || 'LOCAL';
+
+      // 2. Insertar Cabecera
       const resVenta = await db.execute(
-        `INSERT INTO ventas (usuario_id, total, metodo_pago, monto_pagado, vuelto) VALUES (?, ?, ?, ?, ?)`,
-        [venta.usuario_id, venta.total, venta.metodo_pago, venta.monto_pagado, venta.vuelto]
+        `INSERT INTO ventas (usuario_id, total, metodo_pago, monto_pagado, vuelto, sucursal_id) VALUES (?, ?, ?, ?, ?, ?)`,
+        [venta.usuario_id, venta.total, venta.metodo_pago, venta.monto_pagado, venta.vuelto, sucursalId]
       );
       
       const ventaId = resVenta.lastInsertId as number;
@@ -81,6 +86,9 @@ export const ventaService = {
   async getVentas(limit = 50): Promise<any[]> {
     return withDb(async () => {
       const db = await getDb();
+      const config = await sucursalService.getConfig();
+      const sucursalId = config?.sucursal_id || 'LOCAL';
+
       return db.select(`
         SELECT 
           v.*, 
@@ -88,9 +96,10 @@ export const ventaService = {
           (SELECT COUNT(*) FROM ventas_detalle WHERE venta_id = v.id) as items_count
         FROM ventas v
         JOIN usuarios u ON v.usuario_id = u.id
+        WHERE v.sucursal_id = ? OR v.sucursal_id IS NULL
         ORDER BY v.fecha DESC
         LIMIT ?
-      `, [limit]);
+      `, [sucursalId, limit]);
     });
   },
 
@@ -115,13 +124,17 @@ export const ventaService = {
   async getResumenHoy(): Promise<{ total: number, count: number }> {
     return withDb(async () => {
       const db = await getDb();
+      const config = await sucursalService.getConfig();
+      const sucursalId = config?.sucursal_id || 'LOCAL';
+
       const result = await db.select<any[]>(`
         SELECT 
           COALESCE(SUM(total), 0) as total,
           COUNT(*) as count
         FROM ventas
         WHERE date(fecha, 'localtime') = date('now', 'localtime')
-      `);
+        AND (sucursal_id = ? OR sucursal_id IS NULL)
+      `, [sucursalId]);
       return result[0];
     });
   }

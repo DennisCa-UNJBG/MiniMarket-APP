@@ -34,3 +34,21 @@ pub struct SyncPayloadDto {
     pub sucursal_id: String,
     pub ventas: Vec<VentaSyncDto>,
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct KardexSyncDto {
+    pub producto_codigo_barras: String,
+    pub usuario_id: i32,
+    pub fecha: String,
+    pub tipo_movimiento: String,
+    pub cantidad: f64,
+    pub saldo_posterior: f64,
+    pub costo_unitario: f64,
+    pub referencia: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct KardexPayloadDto {
+    pub sucursal_id: String,
+    pub movimientos: Vec<KardexSyncDto>,
+}

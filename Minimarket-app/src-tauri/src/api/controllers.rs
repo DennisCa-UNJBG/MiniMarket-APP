@@ -5,7 +5,7 @@ use axum::{
 };
 use serde_json::{json, Value};
 use sqlx::SqlitePool;
-use crate::api::dtos::{SyncPayloadDto, StockPayloadDto};
+use crate::api::dtos::{SyncPayloadDto, StockPayloadDto, KardexPayloadDto};
 
 pub async fn get_productos(
     headers: HeaderMap,
@@ -184,10 +184,71 @@ pub async fn update_stock(
         return (StatusCode::FORBIDDEN, Json(json!({ "error": "Llave no coincide" })));
     }
 
+    // 1. Persistir el stock de cada producto reportado
+    for item in payload.inventario {
+        let _ = sqlx::query(
+            "INSERT INTO sucursales_stock (sucursal_id, codigo_barras, stock, ultima_actualizacion) 
+             VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+             ON CONFLICT(sucursal_id, codigo_barras) DO UPDATE SET 
+                stock = excluded.stock, 
+                ultima_actualizacion = CURRENT_TIMESTAMP"
+        )
+        .bind(&payload.sucursal_id)
+        .bind(&item.codigo_barras)
+        .bind(item.stock_actual)
+        .execute(&pool)
+        .await;
+    }
+
+    // 2. Actualizar metadatos de la sucursal
     let _ = sqlx::query("UPDATE sucursales SET ultima_sincronizacion = CURRENT_TIMESTAMP WHERE codigo = ?")
         .bind(&payload.sucursal_id)
         .execute(&pool)
         .await;
 
     (StatusCode::OK, Json(json!({ "status": "ok" })))
+}
+
+pub async fn sincronizar_kardex(
+    headers: HeaderMap,
+    State(pool): State<SqlitePool>,
+    Json(payload): Json<KardexPayloadDto>,
+) -> (StatusCode, Json<Value>) {
+    let auth_key = headers.get("X-Sucursal-Key").and_then(|h| h.to_str().ok()).unwrap_or("");
+    if auth_key != payload.sucursal_id {
+        return (StatusCode::FORBIDDEN, Json(json!({ "error": "Llave no coincide" })));
+    }
+
+    let mut procesados = 0;
+    for m in payload.movimientos {
+        // Buscar producto por código de barras
+        let prod = sqlx::query("SELECT id FROM productos WHERE codigo_barras = ?")
+            .bind(&m.producto_codigo_barras)
+            .fetch_optional(&pool)
+            .await
+            .unwrap();
+
+        if let Some(p_row) = prod {
+            use sqlx::Row;
+            let p_id: i32 = p_row.get("id");
+            let _ = sqlx::query(
+                "INSERT INTO kardex (producto_id, usuario_id, fecha, tipo_movimiento, cantidad, saldo_posterior, costo_unitario, referencia, sucursal_id, sincronizado) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)"
+            )
+            .bind(p_id)
+            .bind(m.usuario_id)
+            .bind(&m.fecha)
+            .bind(&m.tipo_movimiento)
+            .bind(m.cantidad)
+            .bind(m.saldo_posterior)
+            .bind(m.costo_unitario)
+            .bind(&m.referencia)
+            .bind(&payload.sucursal_id)
+            .execute(&pool)
+            .await;
+            procesados += 1;
+        }
+    }
+
+    (StatusCode::OK, Json(json!({ "status": "ok", "procesados": procesados })))
 }

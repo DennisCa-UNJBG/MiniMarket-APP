@@ -1,5 +1,6 @@
 import { getDb } from '../lib/db';
 import { withDb } from '../lib/withDb';
+import { sucursalService } from './sucursalService';
 
 export interface InventarioIngreso {
   id?: number;
@@ -33,11 +34,14 @@ export const inventarioService = {
       
       const totalCompra = compra.items.reduce((acc, item) => acc + (item.cantidad * item.costo_unitario), 0);
 
+      const config = await sucursalService.getConfig();
+      const sucursalId = config?.sucursal_id || 'LOCAL';
+
       // 1. Insertar Cabecera de Compra
       const resCabecera = await db.execute(
-        `INSERT INTO compras_ingresos (usuario_id, documento_referencia, total) 
-         VALUES (?, ?, ?)`,
-        [compra.usuario_id, compra.documento_referencia, totalCompra]
+        `INSERT INTO compras_ingresos (usuario_id, documento_referencia, total, sucursal_id) 
+         VALUES (?, ?, ?, ?)`,
+        [compra.usuario_id, compra.documento_referencia, totalCompra, sucursalId]
       );
       
       const compraId = resCabecera.lastInsertId;
@@ -58,9 +62,9 @@ export const inventarioService = {
 
         // C. Registrar en Kardex
         await db.execute(
-          `INSERT INTO kardex (producto_id, usuario_id, tipo_movimiento, cantidad, saldo_posterior, costo_unitario, referencia) 
-           VALUES (?, ?, 'INGRESO', ?, ?, ?, ?)`,
-          [item.producto_id, compra.usuario_id, item.cantidad, nuevoStock, item.costo_unitario, compra.documento_referencia || `COMPRA #${compraId}`]
+          `INSERT INTO kardex (producto_id, usuario_id, tipo_movimiento, cantidad, saldo_posterior, costo_unitario, referencia, sucursal_id) 
+           VALUES (?, ?, 'INGRESO', ?, ?, ?, ?, ?)`,
+          [item.producto_id, compra.usuario_id, item.cantidad, nuevoStock, item.costo_unitario, compra.documento_referencia || `COMPRA #${compraId}`, sucursalId]
         );
 
         // D. Actualizar Stock en tabla Productos
@@ -90,14 +94,18 @@ export const inventarioService = {
   async getMovimientos(limit = 50): Promise<any[]> {
     return withDb(async () => {
       const db = await getDb();
+      const config = await sucursalService.getConfig();
+      const sucursalId = config?.sucursal_id || 'LOCAL';
+
       return db.select(`
         SELECT k.*, p.nombre as producto_nombre, u.nombre_completo as usuario_nombre
         FROM kardex k
         JOIN productos p ON k.producto_id = p.id
         JOIN usuarios u ON k.usuario_id = u.id
+        WHERE k.sucursal_id = ? OR k.sucursal_id IS NULL
         ORDER BY k.fecha DESC
         LIMIT ?
-      `, [limit]);
+      `, [sucursalId, limit]);
     });
   },
 
@@ -107,14 +115,17 @@ export const inventarioService = {
   async getMovimientosPorProducto(productoId: number): Promise<any[]> {
     return withDb(async () => {
       const db = await getDb();
+      const config = await sucursalService.getConfig();
+      const sucursalId = config?.sucursal_id || 'LOCAL';
+
       return db.select(`
         SELECT k.*, p.nombre as producto_nombre, u.nombre_completo as usuario_nombre
         FROM kardex k
         JOIN productos p ON k.producto_id = p.id
         JOIN usuarios u ON k.usuario_id = u.id
-        WHERE k.producto_id = ?
+        WHERE k.producto_id = ? AND (k.sucursal_id = ? OR k.sucursal_id IS NULL)
         ORDER BY k.fecha DESC
-      `, [productoId]);
+      `, [productoId, sucursalId]);
     });
   },
 
@@ -124,14 +135,18 @@ export const inventarioService = {
   async getMovimientosDia(): Promise<any[]> {
     return withDb(async () => {
       const db = await getDb();
+      const config = await sucursalService.getConfig();
+      const sucursalId = config?.sucursal_id || 'LOCAL';
+
       return db.select(`
         SELECT k.*, p.nombre as producto_nombre, u.nombre_completo as usuario_nombre
         FROM kardex k
         JOIN productos p ON k.producto_id = p.id
         JOIN usuarios u ON k.usuario_id = u.id
         WHERE date(k.fecha, 'localtime') = date('now', 'localtime')
+        AND (k.sucursal_id = ? OR k.sucursal_id IS NULL)
         ORDER BY k.fecha DESC
-      `);
+      `, [sucursalId]);
     });
   },
 
@@ -177,13 +192,17 @@ export const inventarioService = {
   async getCompras(limit = 50): Promise<any[]> {
     return withDb(async () => {
       const db = await getDb();
+      const config = await sucursalService.getConfig();
+      const sucursalId = config?.sucursal_id || 'LOCAL';
+
       return db.select(`
         SELECT c.*, u.nombre_completo as usuario_nombre
         FROM compras_ingresos c
         JOIN usuarios u ON c.usuario_id = u.id
+        WHERE c.sucursal_id = ? OR c.sucursal_id IS NULL
         ORDER BY c.fecha DESC
         LIMIT ?
-      `, [limit]);
+      `, [sucursalId, limit]);
     });
   },
 

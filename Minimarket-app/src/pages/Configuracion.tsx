@@ -133,8 +133,9 @@ export function Configuracion() {
     try {
       notificationService.info('Sincronizando', 'Actualizando catálogo, usuarios y enviando ventas...');
       
-      // 1. Enviar ventas pendientes
-      const { enviadas } = await syncService.pushSales();
+      // 1. Enviar ventas y movimientos
+      const { enviadas: vEnviadas } = await syncService.pushSales();
+      const { enviadas: kEnviadas } = await syncService.pushKardex();
       
       // 2. Enviar niveles de stock
       await syncService.pushStockLevels();
@@ -147,7 +148,7 @@ export function Configuracion() {
 
       notificationService.success(
         'Sincronización Completa', 
-        `Se enviaron ${enviadas} ventas y el stock actual. Productos: +${pCreados}/~${pActualizados}. Usuarios: +${uCreados}/~${uActualizados}.`
+        `Enviado: ${vEnviadas} ventas y ${kEnviadas} mov. Catálogo: +${pCreados}/~${pActualizados}. Usuarios: +${uCreados}/~${uActualizados}.`
       );
     } catch (error: any) {
       notificationService.error('Error de Sincronización', error.message);

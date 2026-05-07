@@ -5,7 +5,7 @@ use tauri::{AppHandle, Manager, State};
 use serde_json::json;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use axum::Router;
+// use axum::Router; // Eliminado por ser innecesario tras la refactorización
 use tower_http::cors::CorsLayer;
 use local_ip_address::local_ip;
 
@@ -214,6 +214,19 @@ pub fn run() {
             version: 7,
             description: "add_sucursal_to_users",
             sql: "ALTER TABLE usuarios ADD COLUMN sucursal_id TEXT;",
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 8,
+            description: "add_sucursales_stock_table",
+            sql: "CREATE TABLE IF NOT EXISTS sucursales_stock (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    sucursal_id TEXT NOT NULL,
+                    codigo_barras TEXT NOT NULL,
+                    stock REAL NOT NULL,
+                    ultima_actualizacion DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(sucursal_id, codigo_barras)
+                  );",
             kind: MigrationKind::Up,
         }
     ];

@@ -230,5 +230,58 @@ export const syncService = {
     }
 
     return { total: inventario.length };
+  },
+
+  /**
+   * Envía los movimientos de kardex locales no sincronizados a la central
+   */
+  async pushKardex() {
+    const config = await sucursalService.getConfig();
+    if (!config || !config.api_url_central || !config.sucursal_id) {
+      throw new Error('Configuración de sucursal incompleta');
+    }
+
+    const db = await getDb();
+    const movimientos = await db.select<any[]>(
+      `SELECT k.*, p.codigo_barras as producto_codigo_barras 
+       FROM kardex k 
+       JOIN productos p ON k.producto_id = p.id 
+       WHERE k.sincronizado = 0`
+    );
+
+    if (movimientos.length === 0) return { enviadas: 0 };
+
+    const response = await fetch(`${config.api_url_central}/api/kardex-sync`, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'X-Sucursal-Key': config.sucursal_id 
+      },
+      body: JSON.stringify({
+        sucursal_id: config.sucursal_id,
+        movimientos: movimientos.map(m => ({
+          producto_codigo_barras: m.producto_codigo_barras,
+          usuario_id: m.usuario_id,
+          fecha: m.fecha,
+          tipo_movimiento: m.tipo_movimiento,
+          cantidad: m.cantidad,
+          saldo_posterior: m.saldo_posterior,
+          costo_unitario: m.costo_unitario,
+          referencia: m.referencia
+        }))
+      })
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Error al sincronizar movimientos');
+    }
+
+    // Marcar como sincronizados
+    for (const m of movimientos) {
+      await db.execute('UPDATE kardex SET sincronizado = 1 WHERE id = $1', [m.id]);
+    }
+
+    return { enviadas: movimientos.length };
   }
 };

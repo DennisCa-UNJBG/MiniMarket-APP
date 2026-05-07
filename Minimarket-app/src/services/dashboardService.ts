@@ -1,5 +1,6 @@
 import { getDb } from '../lib/db';
 import { withDb } from '../lib/withDb';
+import { sucursalService } from './sucursalService';
 
 export interface DashboardStats {
   totalProductos: number;
@@ -29,6 +30,8 @@ export const dashboardService = {
   async getStats(): Promise<DashboardStats> {
     return withDb(async () => {
       const db = await getDb();
+      const config = await sucursalService.getConfig();
+      const sucursalId = config?.sucursal_id || 'LOCAL';
       
       // 1. Total Productos con stock
       const stockData = await db.select<any[]>('SELECT COUNT(*) as total FROM productos WHERE stock_actual > 0');
@@ -38,21 +41,24 @@ export const dashboardService = {
         SELECT COALESCE(SUM(total), 0) as total, COUNT(*) as count 
         FROM ventas 
         WHERE date(fecha, 'localtime') = date('now', 'localtime')
-      `);
+        AND (sucursal_id = ? OR sucursal_id IS NULL)
+      `, [sucursalId]);
       
       // 3. Compras del día
       const todayPurchases = await db.select<any[]>(`
         SELECT COALESCE(SUM(total), 0) as total 
         FROM compras_ingresos 
         WHERE date(fecha, 'localtime') = date('now', 'localtime')
-      `);
+        AND (sucursal_id = ? OR sucursal_id IS NULL)
+      `, [sucursalId]);
 
       // 4. Ventas del mes
       const monthSales = await db.select<any[]>(`
         SELECT COALESCE(SUM(total), 0) as total 
         FROM ventas 
         WHERE strftime('%Y-%m', fecha, 'localtime') = strftime('%Y-%m', 'now', 'localtime')
-      `);
+        AND (sucursal_id = ? OR sucursal_id IS NULL)
+      `, [sucursalId]);
 
       return {
         totalProductos: stockData[0].total,
@@ -70,17 +76,21 @@ export const dashboardService = {
   async getRecentActivity(): Promise<RecentActivity[]> {
     return withDb(async () => {
       const db = await getDb();
+      const config = await sucursalService.getConfig();
+      const sucursalId = config?.sucursal_id || 'LOCAL';
+
       return db.select(`
         SELECT * FROM (
-          SELECT 'venta' as tipo, id, total as monto, 'Venta realizada' as descripcion, fecha
+          SELECT 'venta' as tipo, id, total as monto, 'Venta realizada' as descripcion, fecha, sucursal_id
           FROM ventas
           UNION ALL
-          SELECT 'compra' as tipo, id, total as monto, 'Compra de mercadería' as descripcion, fecha
+          SELECT 'compra' as tipo, id, total as monto, 'Compra de mercadería' as descripcion, fecha, sucursal_id
           FROM compras_ingresos
         )
+        WHERE sucursal_id = ? OR sucursal_id IS NULL
         ORDER BY fecha DESC
         LIMIT 5
-      `);
+      `, [sucursalId]);
     });
   },
 
@@ -90,13 +100,17 @@ export const dashboardService = {
   async getSalesChartData(): Promise<ChartData[]> {
     return withDb(async () => {
       const db = await getDb();
+      const config = await sucursalService.getConfig();
+      const sucursalId = config?.sucursal_id || 'LOCAL';
+
       return db.select(`
         SELECT date(fecha, 'localtime') as dia, SUM(total) as total
         FROM ventas
         WHERE date(fecha, 'localtime') >= date('now', 'localtime', '-7 days')
+        AND (sucursal_id = ? OR sucursal_id IS NULL)
         GROUP BY dia
         ORDER BY dia ASC
-      `);
+      `, [sucursalId]);
     });
   },
 

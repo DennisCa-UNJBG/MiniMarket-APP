@@ -72,8 +72,9 @@ export function Sincronizacion() {
     try {
       notificationService.info('Sincronizando', 'Enviando ventas y descargando catálogo actualizado...');
       
-      // 1. Enviar ventas locales
+      // 1. Enviar ventas y movimientos
       const { enviadas } = await syncService.pushSales();
+      const { enviadas: kEnviadas } = await syncService.pushKardex();
       
       // 2. Enviar niveles de stock
       await syncService.pushStockLevels();
@@ -86,7 +87,7 @@ export function Sincronizacion() {
 
       notificationService.success(
         'Sincronización Completa', 
-        `Se enviaron ${enviadas} ventas y el stock actual. Productos: +${pCreados}/~${pActualizados}. Usuarios: +${uCreados}/~${uActualizados}.`
+        `Enviados: ${enviadas} ventas y ${kEnviadas} movimientos. Stock OK. Catálogo: +${pCreados}/~${pActualizados}. Usuarios: +${uCreados}/~${uActualizados}.`
       );
       checkPendingData();
     } catch (error: any) {
