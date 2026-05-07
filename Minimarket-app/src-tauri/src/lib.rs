@@ -228,6 +228,20 @@ pub fn run() {
                     UNIQUE(sucursal_id, codigo_barras)
                   );",
             kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 9,
+            description: "add_negocio_table",
+            sql: "CREATE TABLE IF NOT EXISTS negocio (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    razon_social TEXT NOT NULL,
+                    ruc TEXT NOT NULL,
+                    direccion TEXT,
+                    telefono TEXT,
+                    email TEXT,
+                    logo_path TEXT
+                  );",
+            kind: MigrationKind::Up,
         }
     ];
 

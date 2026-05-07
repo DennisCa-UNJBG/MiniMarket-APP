@@ -7,6 +7,7 @@ import { databaseService } from '../services/databaseService';
 import { preferenciasService, type AppPreferences } from '../services/preferenciasService';
 import { sucursalService, type SucursalConfig } from '../services/sucursalService';
 import { syncService } from '../services/syncService';
+import { negocioService, type DatosNegocio } from '../services/negocioService';
 
 function Section({ icon: Icon, title, description, children }: { icon: React.ElementType; title: string; description: string; children: React.ReactNode }) {
   return (
@@ -29,13 +30,14 @@ function Section({ icon: Icon, title, description, children }: { icon: React.Ele
   );
 }
 
-function Field({ label, defaultValue, type = 'text', placeholder }: { label: string; defaultValue: string; type?: string; placeholder?: string }) {
+function Field({ label, value, onChange, type = 'text', placeholder }: { label: string; value: string; onChange: (val: string) => void; type?: string; placeholder?: string }) {
   return (
     <div className="flex flex-col gap-1.5">
       <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">{label}</label>
       <input
         type={type}
-        defaultValue={defaultValue}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         className="w-full px-4 py-2.5 text-sm font-medium border border-gray-100 dark:border-gray-700 rounded-2xl bg-gray-50/50 dark:bg-gray-900/50 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
       />
@@ -53,9 +55,23 @@ export function Configuracion() {
     nombre_sucursal: '',
     api_url_central: ''
   });
+  const [negocio, setNegocio] = useState<DatosNegocio>({
+    razon_social: '',
+    ruc: '',
+    direccion: '',
+    telefono: '',
+    email: ''
+  });
   const [isCentral, setIsCentral] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle');
+
+  // Estado para la sección de seguridad (temporal, no persistido aquí por ahora)
+  const [securityData, setSecurityData] = useState({
+    username: 'admin',
+    currentPassword: '',
+    newPassword: ''
+  });
 
   const loadData = async () => {
     const stats = await databaseService.getDbStats();
@@ -63,6 +79,9 @@ export function Configuracion() {
     
     const config = await sucursalService.getConfig();
     if (config) setSucursal(config);
+
+    const datosNegocio = await negocioService.get();
+    setNegocio(datosNegocio);
 
     // Verificar si el servidor está corriendo (solo para saber si ocultar/mostrar opciones)
     const running = await invoke<boolean>('is_server_running');
@@ -85,24 +104,29 @@ export function Configuracion() {
     setPrefs(updated);
   };
 
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      notificationService.success('Configuración Guardada', 'Los cambios se aplicaron correctamente.');
-    }, 1000);
-  };
-
   const handleSucursalSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
       await sucursalService.saveConfig(sucursal);
-      notificationService.success('Configuración de Sede Guardada', 'La identidad y conexión se actualizaron correctamente.');
+      notificationService.success('Configuración Guardada', 'La identidad de la sede se actualizó correctamente.');
       loadData();
     } catch (error) {
       notificationService.error('Error', 'No se pudo guardar la configuración.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleNegocioSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await negocioService.save(negocio);
+      notificationService.success('Datos Actualizados', 'La información del negocio se guardó correctamente.');
+      loadData();
+    } catch (error) {
+      notificationService.error('Error', 'No se pudieron guardar los datos del negocio.');
     } finally {
       setLoading(false);
     }
@@ -126,7 +150,6 @@ export function Configuracion() {
     }
   };
 
-
   const handleSync = async () => {
     if (isCentral) {
       notificationService.info('Sede Principal', 'Las sedes principales no sincronizan productos de otros, solo los sirven.');
@@ -137,17 +160,10 @@ export function Configuracion() {
     try {
       notificationService.info('Sincronizando', 'Actualizando catálogo, usuarios y enviando ventas...');
       
-      // 1. Enviar ventas y movimientos
       const { enviadas: vEnviadas } = await syncService.pushSales();
       const { enviadas: kEnviadas } = await syncService.pushKardex();
-      
-      // 2. Enviar niveles de stock
       await syncService.pushStockLevels();
-      
-      // 3. Descargar catálogo
       const { creados: pCreados, actualizados: pActualizados } = await syncService.pullProducts();
-      
-      // 4. Descargar usuarios
       const { creados: uCreados, actualizados: uActualizados } = await syncService.pullUsers();
 
       notificationService.success(
@@ -176,10 +192,7 @@ export function Configuracion() {
     try {
       notificationService.info('Respaldo', 'Creando copia de seguridad...');
       const path = await databaseService.backup();
-      
-      // Abrir automáticamente la ubicación en el explorador
       await databaseService.reveal(path);
-      
       notificationService.successWithConfirm('Copia Creada', 'El respaldo se completó y la carpeta se ha abierto.');
     } catch (error) {
       console.error(error);
@@ -236,45 +249,44 @@ export function Configuracion() {
                 />
               </div>
               <div className="sm:col-span-2">
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">URL API Sede Central</label>
-                    <div className="flex gap-2">
-                      <div className="relative flex-1">
-                        <input
-                          type="url"
-                          value={sucursal.api_url_central}
-                          onChange={(e) => {
-                            setSucursal({...sucursal, api_url_central: e.target.value});
-                            setConnectionStatus('idle');
-                          }}
-                          placeholder="https://central.tu-negocio.com/api"
-                          className="w-full px-4 py-2.5 text-sm font-medium border border-gray-100 dark:border-gray-700 rounded-2xl bg-gray-50/50 dark:bg-gray-900/50 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
-                        />
-                        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
-                          {connectionStatus === 'success' && <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />}
-                          {connectionStatus === 'error' && <div className="w-2 h-2 rounded-full bg-red-500" />}
-                        </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">URL API Sede Central</label>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <input
+                        type="url"
+                        value={sucursal.api_url_central}
+                        onChange={(e) => {
+                          setSucursal({...sucursal, api_url_central: e.target.value});
+                          setConnectionStatus('idle');
+                        }}
+                        placeholder="https://central.tu-negocio.com/api"
+                        className="w-full px-4 py-2.5 text-sm font-medium border border-gray-100 dark:border-gray-700 rounded-2xl bg-gray-50/50 dark:bg-gray-900/50 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                      />
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+                        {connectionStatus === 'success' && <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />}
+                        {connectionStatus === 'error' && <div className="w-2 h-2 rounded-full bg-red-500" />}
                       </div>
-                      <button 
-                        type="button"
-                        onClick={handleTestConnection}
-                        disabled={testingConnection || isCentral}
-                        className={`px-4 rounded-2xl transition-all disabled:opacity-50 border ${
-                          connectionStatus === 'success' 
-                            ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-800'
-                            : connectionStatus === 'error'
-                            ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-100 dark:border-red-800'
-                            : 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 border-indigo-100 dark:border-indigo-800'
-                        }`}
-                        title="Probar Conexión"
-                      >
-                        <RefreshCw size={18} className={testingConnection ? 'animate-spin' : ''} />
-                      </button>
                     </div>
+                    <button 
+                      type="button"
+                      onClick={handleTestConnection}
+                      disabled={testingConnection || isCentral}
+                      className={`px-4 rounded-2xl transition-all disabled:opacity-50 border ${
+                        connectionStatus === 'success' 
+                          ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-800'
+                          : connectionStatus === 'error'
+                          ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-100 dark:border-red-800'
+                          : 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 border-indigo-100 dark:border-indigo-800'
+                      }`}
+                      title="Probar Conexión"
+                    >
+                      <RefreshCw size={18} className={testingConnection ? 'animate-spin' : ''} />
+                    </button>
                   </div>
+                </div>
               </div>
 
-              {/* Botón de Sincronización Manual */}
               {!isCentral && (
                 <div className="sm:col-span-2">
                   <button 
@@ -286,16 +298,11 @@ export function Configuracion() {
                     <RefreshCw size={18} className={syncing ? 'animate-spin' : ''} />
                     {syncing ? 'Sincronizando...' : 'Sincronizar con Sede Central'}
                   </button>
-                  <div className="flex justify-between items-center mt-2 px-1">
-                    <p className="text-[10px] text-gray-400 italic">
-                      Descarga productos, usuarios y envía ventas.
+                  {sucursal.ultima_sincronizacion && (
+                    <p className="text-[9px] font-bold text-indigo-400 uppercase tracking-tighter mt-1 text-right">
+                      Última: {new Date(sucursal.ultima_sincronizacion).toLocaleString()}
                     </p>
-                    {sucursal.ultima_sincronizacion && (
-                      <p className="text-[9px] font-bold text-indigo-400 uppercase tracking-tighter">
-                        Última: {new Date(sucursal.ultima_sincronizacion).toLocaleString()}
-                      </p>
-                    )}
-                  </div>
+                  )}
                 </div>
               )}
             </div>
@@ -316,15 +323,15 @@ export function Configuracion() {
           title="Datos del Negocio" 
           description="Información que aparecerá en tus comprobantes."
         >
-          <form onSubmit={handleSave} className="space-y-5">
+          <form onSubmit={handleNegocioSave} className="space-y-5">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field label="Razón Social" defaultValue="Minimarket El Sol" />
-              <Field label="RUC / Identificación" defaultValue="20123456789" />
+              <Field label="Razón Social" value={negocio.razon_social} onChange={val => setNegocio({...negocio, razon_social: val})} placeholder="Ej: Minimarket El Sol S.A.C." />
+              <Field label="RUC / Identificación" value={negocio.ruc} onChange={val => setNegocio({...negocio, ruc: val})} placeholder="Ej: 20123456789" />
               <div className="sm:col-span-2">
-                <Field label="Dirección Fiscal" defaultValue="Av. Principal 123, Tacna" />
+                <Field label="Dirección Fiscal" value={negocio.direccion} onChange={val => setNegocio({...negocio, direccion: val})} placeholder="Av. Principal 123, Tacna" />
               </div>
-              <Field label="Teléfono de Contacto" defaultValue="052 123 456" />
-              <Field label="Correo Electrónico" defaultValue="contacto@elsol.com" />
+              <Field label="Teléfono de Contacto" value={negocio.telefono} onChange={val => setNegocio({...negocio, telefono: val})} placeholder="Ej: 052 123 456" />
+              <Field label="Correo Electrónico" value={negocio.email} onChange={val => setNegocio({...negocio, email: val})} placeholder="contacto@empresa.com" />
             </div>
             <button 
               type="submit"
@@ -332,7 +339,7 @@ export function Configuracion() {
               className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-2xl transition-all shadow-lg shadow-indigo-200 dark:shadow-none disabled:opacity-50"
             >
               <Save size={18} />
-              {loading ? 'Guardando...' : 'Guardar Cambios'}
+              {loading ? 'Guardando...' : 'Guardar Datos del Negocio'}
             </button>
           </form>
         </Section>
@@ -345,10 +352,13 @@ export function Configuracion() {
         >
           <div className="space-y-5">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field label="Usuario" defaultValue="admin" />
-              <Field label="Rol del Sistema" defaultValue="Administrador" />
-              <Field label="Contraseña Actual" defaultValue="••••••••" type="password" />
-              <Field label="Nueva Contraseña" defaultValue="" type="password" placeholder="Mínimo 8 caracteres" />
+              <Field label="Usuario" value={securityData.username} onChange={val => setSecurityData({...securityData, username: val})} />
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">Rol del Sistema</label>
+                <input disabled value="Administrador" className="w-full px-4 py-2.5 text-sm font-medium border border-gray-100 dark:border-gray-700 rounded-2xl bg-gray-100 dark:bg-gray-800 text-gray-500 cursor-not-allowed" />
+              </div>
+              <Field label="Contraseña Actual" value={securityData.currentPassword} onChange={val => setSecurityData({...securityData, currentPassword: val})} type="password" />
+              <Field label="Nueva Contraseña" value={securityData.newPassword} onChange={val => setSecurityData({...securityData, newPassword: val})} type="password" placeholder="Mínimo 8 caracteres" />
             </div>
             <button className="w-full sm:w-auto px-6 py-2.5 bg-gray-800 dark:bg-gray-700 hover:bg-gray-900 text-white text-sm font-bold rounded-2xl transition-all">
               Actualizar Credenciales
@@ -403,7 +413,7 @@ export function Configuracion() {
           <div className="space-y-2">
             {[
               { id: 'stockAlert', label: 'Alertas de Stock Crítico', desc: 'Notificar cuando un producto se agota.' },
-              { id: 'enableAutoLogout', label: 'Cierre de Sesión Automático', desc: 'Protege tu cuenta cerrando la sesión tras un periodo de inactividad (ratón, teclado o scroll).' },
+              { id: 'enableAutoLogout', label: 'Cierre de Sesión Automático', desc: 'Protege tu cuenta cerrando la sesión tras un periodo de inactividad.' },
             ].map(({ id, label, desc }) => {
               const active = prefs[id as keyof AppPreferences] as boolean;
               return (
@@ -422,13 +432,11 @@ export function Configuracion() {
               );
             })}
 
-            {/* Selector de minutos (Solo si está activo el cierre automático) */}
             {prefs.enableAutoLogout && (
               <div className="mt-4 p-4 bg-indigo-50/50 dark:bg-indigo-900/10 rounded-2xl border border-indigo-100/50 dark:border-indigo-900/20 animate-in zoom-in-95 duration-200">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs font-bold text-indigo-900 dark:text-indigo-300">Tiempo de Inactividad</p>
-                    <p className="text-[10px] text-indigo-700 dark:text-indigo-400">Minutos antes de desconectar</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <input 
@@ -446,7 +454,6 @@ export function Configuracion() {
             )}
           </div>
         </Section>
-
       </div>
     </div>
   );

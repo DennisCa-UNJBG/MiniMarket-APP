@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { type TopProduct, type MonthlyRevenue, type ReportKPIs } from '../../services/reporteService';
 import { VentasBarChart, RankingProductos } from '../reportes/ReportComponents';
+import { negocioService, type DatosNegocio } from '../../services/negocioService';
 
 interface ReporteDocumentoProps {
   id: string;
@@ -10,6 +11,20 @@ interface ReporteDocumentoProps {
 }
 
 export const ReporteDocumento: React.FC<ReporteDocumentoProps> = ({ id, kpis, topProducts, monthlySales }) => {
+  const [negocio, setNegocio] = useState<DatosNegocio | null>(null);
+
+  useEffect(() => {
+    const loadNegocio = async () => {
+      try {
+        const data = await negocioService.get();
+        setNegocio(data);
+      } catch (error) {
+        console.error('Error al cargar datos del negocio para el reporte:', error);
+      }
+    };
+    loadNegocio();
+  }, []);
+
   return (
     <div 
       id={id} 
@@ -19,8 +34,15 @@ export const ReporteDocumento: React.FC<ReporteDocumentoProps> = ({ id, kpis, to
       {/* Encabezado del Reporte */}
       <div className="flex justify-between items-start border-b-2 border-indigo-600 pb-6 mb-8">
         <div>
-          <h1 className="text-3xl font-black text-indigo-900 uppercase tracking-tighter">Reporte de Gestión</h1>
-          <p className="text-gray-500 font-bold">Minimarket - Sistema de Inventario</p>
+          <h1 className="text-3xl font-black text-indigo-900 uppercase tracking-tighter">
+            {negocio?.razon_social || 'Reporte de Gestión'}
+          </h1>
+          <p className="text-gray-500 font-bold">
+            {negocio?.ruc ? `RUC: ${negocio.ruc}` : 'Sistema de Inventario'}
+          </p>
+          <p className="text-[10px] text-gray-400 font-medium">
+            {negocio?.direccion || ''} {negocio?.telefono ? `• Tel: ${negocio.telefono}` : ''}
+          </p>
         </div>
         <div className="text-right">
           <p className="text-sm font-bold text-gray-400">FECHA DE EMISIÓN</p>

@@ -1,15 +1,36 @@
+import { useState, useEffect } from 'react';
+import { negocioService, type DatosNegocio } from '../../services/negocioService';
+
 interface VoucherProps {
   venta: any; // Cabecera de la venta
   detalles: any[]; // Items de la venta
 }
 
 export function Voucher({ venta, detalles }: VoucherProps) {
+  const [negocio, setNegocio] = useState<DatosNegocio | null>(null);
+
+  useEffect(() => {
+    const loadNegocio = async () => {
+      try {
+        const data = await negocioService.get();
+        setNegocio(data);
+      } catch (error) {
+        console.error('Error al cargar datos del negocio para el voucher:', error);
+      }
+    };
+    loadNegocio();
+  }, []);
+
   return (
     <div id="printable-voucher" className="hidden print:block font-mono text-black bg-white p-4 w-[80mm] mx-auto">
       <div className="text-center mb-4">
-        <h1 className="text-lg font-black uppercase">Minimarket App</h1>
-        <p className="text-[10px]">RUC: 10234567890</p>
-        <p className="text-[10px]">Calle Principal #123 - Tacna</p>
+        <h1 className="text-lg font-black uppercase">
+          {negocio?.razon_social || 'Minimarket App'}
+        </h1>
+        <p className="text-[10px]">RUC: {negocio?.ruc || '10234567890'}</p>
+        <p className="text-[10px]">{negocio?.direccion || 'Calle Principal #123 - Tacna'}</p>
+        {negocio?.telefono && <p className="text-[10px]">TEL: {negocio.telefono}</p>}
+        
         <div className="border-b border-dashed border-black my-2"></div>
         <h2 className="text-xs font-bold">COMPROBANTE DE VENTA</h2>
         <p className="text-xs font-bold">#{venta.id.toString().padStart(5, '0')}</p>

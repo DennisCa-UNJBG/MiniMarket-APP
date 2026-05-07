@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Package, ShoppingCart, Truck, TrendingUp, AlertTriangle, ArrowRight } from 'lucide-react';
 import { dashboardService, type DashboardStats, type RecentActivity, type ChartData } from '../services/dashboardService';
+import { negocioService } from '../services/negocioService';
 import { Badge } from '../components/ui/Badge';
+import { useNavigate } from 'react-router-dom';
 import { 
   AreaChart, 
   Area, 
@@ -20,7 +22,9 @@ const statsConfig = [
 ];
 
 export function Dashboard() {
+  const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [isNegocioConfigured, setIsNegocioConfigured] = useState(true);
   const [activity, setActivity] = useState<RecentActivity[]>([]);
   const [chartData, setChartData] = useState<ChartData[]>([]);
   const [lowStock, setLowStock] = useState<any[]>([]);
@@ -28,13 +32,16 @@ export function Dashboard() {
 
   const loadData = async () => {
     try {
-      const [s, a, rawChart, l] = await Promise.all([
+      const [s, a, rawChart, l, n] = await Promise.all([
         dashboardService.getStats(),
         dashboardService.getRecentActivity(),
         dashboardService.getSalesChartData(),
-        dashboardService.getLowStockProducts()
+        dashboardService.getLowStockProducts(),
+        negocioService.get()
       ]);
       
+      setIsNegocioConfigured(!!n.razon_social && !!n.ruc);
+
       // Asegurar que tenemos los últimos 7 días representados
       const last7Days = [];
       for (let i = 6; i >= 0; i--) {
@@ -83,6 +90,28 @@ export function Dashboard() {
         </div>
         <Badge label="En Línea" variant="emerald" />
       </div>
+
+      {/* Banner de configuración pendiente */}
+      {!isNegocioConfigured && (
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-3xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 animate-in slide-in-from-top duration-500">
+          <div className="flex items-center gap-3 text-center sm:text-left">
+            <div className="bg-amber-100 dark:bg-amber-800 p-2 rounded-xl text-amber-600 dark:text-amber-400">
+              <AlertTriangle size={20} />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-amber-900 dark:text-amber-200 leading-tight">Configuración de Sede Incompleta</p>
+              <p className="text-[11px] text-amber-700 dark:text-amber-400">Los datos de tu negocio no han sido configurados. Tus boletas y reportes podrían aparecer con nombres genéricos.</p>
+            </div>
+          </div>
+          <button 
+            onClick={() => navigate('/configuracion')}
+            className="flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl transition-all shadow-lg shadow-amber-200 dark:shadow-none whitespace-nowrap"
+          >
+            Configurar Ahora
+            <ArrowRight size={14} />
+          </button>
+        </div>
+      )}
 
       {/* Tarjetas de estadísticas */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
