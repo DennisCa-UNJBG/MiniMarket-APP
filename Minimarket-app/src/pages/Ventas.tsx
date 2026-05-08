@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { ShoppingCart, Plus, Receipt, TrendingUp, DollarSign, Calendar, Clock, User, CreditCard, Banknote, Printer } from 'lucide-react';
 import { DataTable, type TableColumn } from '../components/ui/DataTable';
 import { PageHeader } from '../components/ui/PageHeader';
@@ -82,37 +83,31 @@ const getColumns = (onViewDetail: (sale: any) => void): TableColumn<any>[] => [
 
 export function Ventas() {
   const navigate = useNavigate();
-  const [sales, setSales] = useState<any[]>([]);
-  const [resumen, setResumen] = useState({ total: 0, count: 0 });
   const [search, setSearch] = useState('');
   const [selectedSale, setSelectedSale] = useState<any>(null);
   const [saleDetails, setSaleDetails] = useState<any[]>([]);
 
-  const loadData = async () => {
-    try {
-      const [data, res] = await Promise.all([
-        ventaService.getVentas(),
-        ventaService.getResumenHoy()
-      ]);
-      setSales(data);
-      setResumen(res);
-    } catch (error) {
-      console.error(error);
-    }
-  };
+  // Queries
+  const { data: sales = [] } = useQuery({
+    queryKey: ['sales'],
+    queryFn: () => ventaService.getVentas()
+  });
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  const { data: resumen = { total: 0, count: 0 } } = useQuery({
+    queryKey: ['sales-summary'],
+    queryFn: () => ventaService.getResumenHoy()
+  });
 
-  const handleViewDetail = async (sale: any) => {
-    try {
-      const details = await ventaService.getVentaDetalles(sale.id);
+  const fetchDetailsMutation = useMutation({
+    mutationFn: (id: number) => ventaService.getVentaDetalles(id),
+    onSuccess: (details, id) => {
       setSaleDetails(details);
-      setSelectedSale(sale);
-    } catch (error) {
-      console.error(error);
+      setSelectedSale(sales.find(s => s.id === id));
     }
+  });
+
+  const handleViewDetail = (sale: any) => {
+    fetchDetailsMutation.mutate(sale.id);
   };
 
   const handlePrint = () => {

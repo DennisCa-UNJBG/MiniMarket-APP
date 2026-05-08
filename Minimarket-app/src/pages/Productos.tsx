@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Package, Tag, Plus, Search, Edit2, PowerOff, RefreshCcw } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { DataTable, type TableColumn } from '../components/ui/DataTable';
 import { Badge } from '../components/ui/Badge';
 import { Modal } from '../components/ui/Modal';
@@ -33,7 +34,7 @@ const units = ['unidad', 'kg', 'bolsa', 'botella', 'tarro', 'litro', 'caja', 'pa
 
 // ── Pestaña Productos ──────────────────────────────────────────────────────────
 function TabProductos({ categories }: { categories: Category[] }) {
-  const [products, setProducts] = useState<Product[]>([]);
+  const queryClient = useQueryClient();
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [search, setSearch] = useState('');
@@ -42,66 +43,77 @@ function TabProductos({ categories }: { categories: Category[] }) {
   const [showCatList, setShowCatList] = useState(false);
   const nameInputRef = useRef<HTMLInputElement>(null);
 
+  // Consulta de productos
+  const { data: products = [] } = useQuery({
+    queryKey: ['products', false],
+    queryFn: () => productoService.getAll(false),
+  });
+
+  // Mutación para guardar (crear/editar)
+  const saveMutation = useMutation({
+    mutationFn: async (payload: any) => {
+      if (editingId) {
+        return productoService.update(editingId, payload);
+      } else {
+        return productoService.create(payload);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['categories'] }); // Por el conteo de productos
+      notificationService.success(
+        editingId ? 'Producto actualizado' : 'Producto guardado',
+        editingId ? 'Los cambios se han guardado correctamente.' : 'El producto se ha registrado correctamente.'
+      );
+      setForm({ code: '', name: '', categoryId: '', unit: 'unidad', sellPrice: '', minStock: '' });
+      setEditingId(null);
+      setShowModal(false);
+    }
+  });
+
+  // Mutación para cambiar estado
+  const statusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: number, status: 'activo' | 'inactivo' }) => 
+      productoService.updateStatus(id, status),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+      if (variables.status === 'activo') {
+        notificationService.success('Producto reactivado');
+      }
+    }
+  });
+
   useEffect(() => {
     if (showModal) {
       setTimeout(() => nameInputRef.current?.focus(), 100);
     }
   }, [showModal]);
 
-  const loadProducts = async () => {
-    const data = await productoService.getAll(false);
-    setProducts(data);
-  };
-
   const activeProducts = products.filter(p => p.estado === 'activo');
   const inactiveProducts = products.filter(p => p.estado === 'inactivo');
-
-  useEffect(() => {
-    loadProducts();
-  }, []);
 
   const handleSave = async () => {
     if (!form.name || !form.categoryId) {
       notificationService.warning('Campos incompletos', 'Por favor, completa todos los campos obligatorios.');
       return;
     }
-    try {
-      if (editingId) {
-        await productoService.update(editingId, {
-          nombre: form.name,
-          categoria_id: parseInt(form.categoryId),
-          unidad_medida: form.unit,
-          precio_venta: parseFloat(form.sellPrice) || 0,
-          stock_minimo: parseFloat(form.minStock) || 0,
-          codigo_barras: form.code 
-        });
-        notificationService.success('Producto actualizado', 'Los cambios se han guardado correctamente.');
-      } else {
-        await productoService.create({
-          codigo_barras: form.code,
-          nombre: form.name,
-          categoria_id: parseInt(form.categoryId),
-          unidad_medida: form.unit,
-          precio_compra: 0,
-          precio_venta: parseFloat(form.sellPrice) || 0,
-          stock_minimo: parseFloat(form.minStock) || 0,
-          stock_actual: 0 
-        });
-        notificationService.success('Producto guardado', 'El producto se ha registrado correctamente.');
-      }
-      setForm({ code: '', name: '', categoryId: '', unit: 'unidad', sellPrice: '', minStock: '' });
-      setEditingId(null);
-      setShowModal(false);
-      loadProducts();
-    } catch (error) {
-      console.error(error);
-      notificationService.error('Error al guardar', 'Ocurrió un problema al guardar el producto.');
-    }
+    
+    saveMutation.mutate({
+      nombre: form.name,
+      categoria_id: parseInt(form.categoryId),
+      unidad_medida: form.unit,
+      precio_venta: parseFloat(form.sellPrice) || 0,
+      stock_minimo: parseFloat(form.minStock) || 0,
+      codigo_barras: form.code,
+      // Para creación:
+      precio_compra: 0,
+      stock_actual: 0
+    });
   };
 
-  const handleDeactivate = async (id: number) => {
-    await productoService.updateStatus(id, 'inactivo');
-    loadProducts();
+  const handleDeactivate = (id: number) => {
+    statusMutation.mutate({ id, status: 'inactivo' });
   };
 
   const inputCls = 'w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition';
@@ -211,11 +223,7 @@ function TabProductos({ categories }: { categories: Category[] }) {
                   key: 'acciones', header: '', align: 'right',
                   render: (row) => (
                     <button 
-                      onClick={async () => {
-                        await productoService.updateStatus(row.id, 'activo');
-                        notificationService.success('Producto reactivado');
-                        loadProducts();
-                      }}
+                      onClick={() => statusMutation.mutate({ id: row.id, status: 'activo' })}
                       title="Reactivar producto"
                       className="flex items-center gap-1 px-3 py-1 text-xs text-green-600 dark:text-green-500 hover:bg-green-50 dark:hover:bg-gray-700 rounded-lg transition-colors"
                     >
@@ -333,11 +341,50 @@ function TabProductos({ categories }: { categories: Category[] }) {
 
 // ── Pestaña Categorías ─────────────────────────────────────────────────────────
 function TabCategorias({ onUpdate }: { onUpdate: () => void }) {
-  const [categories, setCategories] = useState<Category[]>([]);
+  const queryClient = useQueryClient();
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState({ name: '', color: getRandomColor(), productCount: 0 });
   const nameInputRef = useRef<HTMLInputElement>(null);
+
+  // Consulta de categorías
+  const { data: categories = [] } = useQuery({
+    queryKey: ['categories'],
+    queryFn: () => categoriaService.getAll(false),
+  });
+
+  const saveMutation = useMutation({
+    mutationFn: async (payload: any) => {
+      if (editingId) {
+        return categoriaService.update(editingId, payload.name, payload.color);
+      } else {
+        return categoriaService.create(payload.name, payload.color);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+      notificationService.success(
+        editingId ? 'Categoría actualizada' : 'Categoría creada',
+        editingId ? 'Los cambios se han guardado correctamente.' : 'La categoría se ha registrado correctamente.'
+      );
+      setForm({ name: '', color: getRandomColor(), productCount: 0 });
+      setEditingId(null);
+      setShowModal(false);
+      onUpdate();
+    }
+  });
+
+  const statusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: number, status: 'activo' | 'inactivo' }) => 
+      categoriaService.updateStatus(id, status),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+      if (variables.status === 'activo') {
+        notificationService.success('Categoría reactivada');
+      }
+      onUpdate();
+    }
+  });
 
   useEffect(() => {
     if (showModal) {
@@ -345,49 +392,19 @@ function TabCategorias({ onUpdate }: { onUpdate: () => void }) {
     }
   }, [showModal]);
 
-  const loadCategories = async () => {
-    const data = await categoriaService.getAll(false);
-    setCategories(data);
-  };
-
   const activeCategories = categories.filter(c => c.estado === 'activo');
   const inactiveCategories = categories.filter(c => c.estado === 'inactivo');
-
-  useEffect(() => {
-    loadCategories();
-  }, []);
 
   const handleSave = async () => {
     if (!form.name.trim()) {
       notificationService.warning('Campo incompleto', 'Por favor, ingresa un nombre para la categoría.');
       return;
     }
-    try {
-      if (editingId) {
-        await categoriaService.update(editingId, form.name.trim(), form.color);
-        notificationService.success('Categoría actualizada', 'Los cambios se han guardado correctamente.');
-      } else {
-        await categoriaService.create(form.name.trim(), form.color);
-        notificationService.success('Categoría creada', 'La categoría se ha registrado correctamente.');
-      }
-      setForm({ name: '', color: getRandomColor(), productCount: 0 });
-      setEditingId(null);
-      setShowModal(false);
-      await loadCategories();
-      onUpdate(); 
-    } catch (error: any) {
-      console.error(error);
-      const msg = error.message?.includes('UNIQUE') 
-        ? 'Ya existe una categoría con ese nombre.' 
-        : 'Ocurrió un problema al crear la categoría.';
-      notificationService.error('Error al crear', msg);
-    }
+    saveMutation.mutate({ name: form.name.trim(), color: form.color });
   };
 
-  const handleDeactivate = async (id: number) => {
-    await categoriaService.updateStatus(id, 'inactivo');
-    loadCategories();
-    onUpdate();
+  const handleDeactivate = (id: number) => {
+    statusMutation.mutate({ id, status: 'inactivo' });
   };
 
   return (
@@ -471,12 +488,7 @@ function TabCategorias({ onUpdate }: { onUpdate: () => void }) {
                     <Edit2 size={12} /> Editar
                   </button>
                   <button 
-                    onClick={async () => {
-                      await categoriaService.updateStatus(cat.id, 'activo');
-                      notificationService.success('Categoría reactivada');
-                      loadCategories();
-                      onUpdate();
-                    }}
+                    onClick={() => statusMutation.mutate({ id: cat.id, status: 'activo' })}
                     title="Reactivar categoría"
                     className="flex-1 flex items-center justify-center gap-1 py-1.5 text-xs text-green-600 dark:text-green-500 hover:bg-green-50 dark:hover:bg-gray-700 rounded-lg transition-colors"
                   >
@@ -543,17 +555,18 @@ function TabCategorias({ onUpdate }: { onUpdate: () => void }) {
 type Tab = 'productos' | 'categorias';
 
 export function Productos() {
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<Tab>('productos');
-  const [categories, setCategories] = useState<Category[]>([]);
 
-  const loadCategories = async () => {
-    const data = await categoriaService.getAll();
-    setCategories(data);
+  // Consulta de categorías (compartida)
+  const { data: categories = [] } = useQuery({
+    queryKey: ['categories'],
+    queryFn: () => categoriaService.getAll(),
+  });
+
+  const loadCategories = () => {
+    queryClient.invalidateQueries({ queryKey: ['categories'] });
   };
-
-  useEffect(() => {
-    loadCategories();
-  }, []);
 
   const tabs: { key: Tab; label: string; icon: React.ElementType }[] = [
     { key: 'productos',  label: 'Productos',   icon: Package },

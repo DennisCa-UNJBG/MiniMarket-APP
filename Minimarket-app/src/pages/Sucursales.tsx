@@ -1,12 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Building2, Plus, Search, MapPin, Key, RefreshCw, Pencil, Copy, Clock, AlertCircle, Power, RotateCcw } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { sucursalService } from '../services/sucursalService';
 import { notificationService } from '../lib/notifications';
 import { Badge } from '../components/ui/Badge';
 
 export function Sucursales() {
-  const [sedes, setSedes] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [showModal, setShowModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -16,6 +16,43 @@ export function Sucursales() {
     nombre: '',
     direccion: '',
     estado: 'activo'
+  });
+
+  // Queries
+  const { data: sedes = [], isLoading: loading } = useQuery({
+    queryKey: ['sedes'],
+    queryFn: () => sucursalService.getAll()
+  });
+
+  // Mutations
+  const saveMutation = useMutation({
+    mutationFn: async (data: any) => {
+      if (editingId) {
+        return sucursalService.update(editingId, data);
+      } else {
+        return sucursalService.create(data);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sedes'] });
+      notificationService.success(
+        editingId ? 'Sucursal Actualizada' : 'Sucursal Registrada',
+        editingId ? 'Los cambios se guardaron correctamente.' : 'La nueva sucursal ha sido creada.'
+      );
+      setShowModal(false);
+    }
+  });
+
+  const toggleStatusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: number, status: 'activo' | 'inactivo' }) => 
+      sucursalService.toggleEstado(id, status),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['sedes'] });
+      notificationService.success(
+        variables.status === 'activo' ? 'Sede Reactivada' : 'Sede Desactivada', 
+        `La sucursal ahora está ${variables.status}.`
+      );
+    }
   });
 
   const handleToggleStatus = async (id: number, currentStatus: string) => {
@@ -30,34 +67,8 @@ export function Sucursales() {
     );
 
     if (!confirmed) return;
-
-    try {
-      await sucursalService.toggleEstado(id, nuevoEstado as 'activo' | 'inactivo');
-      notificationService.success(
-        nuevoEstado === 'activo' ? 'Sede Reactivada' : 'Sede Desactivada', 
-        `La sucursal ahora está ${nuevoEstado}.`
-      );
-      loadSedes();
-    } catch (error) {
-      notificationService.error('Error', 'No se pudo cambiar el estado de la sucursal.');
-    }
+    toggleStatusMutation.mutate({ id, status: nuevoEstado as 'activo' | 'inactivo' });
   };
-
-  const loadSedes = async () => {
-    setLoading(true);
-    try {
-      const data = await sucursalService.getAll();
-      setSedes(data);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadSedes();
-  }, []);
 
   const handleOpenCreate = () => {
     setEditingId(null);
@@ -76,21 +87,9 @@ export function Sucursales() {
     setShowModal(true);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      if (editingId) {
-        await sucursalService.update(editingId, formData);
-        notificationService.success('Sucursal Actualizada', 'Los cambios se guardaron correctamente.');
-      } else {
-        await sucursalService.create(formData);
-        notificationService.success('Sucursal Registrada', 'La nueva sucursal ha sido creada.');
-      }
-      setShowModal(false);
-      loadSedes();
-    } catch (error: any) {
-      notificationService.error('Error', 'No se pudo procesar la solicitud.');
-    }
+    saveMutation.mutate(formData);
   };
 
   const getStatus = (lastSync: string | null, estado: string) => {

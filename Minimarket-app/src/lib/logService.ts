@@ -1,5 +1,4 @@
 import { getDb } from './db';
-import { withDb } from './withDb';
 
 export interface LogEntry {
   usuario_id: number;
@@ -11,27 +10,23 @@ export interface LogEntry {
 
 export const logService = {
   async register(log: LogEntry): Promise<void> {
-    return withDb(async () => {
-      const db = await getDb();
-      await db.execute(
-        `INSERT INTO logs (usuario_id, accion, tabla, registro_id, detalles) 
-         VALUES (?, ?, ?, ?, ?)`,
-        [log.usuario_id, log.accion, log.tabla, log.registro_id, log.detalles || null]
-      );
-    });
+    const db = await getDb();
+    await db.execute(
+      `INSERT INTO logs (usuario_id, accion, tabla, registro_id, detalles) 
+       VALUES (?, ?, ?, ?, ?)`,
+      [log.usuario_id, log.accion, log.tabla, log.registro_id, log.detalles || null]
+    );
   },
 
   async getAll(limit = 100): Promise<any[]> {
-    return withDb(async () => {
-      const db = await getDb();
-      return db.select(
-        `SELECT l.*, u.nombre_completo as usuario_nombre 
-         FROM logs l
-         JOIN usuarios u ON l.usuario_id = u.id
-         ORDER BY l.fecha DESC
-         LIMIT ?`,
-        [limit]
-      );
-    });
+    const db = await getDb();
+    return db.select(
+      `SELECT l.*, u.nombre_completo as usuario_nombre 
+       FROM logs l
+       JOIN usuarios u ON l.usuario_id = u.id
+       ORDER BY l.fecha DESC
+       LIMIT ?`,
+      [limit]
+    );
   }
 };

@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { negocioService, type DatosNegocio } from '../../services/negocioService';
+import { useQuery } from '@tanstack/react-query';
+import { negocioService } from '../../services/negocioService';
 
 interface VoucherProps {
   venta: any; // Cabecera de la venta
@@ -7,19 +7,10 @@ interface VoucherProps {
 }
 
 export function Voucher({ venta, detalles }: VoucherProps) {
-  const [negocio, setNegocio] = useState<DatosNegocio | null>(null);
-
-  useEffect(() => {
-    const loadNegocio = async () => {
-      try {
-        const data = await negocioService.get();
-        setNegocio(data);
-      } catch (error) {
-        console.error('Error al cargar datos del negocio para el voucher:', error);
-      }
-    };
-    loadNegocio();
-  }, []);
+  const { data: negocio } = useQuery({
+    queryKey: ['negocio'],
+    queryFn: () => negocioService.get()
+  });
 
   return (
     <div id="printable-voucher" className="hidden print:block font-mono text-black bg-white p-4 w-[80mm] mx-auto">

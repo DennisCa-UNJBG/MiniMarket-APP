@@ -29,7 +29,7 @@ export const authService = {
       const db = await getDb();
       // Buscamos al usuario solo por nombre de usuario para obtener su hash
       result = await db.select(
-        "SELECT u.*, r.permisos FROM usuarios u JOIN roles r ON u.rol_id = r.id WHERE u.username = $1 AND u.estado = 'activo'",
+        "SELECT u.*, r.permisos FROM usuarios u JOIN roles r ON u.rol_id = r.id WHERE u.username = ? AND u.estado = 'activo'",
         [username]
       );
     } catch (e) {
@@ -71,14 +71,9 @@ export const authService = {
    * Actualiza la contraseña del usuario de forma directa
    */
   async updatePassword(userId: number, newPasswordPlain: string): Promise<boolean> {
-    try {
-      const db = await getDb();
-      const newHash = await this.hashPassword(newPasswordPlain);
-      await db.execute("UPDATE usuarios SET password_hash = $1 WHERE id = $2", [newHash, userId]);
-      return true;
-    } catch (error) {
-      console.error('Error al actualizar contraseña:', error);
-      throw error;
-    }
+    const db = await getDb();
+    const newHash = await this.hashPassword(newPasswordPlain);
+    await db.execute("UPDATE usuarios SET password_hash = ? WHERE id = ?", [newHash, userId]);
+    return true;
   }
 };

@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
 import { TrendingUp, Package, ShoppingCart, Calendar, Info, Download } from 'lucide-react';
-import { reporteService, type TopProduct, type MonthlyRevenue, type ReportKPIs } from '../services/reporteService';
+import { useQuery } from '@tanstack/react-query';
+import { reporteService } from '../services/reporteService';
 import { Badge } from '../components/ui/Badge';
 import { notificationService } from '../lib/notifications';
 import { ReporteDocumento } from '../components/shared/ReporteDocumento';
@@ -9,31 +9,21 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
 export function Reportes() {
-  const [topProducts, setTopProducts] = useState<TopProduct[]>([]);
-  const [monthlySales, setMonthlySales] = useState<MonthlyRevenue[]>([]);
-  const [kpis, setKpis] = useState<ReportKPIs | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Queries
+  const { data: topProducts = [] } = useQuery({
+    queryKey: ['report-top-products'],
+    queryFn: () => reporteService.getTopProducts()
+  });
 
-  const loadData = async () => {
-    try {
-      const [tp, ms, k] = await Promise.all([
-        reporteService.getTopProducts(),
-        reporteService.getMonthlyRevenue(),
-        reporteService.getKPIs()
-      ]);
-      setTopProducts(tp);
-      setMonthlySales(ms);
-      setKpis(k);
-    } catch (error) {
-      notificationService.error('Error', 'No se pudieron cargar los reportes');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: monthlySales = [] } = useQuery({
+    queryKey: ['report-monthly-revenue'],
+    queryFn: () => reporteService.getMonthlyRevenue()
+  });
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  const { data: kpis = null, isLoading: loading } = useQuery({
+    queryKey: ['report-kpis'],
+    queryFn: () => reporteService.getKPIs()
+  });
 
   const handleExportPDF = async () => {
     const element = document.getElementById('reporte-pdf-content');

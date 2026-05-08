@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Store, Database, Bell, Save, Shield, Server, RefreshCw, Eye, EyeOff } from 'lucide-react';
 import { Badge } from '../components/ui/Badge';
 import { notificationService } from '../lib/notifications';
@@ -65,50 +66,84 @@ function Field({ label, value, onChange, type = 'text', placeholder }: { label: 
 
 export function Configuracion() {
   const { user } = useAuth();
-  const [loading, setLoading] = useState(false);
-  const [testingConnection, setTestingConnection] = useState(false);
-  const [dbStats, setDbStats] = useState<{ size: number; path: string }>({ size: 0, path: 'Cargando...' });
+  const queryClient = useQueryClient();
+  
+  const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  
   const [prefs, setPrefs] = useState<AppPreferences>(preferenciasService.get());
-  const [sucursal, setSucursal] = useState<SucursalConfig>({
+  
+  const [localSucursal, setLocalSucursal] = useState<SucursalConfig>({
     sucursal_id: '',
     nombre_sucursal: '',
     api_url_central: ''
   });
-  const [negocio, setNegocio] = useState<DatosNegocio>({
+
+  const [localNegocio, setLocalNegocio] = useState<DatosNegocio>({
     razon_social: '',
     ruc: '',
     direccion: '',
     telefono: '',
     email: ''
   });
-  const [isCentral, setIsCentral] = useState(false);
-  const [syncing, setSyncing] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
-  // Estado para la sección de seguridad
   const [securityData, setSecurityData] = useState({
     newPassword: '',
     confirmPassword: ''
   });
 
-  const loadData = async () => {
-    const stats = await databaseService.getDbStats();
-    setDbStats(stats);
-    
-    const config = await sucursalService.getConfig();
-    if (config) setSucursal(config);
+  // Queries
+  const { data: dbStats = { size: 0, path: 'Cargando...' } } = useQuery({
+    queryKey: ['db-stats'],
+    queryFn: () => databaseService.getDbStats()
+  });
 
-    const datosNegocio = await negocioService.get();
-    setNegocio(datosNegocio);
+  const { data: sucursalData } = useQuery({
+    queryKey: ['sucursal-config'],
+    queryFn: () => sucursalService.getConfig()
+  });
 
-    // Verificar si el servidor está corriendo (solo para saber si ocultar/mostrar opciones)
-    const running = await invoke<boolean>('is_server_running');
-    setIsCentral(running);
-  };
+  const { data: negocioData } = useQuery({
+    queryKey: ['negocio'],
+    queryFn: () => negocioService.get()
+  });
+
+  const { data: isCentral = false } = useQuery({
+    queryKey: ['server-status'],
+    queryFn: () => invoke<boolean>('is_server_running')
+  });
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (sucursalData) setLocalSucursal(sucursalData);
+  }, [sucursalData]);
+
+  useEffect(() => {
+    if (negocioData) setLocalNegocio(negocioData);
+  }, [negocioData]);
+
+  // Mutations
+  const saveSucursalMutation = useMutation({
+    mutationFn: (data: SucursalConfig) => sucursalService.saveConfig(data),
+    onSuccess: () => {
+      notificationService.success('Configuración Guardada', 'La identidad de la sede se actualizó correctamente.');
+      queryClient.invalidateQueries({ queryKey: ['sucursal-config'] });
+    }
+  });
+
+  const saveNegocioMutation = useMutation({
+    mutationFn: (data: DatosNegocio) => negocioService.save(data),
+    onSuccess: () => {
+      notificationService.success('Datos Actualizados', 'La información del negocio se guardó correctamente.');
+      queryClient.invalidateQueries({ queryKey: ['negocio'] });
+    }
+  });
+
+  const updatePasswordMutation = useMutation({
+    mutationFn: (password: string) => authService.updatePassword(user!.id, password),
+    onSuccess: () => {
+      notificationService.success('Contraseña Actualizada', 'Tu acceso ha sido actualizado correctamente.');
+      setSecurityData({ newPassword: '', confirmPassword: '' });
+    }
+  });
 
   const handleToggle = (key: keyof AppPreferences) => {
     const updated = preferenciasService.toggle(key);
@@ -122,80 +157,93 @@ export function Configuracion() {
     setPrefs(updated);
   };
 
-  const handleSucursalSave = async (e: React.FormEvent) => {
+  const handleSucursalSave = (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    try {
-      await sucursalService.saveConfig(sucursal);
-      notificationService.success('Configuración Guardada', 'La identidad de la sede se actualizó correctamente.');
-      loadData();
-    } catch (error) {
-      notificationService.error('Error', 'No se pudo guardar la configuración.');
-    } finally {
-      setLoading(false);
-    }
+    saveSucursalMutation.mutate(localSucursal);
   };
 
-  const handleNegocioSave = async (e: React.FormEvent) => {
+  const handleNegocioSave = (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    try {
-      await negocioService.save(negocio);
-      notificationService.success('Datos Actualizados', 'La información del negocio se guardó correctamente.');
-      loadData();
-    } catch (error) {
-      notificationService.error('Error', 'No se pudieron guardar los datos del negocio.');
-    } finally {
-      setLoading(false);
-    }
+    saveNegocioMutation.mutate(localNegocio);
   };
 
-  const handleTestConnection = async () => {
-    if (!sucursal.api_url_central || !sucursal.sucursal_id) {
+  const testConnectionMutation = useMutation({
+    mutationFn: () => sucursalService.testConnection(localSucursal.api_url_central, localSucursal.sucursal_id),
+    onSuccess: () => {
+      notificationService.success('Conexión Exitosa', 'La sede central está disponible y lista.');
+      setConnectionStatus('success');
+    },
+    onError: (error: any) => {
+      notificationService.error('Conexión Fallida', error.message);
+      setConnectionStatus('error');
+    }
+  });
+
+  const handleTestConnection = () => {
+    if (!localSucursal.api_url_central || !localSucursal.sucursal_id) {
       notificationService.error('Configuración Incompleta', 'Ingresa el ID de Sede y la URL de la central.');
       return;
     }
-    setTestingConnection(true);
-    try {
-      await sucursalService.testConnection(sucursal.api_url_central, sucursal.sucursal_id);
-      notificationService.success('Conexión Exitosa', 'La sede central está disponible y lista.');
-      setConnectionStatus('success');
-    } catch (error: any) {
-      notificationService.error('Conexión Fallida', error.message);
-      setConnectionStatus('error');
-    } finally {
-      setTestingConnection(false);
-    }
+    testConnectionMutation.mutate();
   };
 
-  const handleSync = async () => {
-    if (isCentral) {
-      notificationService.info('Sede Principal', 'Las sedes principales no sincronizan productos de otros, solo los sirven.');
-      return;
-    }
-
-    setSyncing(true);
-    try {
+  const syncMutation = useMutation({
+    mutationFn: async () => {
       notificationService.info('Sincronizando', 'Actualizando catálogo, usuarios y enviando ventas...');
-      
       const { enviadas: vEnviadas } = await syncService.pushSales();
       const { enviadas: kEnviadas } = await syncService.pushKardex();
       await syncService.pushStockLevels();
       const { creados: pCreados, actualizados: pActualizados } = await syncService.pullProducts();
       const { creados: uCreados, actualizados: uActualizados } = await syncService.pullUsers();
-
+      return { vEnviadas, kEnviadas, pCreados, pActualizados, uCreados, uActualizados };
+    },
+    onSuccess: (data) => {
       notificationService.success(
         'Sincronización Completa', 
-        `Enviado: ${vEnviadas} ventas y ${kEnviadas} mov. Catálogo: +${pCreados}/~${pActualizados}. Usuarios: +${uCreados}/~${uActualizados}.`
+        `Enviado: ${data.vEnviadas} ventas y ${data.kEnviadas} mov. Catálogo: +${data.pCreados}/~${data.pActualizados}. Usuarios: +${data.uCreados}/~${data.uActualizados}.`
       );
-    } catch (error: any) {
-      notificationService.error('Error de Sincronización', error.message);
-    } finally {
-      setSyncing(false);
+      queryClient.invalidateQueries({ queryKey: ['products'] });
     }
+  });
+
+  const handleSync = () => {
+    if (isCentral) {
+      notificationService.info('Sede Principal', 'Las sedes principales no sincronizan productos de otros, solo los sirven.');
+      return;
+    }
+    syncMutation.mutate();
   };
 
-  const handleUpdatePassword = async (e: React.FormEvent) => {
+  const optimizeMutation = useMutation({
+    mutationFn: () => databaseService.optimize(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['db-stats'] });
+      notificationService.success('Completado', 'La base de datos ha sido optimizada.');
+    }
+  });
+
+  const handleOptimize = () => {
+    notificationService.info('Mantenimiento', 'Optimizando base de datos...');
+    optimizeMutation.mutate();
+  };
+
+  const backupMutation = useMutation({
+    mutationFn: async () => {
+      const path = await databaseService.backup();
+      await databaseService.reveal(path);
+      return path;
+    },
+    onSuccess: () => {
+      notificationService.successWithConfirm('Copia Creada', 'El respaldo se completó y la carpeta se ha abierto.');
+    }
+  });
+
+  const handleBackup = () => {
+    notificationService.info('Respaldo', 'Creando copia de seguridad...');
+    backupMutation.mutate();
+  };
+
+  const handleUpdatePassword = (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
 
@@ -214,40 +262,9 @@ export function Configuracion() {
       return;
     }
 
-    setLoading(true);
-    try {
-      await authService.updatePassword(user.id, securityData.newPassword);
-      notificationService.success('Contraseña Actualizada', 'Tu acceso ha sido actualizado correctamente.');
-      setSecurityData({ newPassword: '', confirmPassword: '' });
-    } catch (error: any) {
-      notificationService.error('Error', error.message || 'No se pudo actualizar la contraseña.');
-    } finally {
-      setLoading(false);
-    }
+    updatePasswordMutation.mutate(securityData.newPassword);
   };
 
-  const handleOptimize = async () => {
-    try {
-      notificationService.info('Mantenimiento', 'Optimizando base de datos...');
-      await databaseService.optimize();
-      await loadData();
-      notificationService.success('Completado', 'La base de datos ha sido optimizada.');
-    } catch (error) {
-      notificationService.error('Error', 'No se pudo optimizar la base de datos.');
-    }
-  };
-
-  const handleBackup = async () => {
-    try {
-      notificationService.info('Respaldo', 'Creando copia de seguridad...');
-      const path = await databaseService.backup();
-      await databaseService.reveal(path);
-      notificationService.successWithConfirm('Copia Creada', 'El respaldo se completó y la carpeta se ha abierto.');
-    } catch (error) {
-      console.error(error);
-      notificationService.error('Error', 'No se pudo crear el respaldo.');
-    }
-  };
 
   const formatSize = (bytes: number) => {
     if (bytes === 0) return '0 B';
@@ -281,8 +298,8 @@ export function Configuracion() {
                 <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">ID de Sede Único</label>
                 <input
                   type="text"
-                  value={sucursal.sucursal_id}
-                  onChange={(e) => setSucursal({...sucursal, sucursal_id: e.target.value})}
+                  value={localSucursal.sucursal_id}
+                  onChange={(e) => setLocalSucursal({...localSucursal, sucursal_id: e.target.value})}
                   placeholder="Ej: SEDE-01"
                   className="w-full px-4 py-2.5 text-sm font-medium border border-gray-100 dark:border-gray-700 rounded-2xl bg-gray-50/50 dark:bg-gray-900/50 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
                 />
@@ -291,8 +308,8 @@ export function Configuracion() {
                 <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">Nombre de Sucursal</label>
                 <input
                   type="text"
-                  value={sucursal.nombre_sucursal}
-                  onChange={(e) => setSucursal({...sucursal, nombre_sucursal: e.target.value})}
+                  value={localSucursal.nombre_sucursal}
+                  onChange={(e) => setLocalSucursal({...localSucursal, nombre_sucursal: e.target.value})}
                   placeholder="Ej: Sucursal Centro"
                   className="w-full px-4 py-2.5 text-sm font-medium border border-gray-100 dark:border-gray-700 rounded-2xl bg-gray-50/50 dark:bg-gray-900/50 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
                 />
@@ -304,9 +321,9 @@ export function Configuracion() {
                     <div className="relative flex-1">
                       <input
                         type="url"
-                        value={sucursal.api_url_central}
+                        value={localSucursal.api_url_central}
                         onChange={(e) => {
-                          setSucursal({...sucursal, api_url_central: e.target.value});
+                          setLocalSucursal({...localSucursal, api_url_central: e.target.value});
                           setConnectionStatus('idle');
                         }}
                         placeholder="https://central.tu-negocio.com/api"
@@ -320,7 +337,7 @@ export function Configuracion() {
                     <button 
                       type="button"
                       onClick={handleTestConnection}
-                      disabled={testingConnection || isCentral}
+                      disabled={testConnectionMutation.isPending || isCentral}
                       className={`px-4 rounded-2xl transition-all disabled:opacity-50 border ${
                         connectionStatus === 'success' 
                           ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-800'
@@ -330,7 +347,7 @@ export function Configuracion() {
                       }`}
                       title="Probar Conexión"
                     >
-                      <RefreshCw size={18} className={testingConnection ? 'animate-spin' : ''} />
+                      <RefreshCw size={18} className={testConnectionMutation.isPending ? 'animate-spin' : ''} />
                     </button>
                   </div>
                 </div>
@@ -341,15 +358,15 @@ export function Configuracion() {
                   <button 
                     type="button"
                     onClick={handleSync}
-                    disabled={syncing || !sucursal.api_url_central}
+                    disabled={syncMutation.isPending || !localSucursal.api_url_central}
                     className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 text-sm font-bold rounded-2xl hover:bg-indigo-100 transition-all disabled:opacity-50 border border-indigo-100 dark:border-indigo-800"
                   >
-                    <RefreshCw size={18} className={syncing ? 'animate-spin' : ''} />
-                    {syncing ? 'Sincronizando...' : 'Sincronizar con Sede Central'}
+                    <RefreshCw size={18} className={syncMutation.isPending ? 'animate-spin' : ''} />
+                    {syncMutation.isPending ? 'Sincronizando...' : 'Sincronizar con Sede Central'}
                   </button>
-                  {sucursal.ultima_sincronizacion && (
+                  {localSucursal.ultima_sincronizacion && (
                     <p className="text-[9px] font-bold text-indigo-400 uppercase tracking-tighter mt-1 text-right">
-                      Última: {new Date(sucursal.ultima_sincronizacion).toLocaleString()}
+                      Última: {new Date(localSucursal.ultima_sincronizacion).toLocaleString()}
                     </p>
                   )}
                 </div>
@@ -357,11 +374,11 @@ export function Configuracion() {
             </div>
             <button 
               type="submit"
-              disabled={loading}
+              disabled={saveSucursalMutation.isPending}
               className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-2xl transition-all shadow-lg shadow-indigo-200 dark:shadow-none disabled:opacity-50"
             >
               <Save size={18} />
-              {loading ? 'Guardando...' : 'Guardar Identidad de Sede'}
+              {saveSucursalMutation.isPending ? 'Guardando...' : 'Guardar Identidad de Sede'}
             </button>
           </form>
         </Section>
@@ -374,21 +391,21 @@ export function Configuracion() {
         >
           <form onSubmit={handleNegocioSave} className="space-y-5">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field label="Razón Social" value={negocio.razon_social} onChange={val => setNegocio({...negocio, razon_social: val})} placeholder="Ej: Minimarket El Sol S.A.C." />
-              <Field label="RUC / Identificación" value={negocio.ruc} onChange={val => setNegocio({...negocio, ruc: val})} placeholder="Ej: 20123456789" />
+              <Field label="Razón Social" value={localNegocio.razon_social} onChange={val => setLocalNegocio({...localNegocio, razon_social: val})} placeholder="Ej: Minimarket El Sol S.A.C." />
+              <Field label="RUC / Identificación" value={localNegocio.ruc} onChange={val => setLocalNegocio({...localNegocio, ruc: val})} placeholder="Ej: 20123456789" />
               <div className="sm:col-span-2">
-                <Field label="Dirección Fiscal" value={negocio.direccion} onChange={val => setNegocio({...negocio, direccion: val})} placeholder="Av. Principal 123, Tacna" />
+                <Field label="Dirección Fiscal" value={localNegocio.direccion} onChange={val => setLocalNegocio({...localNegocio, direccion: val})} placeholder="Av. Principal 123, Tacna" />
               </div>
-              <Field label="Teléfono de Contacto" value={negocio.telefono} onChange={val => setNegocio({...negocio, telefono: val})} placeholder="Ej: 052 123 456" />
-              <Field label="Correo Electrónico" value={negocio.email} onChange={val => setNegocio({...negocio, email: val})} placeholder="contacto@empresa.com" />
+              <Field label="Teléfono de Contacto" value={localNegocio.telefono} onChange={val => setLocalNegocio({...localNegocio, telefono: val})} placeholder="Ej: 052 123 456" />
+              <Field label="Correo Electrónico" value={localNegocio.email} onChange={val => setLocalNegocio({...localNegocio, email: val})} placeholder="contacto@empresa.com" />
             </div>
             <button 
               type="submit"
-              disabled={loading}
+              disabled={saveNegocioMutation.isPending}
               className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-2xl transition-all shadow-lg shadow-indigo-200 dark:shadow-none disabled:opacity-50"
             >
               <Save size={18} />
-              {loading ? 'Guardando...' : 'Guardar Datos del Negocio'}
+              {saveNegocioMutation.isPending ? 'Guardando...' : 'Guardar Datos del Negocio'}
             </button>
           </form>
         </Section>
@@ -416,10 +433,10 @@ export function Configuracion() {
             </div>
             <button 
               type="submit"
-              disabled={loading}
+              disabled={updatePasswordMutation.isPending}
               className="w-full sm:w-auto px-6 py-2.5 bg-gray-800 dark:bg-gray-700 hover:bg-gray-900 text-white text-sm font-bold rounded-2xl transition-all disabled:opacity-50"
             >
-              {loading ? 'Actualizando...' : 'Actualizar Credenciales'}
+              {updatePasswordMutation.isPending ? 'Actualizando...' : 'Actualizar Credenciales'}
             </button>
           </form>
         </Section>

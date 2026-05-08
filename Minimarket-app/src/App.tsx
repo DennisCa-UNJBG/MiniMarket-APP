@@ -1,4 +1,5 @@
 import { HashRouter, Routes, Route } from 'react-router-dom';
+import { QueryClient, QueryClientProvider, QueryCache, MutationCache } from '@tanstack/react-query';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { SidebarProvider } from './contexts/SidebarContext';
 import { allNavItems } from './config/navigation';
@@ -6,6 +7,51 @@ import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { MainLayout } from './layouts/MainLayout';
 import { Login } from './pages/Login';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { notificationService } from './lib/notifications';
+import { ConnectionError } from './lib/errors';
+
+// Configuración de TanStack Query con manejo de errores global
+const queryClient = new QueryClient({
+  queryCache: new QueryCache({
+    onError: (error: any) => {
+      console.error('Global Query Error:', error);
+      if (error instanceof ConnectionError) {
+        notificationService.error(
+          'Error de Conexión',
+          'No se pudo conectar a la base de datos local. Verifica la instalación.'
+        );
+      } else {
+        notificationService.error(
+          'Error de Datos',
+          error.message || 'Ocurrió un error al cargar los datos.'
+        );
+      }
+    },
+  }),
+  mutationCache: new MutationCache({
+    onError: (error: any) => {
+      console.error('Global Mutation Error:', error);
+      if (error instanceof ConnectionError) {
+        notificationService.error(
+          'Error de Conexión',
+          'No se pudo conectar a la base de datos. La operación no se guardó.'
+        );
+      } else {
+        notificationService.error(
+          'Error de Operación',
+          error.message || 'No se pudo completar la acción solicitada.'
+        );
+      }
+    },
+  }),
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+      staleTime: 1000 * 60 * 5,
+    },
+  },
+});
 
 function AppContent() {
   const { isAuthenticated, login, isLoading } = useAuth();
@@ -45,13 +91,15 @@ function AppContent() {
 
 function App() {
   return (
-    <ThemeProvider>
-      <SidebarProvider>
-        <AuthProvider>
-          <AppContent />
-        </AuthProvider>
-      </SidebarProvider>
-    </ThemeProvider>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
+        <SidebarProvider>
+          <AuthProvider>
+            <AppContent />
+          </AuthProvider>
+        </SidebarProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
   );
 }
 

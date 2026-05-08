@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Search, Filter, AlertTriangle } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { DataTable, type TableColumn } from '../components/ui/DataTable';
 import { Badge } from '../components/ui/Badge';
 import { PageHeader } from '../components/ui/PageHeader';
 import { productoService, type Product } from '../services/productoService';
-import { notificationService } from '../lib/notifications';
 
 type StockStatus = 'ok' | 'low' | 'out';
 
@@ -21,25 +21,12 @@ const statusBadge: Record<StockStatus, { label: string; variant: 'emerald' | 'am
 };
 
 export function Inventario() {
-  const [products, setProducts] = useState<Product[]>([]);
   const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(false);
 
-  const loadProducts = async () => {
-    setLoading(true);
-    try {
-      const data = await productoService.getAll(true);
-      setProducts(data);
-    } catch (error) {
-      notificationService.error('Error', 'No se pudieron cargar los productos');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadProducts();
-  }, []);
+  const { data: products = [], isLoading: loading } = useQuery({
+    queryKey: ['products', true],
+    queryFn: () => productoService.getAll(true)
+  });
 
   const columns: TableColumn<Product>[] = [
     {

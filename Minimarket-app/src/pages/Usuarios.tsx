@@ -1,15 +1,13 @@
-import { useState, useEffect } from 'react';
-import { Users, Plus, Search, UserCircle, Shield, Building2, Pencil, Key, Eye, EyeOff } from 'lucide-react';
+import { useState } from 'react';
+import { Plus, Search, Shield, Building2, Pencil, Eye, EyeOff } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { userService } from '../services/userService';
 import { sucursalService } from '../services/sucursalService';
 import { notificationService } from '../lib/notifications';
 import { Badge } from '../components/ui/Badge';
 
 export function Usuarios() {
-  const [usuarios, setUsuarios] = useState<any[]>([]);
-  const [roles, setRoles] = useState<any[]>([]);
-  const [sedes, setSedes] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [showModal, setShowModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -23,22 +21,49 @@ export function Usuarios() {
     sucursal_id: ''
   });
 
-  const loadData = async () => {
-    setLoading(true);
-    const [userData, roleData, sedeData] = await Promise.all([
-      userService.getAll(),
-      userService.getRoles(),
-      sucursalService.getAll()
-    ]);
-    setUsuarios(userData);
-    setRoles(roleData);
-    setSedes(sedeData);
-    setLoading(false);
-  };
+  // Queries
+  const { data: usuarios = [], isLoading: loading } = useQuery({
+    queryKey: ['users'],
+    queryFn: () => userService.getAll()
+  });
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  const { data: roles = [] } = useQuery({
+    queryKey: ['roles'],
+    queryFn: () => userService.getRoles()
+  });
+
+  const { data: sedes = [] } = useQuery({
+    queryKey: ['sedes'],
+    queryFn: () => sucursalService.getAll()
+  });
+
+  // Mutations
+  const saveMutation = useMutation({
+    mutationFn: async (data: any) => {
+      if (editingId) {
+        return userService.update(editingId, data);
+      } else {
+        return userService.create(data);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      notificationService.success(
+        editingId ? 'Usuario Actualizado' : 'Usuario Creado',
+        editingId ? 'Los datos se guardaron correctamente.' : 'El nuevo usuario ha sido registrado.'
+      );
+      setShowModal(false);
+    }
+  });
+
+  const toggleStatusMutation = useMutation({
+    mutationFn: ({ id, current }: { id: number, current: string }) => 
+      userService.toggleEstado(id, current),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      notificationService.success('Estado Actualizado', 'El acceso del usuario ha cambiado.');
+    }
+  });
 
   const handleOpenCreate = () => {
     setEditingId(null);
@@ -60,31 +85,13 @@ export function Usuarios() {
     setShowModal(true);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      if (editingId) {
-        await userService.update(editingId, formData);
-        notificationService.success('Usuario Actualizado', 'Los datos se guardaron correctamente.');
-      } else {
-        await userService.create(formData);
-        notificationService.success('Usuario Creado', 'El nuevo usuario ha sido registrado.');
-      }
-      setShowModal(false);
-      loadData();
-    } catch (error: any) {
-      notificationService.error('Error', 'No se pudo procesar la solicitud.');
-    }
+    saveMutation.mutate(formData);
   };
 
-  const handleToggleEstado = async (id: number, current: string) => {
-    try {
-      await userService.toggleEstado(id, current);
-      notificationService.success('Estado Actualizado', 'El acceso del usuario ha cambiado.');
-      loadData();
-    } catch (error) {
-      notificationService.error('Error', 'No se pudo cambiar el estado.');
-    }
+  const handleToggleEstado = (id: number, current: string) => {
+    toggleStatusMutation.mutate({ id, current });
   };
 
   const filteredUsers = usuarios.filter(u => 

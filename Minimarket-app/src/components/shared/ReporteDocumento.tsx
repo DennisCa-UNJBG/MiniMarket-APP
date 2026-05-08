@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { type TopProduct, type MonthlyRevenue, type ReportKPIs } from '../../services/reporteService';
 import { VentasBarChart, RankingProductos } from '../reportes/ReportComponents';
-import { negocioService, type DatosNegocio } from '../../services/negocioService';
+import { negocioService } from '../../services/negocioService';
 
 interface ReporteDocumentoProps {
   id: string;
@@ -11,19 +11,10 @@ interface ReporteDocumentoProps {
 }
 
 export const ReporteDocumento: React.FC<ReporteDocumentoProps> = ({ id, kpis, topProducts, monthlySales }) => {
-  const [negocio, setNegocio] = useState<DatosNegocio | null>(null);
-
-  useEffect(() => {
-    const loadNegocio = async () => {
-      try {
-        const data = await negocioService.get();
-        setNegocio(data);
-      } catch (error) {
-        console.error('Error al cargar datos del negocio para el reporte:', error);
-      }
-    };
-    loadNegocio();
-  }, []);
+  const { data: negocio } = useQuery({
+    queryKey: ['negocio'],
+    queryFn: () => negocioService.get()
+  });
 
   return (
     <div 

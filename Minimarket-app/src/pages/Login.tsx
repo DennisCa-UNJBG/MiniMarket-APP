@@ -2,8 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Package2, Lock, User, ArrowRight } from 'lucide-react';
 import { authService, type UserData } from '../services/authService';
 import { notificationService } from '../lib/notifications';
-import { AuthError } from '../lib/errors';
-import { withDb } from '../lib/withDb';
+import { AuthError, ConnectionError } from '../lib/errors';
 
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
@@ -32,13 +31,14 @@ export function Login({ onLogin }: LoginProps) {
     setIsLoading(true);
     
     try {
-      const userData = await withDb(() => authService.login(account, password));
+      const userData = await authService.login(account, password);
       onLogin(userData);
     } catch (error) {
       if (error instanceof AuthError) {
         notificationService.error('Credenciales inválidas', 'El usuario o la contraseña son incorrectos, o la cuenta está inactiva.');
+      } else if (error instanceof ConnectionError) {
+        notificationService.error('Error de conexión', 'No se pudo conectar a la base de datos local.');
       }
-      // ConnectionError ya es manejado por withDb — no se repite aquí
     } finally {
       setIsLoading(false);
     }

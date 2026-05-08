@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Search, Plus, Minus, Trash2, ShoppingBag, Receipt, ArrowLeft, CreditCard, Banknote } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { notificationService } from '../lib/notifications';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
@@ -8,10 +9,9 @@ import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
 import { Badge } from '../components/ui/Badge';
 import { productoService, type Product } from '../services/productoService';
-import { categoriaService, type Category } from '../services/categoriaService';
+import { categoriaService } from '../services/categoriaService';
 import { ventaService } from '../services/ventaService';
 import { useAuth } from '../contexts/AuthContext';
-import { useEffect } from 'react';
 
 interface CartItem {
   product: Product;
@@ -20,9 +20,9 @@ interface CartItem {
 
 export function NuevaVenta() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { user } = useAuth();
-  const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState<number | 'Todos'>('Todos');
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -32,22 +32,34 @@ export function NuevaVenta() {
   const [paymentMethod, setPaymentMethod] = useState<'EFECTIVO' | 'TARJETA'>('EFECTIVO');
   const [amountPaid, setAmountPaid] = useState('');
 
-  const loadData = async () => {
-    try {
-      const [prods, cats] = await Promise.all([
-        productoService.getAll(true),
-        categoriaService.getAll()
-      ]);
-      setProducts(prods);
-      setCategories(cats);
-    } catch (error) {
-      notificationService.error('Error', 'No se pudieron cargar los datos.');
-    }
-  };
+  // Queries
+  const { data: products = [] } = useQuery({
+    queryKey: ['products', true],
+    queryFn: () => productoService.getAll(true)
+  });
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  const { data: categories = [] } = useQuery({
+    queryKey: ['categories'],
+    queryFn: () => categoriaService.getAll()
+  });
+
+  // Mutations
+  const registrarVentaMutation = useMutation({
+    mutationFn: (ventaData: any) => ventaService.registrarVenta(ventaData),
+    onSuccess: async (_, variables) => {
+      setShowCheckout(false);
+      await notificationService.successWithConfirm('¡Venta completada!', `Vuelto: S/ ${variables.vuelto.toFixed(2)}`);
+      setCart([]);
+      setAmountPaid('');
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['sales'] });
+      queryClient.invalidateQueries({ queryKey: ['sales-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['recent-activity'] });
+      queryClient.invalidateQueries({ queryKey: ['sales-chart'] });
+      queryClient.invalidateQueries({ queryKey: ['low-stock'] });
+    }
+  });
 
   // ── Lógica del Catálogo ───────────────────────────────────────────────────────
   const filteredCatalog = products.filter(p => {
@@ -367,30 +379,20 @@ export function NuevaVenta() {
               </Button>
               <Button 
                 disabled={paymentMethod === 'EFECTIVO' && paidNumber < total}
-                onClick={async () => {
-                  try {
-                    const ventaData = {
-                      usuario_id: user?.id || 1,
-                      total,
-                      metodo_pago: paymentMethod,
-                      monto_pagado: paidNumber,
-                      vuelto: change,
-                      items: cart.map(i => ({
-                        producto_id: i.product.id,
-                        cantidad: i.quantity,
-                        precio_unitario: i.product.precio_venta || 0
-                      }))
-                    };
-                    
-                    await ventaService.registrarVenta(ventaData);
-                    setShowCheckout(false);
-                    await notificationService.successWithConfirm('¡Venta completada!', `Vuelto: S/ ${change.toFixed(2)}`);
-                    setCart([]);
-                    setAmountPaid('');
-                    loadData(); // Recargar stock
-                  } catch (error) {
-                    notificationService.error('Error', 'No se pudo procesar la venta.');
-                  }
+                onClick={() => {
+                  const ventaData = {
+                    usuario_id: user?.id || 1,
+                    total,
+                    metodo_pago: paymentMethod,
+                    monto_pagado: paidNumber,
+                    vuelto: change,
+                    items: cart.map(i => ({
+                      producto_id: i.product.id,
+                      cantidad: i.quantity,
+                      precio_unitario: i.product.precio_venta || 0
+                    }))
+                  };
+                  registrarVentaMutation.mutate(ventaData);
                 }}
                 fullWidth
                 className="flex-[2]"

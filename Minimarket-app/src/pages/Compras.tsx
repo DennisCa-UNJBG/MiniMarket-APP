@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { Plus, Truck, Search, Calendar, FileText, Trash2, ShoppingBag, ArrowUpRight, Edit2, Check } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { DataTable, type TableColumn } from '../components/ui/DataTable';
 import { Badge } from '../components/ui/Badge';
 import { PageHeader } from '../components/ui/PageHeader';
@@ -25,15 +26,13 @@ interface CartItem extends CompraDetalle {
 
 export function Compras() {
   const { user } = useAuth();
-  const [purchases, setPurchases] = useState<PurchaseRecord[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
+  const queryClient = useQueryClient();
   const [showModal, setShowModal] = useState(false);
   const [search, setSearch] = useState('');
   
   // --- Estado para el Detalle de Compra ---
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedPurchase, setSelectedPurchase] = useState<PurchaseRecord | null>(null);
-  const [purchaseDetails, setPurchaseDetails] = useState<any[]>([]);
   const [editingPurchaseId, setEditingPurchaseId] = useState<number | null>(null);
   const [editingCartIndex, setEditingCartIndex] = useState<number | null>(null);
   
@@ -51,21 +50,55 @@ export function Compras() {
   const [cost, setCost] = useState('');
   const qtyInputRef = useRef<HTMLInputElement>(null);
 
-  const loadData = async () => {
-    try {
-      const history = await inventarioService.getCompras(50);
-      setPurchases(history);
-      
-      const prods = await productoService.getAll(true);
-      setProducts(prods);
-    } catch (error) {
-      console.error(error);
-    }
-  };
+  // Queries
+  const { data: purchases = [] } = useQuery({
+    queryKey: ['purchases'],
+    queryFn: () => inventarioService.getCompras(50)
+  });
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  const { data: products = [] } = useQuery({
+    queryKey: ['products', true],
+    queryFn: () => productoService.getAll(true)
+  });
+
+  const { data: purchaseDetails = [] } = useQuery({
+    queryKey: ['purchase-details', selectedPurchase?.id],
+    queryFn: () => inventarioService.getCompraDetalle(selectedPurchase!.id),
+    enabled: !!selectedPurchase
+  });
+
+  // Mutations
+  const savePurchaseMutation = useMutation({
+    mutationFn: (data: any) => {
+      if (editingPurchaseId) {
+        return inventarioService.actualizarCompraCompleta(editingPurchaseId, data);
+      } else {
+        return inventarioService.registrarCompraCompleta(data);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['purchases'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      notificationService.success(
+        editingPurchaseId ? 'Compra actualizada' : 'Compra completada', 
+        editingPurchaseId ? 'Los cambios se han guardado correctamente.' : 'Se ha actualizado el stock y el historial correctamente.'
+      );
+      setShowModal(false);
+      resetForm();
+    }
+  });
+
+  const resetForm = () => {
+    setCart([]);
+    setReferencia('');
+    setHasIGV(false);
+    setEditingPurchaseId(null);
+    setEditingCartIndex(null);
+    setSelectedProd(null);
+    setProdSearch('');
+    setQty('');
+    setCost('');
+  };
 
   const addToCart = () => {
     if (!selectedProd || !qty || !cost) {
@@ -115,45 +148,31 @@ export function Compras() {
   const igvAmount = hasIGV ? (totalSinIGV * (igvPercent / 100)) : 0;
   const totalFinal = totalSinIGV + igvAmount;
 
-  const handleConfirmarCompra = async () => {
+  const handleConfirmarCompra = () => {
     if (cart.length === 0) {
       notificationService.warning('Carrito vacío', 'Agrega al menos un producto a la compra.');
       return;
     }
 
-    try {
-      const purchaseData = {
-        usuario_id: user?.id || 1,
-        documento_referencia: referencia || 'S/R',
-        items: cart.map(({ producto_id, cantidad, costo_unitario }) => ({
-          producto_id,
-          cantidad,
-          costo_unitario: hasIGV ? costo_unitario * (1 + (igvPercent / 100)) : costo_unitario
-        }))
-      };
+    const purchaseData = {
+      usuario_id: user?.id || 1,
+      documento_referencia: referencia || 'S/R',
+      items: cart.map(({ producto_id, cantidad, costo_unitario }) => ({
+        producto_id,
+        cantidad,
+        costo_unitario: hasIGV ? costo_unitario * (1 + (igvPercent / 100)) : costo_unitario
+      }))
+    };
 
-      if (editingPurchaseId) {
-        await inventarioService.actualizarCompraCompleta(editingPurchaseId, purchaseData);
-        notificationService.success('Compra actualizada', 'Los cambios se han guardado correctamente.');
-      } else {
-        await inventarioService.registrarCompraCompleta(purchaseData);
-        notificationService.success('Compra completada', 'Se ha actualizado el stock y el historial correctamente.');
-      }
-      setShowModal(false);
-      setCart([]);
-      setReferencia('');
-      setHasIGV(false);
-      setEditingPurchaseId(null);
-      setEditingCartIndex(null);
-      loadData();
-    } catch (error) {
-      notificationService.error('Error', 'No se pudo procesar la operación.');
-    }
+    savePurchaseMutation.mutate(purchaseData);
   };
 
-  const handleEdit = async (purchase: PurchaseRecord) => {
-    try {
-      const details = await inventarioService.getCompraDetalle(purchase.id);
+  const fetchDetailsMutation = useMutation({
+    mutationFn: (id: number) => inventarioService.getCompraDetalle(id),
+    onSuccess: (details, id) => {
+      const purchase = purchases.find(p => p.id === id);
+      if (!purchase) return;
+      
       setReferencia(purchase.documento_referencia);
       setCart(details.map(d => ({
         producto_id: d.producto_id,
@@ -163,22 +182,18 @@ export function Compras() {
         costo_unitario: d.costo_unitario
       })));
       setEditingPurchaseId(purchase.id);
-      setHasIGV(false); // Por simplicidad al editar, o podríamos intentar deducirlo
+      setHasIGV(false);
       setShowModal(true);
-    } catch (error) {
-      notificationService.error('Error', 'No se pudieron cargar los datos para editar.');
     }
+  });
+
+  const handleEdit = (purchase: PurchaseRecord) => {
+    fetchDetailsMutation.mutate(purchase.id);
   };
 
-  const handleViewDetail = async (purchase: PurchaseRecord) => {
-    try {
-      const details = await inventarioService.getCompraDetalle(purchase.id);
-      setSelectedPurchase(purchase);
-      setPurchaseDetails(details);
-      setShowDetailModal(true);
-    } catch (error) {
-      notificationService.error('Error', 'No se pudieron cargar los detalles de la compra.');
-    }
+  const handleViewDetail = (purchase: PurchaseRecord) => {
+    setSelectedPurchase(purchase);
+    setShowDetailModal(true);
   };
 
   const columns: TableColumn<PurchaseRecord>[] = [
@@ -249,10 +264,7 @@ export function Compras() {
         action={
           <button
             onClick={() => {
-              setCart([]);
-              setReferencia('');
-              setHasIGV(false);
-              setEditingPurchaseId(null);
+              resetForm();
               setShowModal(true);
             }}
             className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-xl transition-colors shadow-sm shadow-indigo-200 dark:shadow-none"
@@ -486,9 +498,10 @@ export function Compras() {
               </div>
               <button 
                 onClick={handleConfirmarCompra}
-                className="flex items-center gap-2 px-6 py-3 bg-white text-indigo-600 font-bold rounded-xl hover:bg-indigo-50 transition-colors"
+                disabled={savePurchaseMutation.isPending}
+                className="flex items-center gap-2 px-6 py-3 bg-white text-indigo-600 font-bold rounded-xl hover:bg-indigo-50 transition-colors disabled:opacity-50"
               >
-                Completar Registro <ArrowUpRight size={20} />
+                {savePurchaseMutation.isPending ? 'Procesando...' : 'Completar Registro'} <ArrowUpRight size={20} />
               </button>
             </div>
           </div>

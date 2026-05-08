@@ -1,75 +1,58 @@
-import { useState, useEffect } from 'react';
 import { Server, Wifi, Globe, Copy, RefreshCw, Database, ShieldCheck, Building2, CloudSync } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { notificationService } from '../lib/notifications';
 import { Badge } from '../components/ui/Badge';
 import { sucursalService } from '../services/sucursalService';
 import { syncService } from '../services/syncService';
-import { getDb } from '../lib/db';
+import { ventaService } from '../services/ventaService';
 
 export function Sincronizacion() {
-  const [isCentral, setIsCentral] = useState(false);
-  const [serverIp, setServerIp] = useState('');
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
 
-  const checkServerStatus = async () => {
-    setLoading(true);
-    try {
-      const running = await invoke<boolean>('is_server_running');
-      setIsCentral(running);
-      if (running) {
-        const ip = await invoke<string>('get_local_ip');
-        setServerIp(ip);
-        loadSucursales();
-      }
-    } catch (error) {
-      console.error('Error al verificar servidor:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Queries
+  const { data: isCentral = false, isLoading: isLoadingServer } = useQuery({
+    queryKey: ['server-status'],
+    queryFn: () => invoke<boolean>('is_server_running')
+  });
 
-  const [sucursales, setSucursales] = useState<any[]>([]);
-  const loadSucursales = async () => {
-    const data = await sucursalService.getAll();
-    setSucursales(data);
-  };
+  const { data: serverIp = '' } = useQuery({
+    queryKey: ['local-ip'],
+    queryFn: () => invoke<string>('get_local_ip'),
+    enabled: isCentral
+  });
 
-  const [pendingSales, setPendingSales] = useState(0);
-  const checkPendingData = async () => {
-    if (!isCentral) {
-      const db = await getDb();
-      const res = await db.select<any[]>('SELECT count(*) as count FROM ventas WHERE sincronizado = 0');
-      setPendingSales(res[0].count);
-    }
-  };
+  const { data: sucursales = [] } = useQuery({
+    queryKey: ['sedes'],
+    queryFn: () => sucursalService.getAll(),
+    enabled: isCentral
+  });
 
-  useEffect(() => {
-    checkServerStatus();
-    checkPendingData();
-  }, [isCentral]);
+  const { data: pendingSales = 0, refetch: refetchPending } = useQuery({
+    queryKey: ['pending-sales'],
+    queryFn: () => ventaService.getVentasPendientes(),
+    enabled: !isCentral
+  });
 
-  const handleToggleServer = async () => {
-    try {
-      const newState = !isCentral;
-      const result = await invoke<boolean>('toggle_server', { active: newState });
-      setIsCentral(result);
-      
+  // Mutations
+  const toggleServerMutation = useMutation({
+    mutationFn: (active: boolean) => invoke<boolean>('toggle_server', { active }),
+    onSuccess: (result) => {
+      queryClient.setQueryData(['server-status'], result);
       if (result) {
-        const ip = await invoke<string>('get_local_ip');
-        setServerIp(ip);
-        notificationService.success('Servidor Iniciado', `La Sede Central está activa en http://${ip}:8080`);
+        queryClient.invalidateQueries({ queryKey: ['local-ip'] });
+        notificationService.success('Servidor Iniciado', `La Sede Central está activa.`);
       } else {
         notificationService.info('Servidor Detenido', 'El modo Sede Central ha sido desactivado.');
       }
-    } catch (error: any) {
+    },
+    onError: (error: any) => {
       notificationService.error('Error de Servidor', error);
     }
-  };
+  });
 
-  const handlePushData = async () => {
-    setLoading(true);
-    try {
+  const syncMutation = useMutation({
+    mutationFn: async () => {
       notificationService.info('Sincronizando', 'Enviando ventas y descargando catálogo actualizado...');
       
       // 1. Enviar ventas y movimientos
@@ -85,17 +68,30 @@ export function Sincronizacion() {
       // 4. Descargar usuarios
       const { creados: uCreados, actualizados: uActualizados } = await syncService.pullUsers();
 
+      return { enviadas, kEnviadas, pCreados, pActualizados, uCreados, uActualizados };
+    },
+    onSuccess: (data) => {
       notificationService.success(
         'Sincronización Completa', 
-        `Enviados: ${enviadas} ventas y ${kEnviadas} movimientos. Stock OK. Catálogo: +${pCreados}/~${pActualizados}. Usuarios: +${uCreados}/~${uActualizados}.`
+        `Enviados: ${data.enviadas} ventas y ${data.kEnviadas} movimientos. Stock OK. Catálogo: +${data.pCreados}/~${data.pActualizados}. Usuarios: +${data.uCreados}/~${data.uActualizados}.`
       );
-      checkPendingData();
-    } catch (error: any) {
+      refetchPending();
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+    },
+    onError: (error: any) => {
       notificationService.error('Error de Sincronización', error.message);
-    } finally {
-      setLoading(false);
     }
+  });
+
+  const handleToggleServer = () => {
+    toggleServerMutation.mutate(!isCentral);
   };
+
+  const handlePushData = () => {
+    syncMutation.mutate();
+  };
+
+  const loading = isLoadingServer || syncMutation.isPending || toggleServerMutation.isPending;
 
   if (loading) {
     return (

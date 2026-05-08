@@ -9,6 +9,7 @@ import {
   Filter,
   Download
 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { PageHeader } from '../components/ui/PageHeader';
 import { DataTable, type TableColumn } from '../components/ui/DataTable';
 import { Card } from '../components/ui/Card';
@@ -17,7 +18,6 @@ import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
 import { inventarioService } from '../services/inventarioService';
 import { productoService, type Product } from '../services/productoService';
-import { useEffect } from 'react';
 
 const columns: TableColumn<any>[] = [
   {
@@ -92,46 +92,45 @@ const columns: TableColumn<any>[] = [
 ];
 
 export function Kardex() {
-  const [products, setProducts] = useState<Product[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [search, setSearch] = useState('');
-  const [movements, setMovements] = useState<any[]>([]);
   const [showProductList, setShowProductList] = useState(false);
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
+  const [filterType, setFilterType] = useState<'today' | 'all' | 'filtered'>('today');
 
-  const loadTodayMovements = async () => {
-    try {
-      const data = await inventarioService.getMovimientosDia();
-      setMovements(data);
-      setSelectedProduct(null);
-      setDateRange({ start: '', end: '' });
-    } catch (error) {
-      console.error(error);
-    }
-  };
+  // Queries
+  const { data: products = [] } = useQuery({
+    queryKey: ['products', true],
+    queryFn: () => productoService.getAll(true)
+  });
 
-  const loadAllMovements = async () => {
-    try {
-      const data = await inventarioService.getMovimientosFiltrados({});
-      setMovements(data);
-      setSelectedProduct(null);
-      setDateRange({ start: '', end: '' });
-    } catch (error) {
-      console.error(error);
-    }
-  };
-
-  const handleFilter = async () => {
-    try {
-      const data = await inventarioService.getMovimientosFiltrados({
+  const { data: movements = [], isLoading: loading } = useQuery({
+    queryKey: ['movements', filterType, selectedProduct?.id, dateRange.start, dateRange.end],
+    queryFn: () => {
+      if (filterType === 'today') return inventarioService.getMovimientosDia();
+      if (filterType === 'all') return inventarioService.getMovimientosFiltrados({});
+      return inventarioService.getMovimientosFiltrados({
         productoId: selectedProduct?.id,
         fechaInicio: dateRange.start,
         fechaFin: dateRange.end
       });
-      setMovements(data);
-    } catch (error) {
-      console.error(error);
     }
+  });
+
+  const loadTodayMovements = () => {
+    setFilterType('today');
+    setSelectedProduct(null);
+    setDateRange({ start: '', end: '' });
+  };
+
+  const loadAllMovements = () => {
+    setFilterType('all');
+    setSelectedProduct(null);
+    setDateRange({ start: '', end: '' });
+  };
+
+  const handleFilter = () => {
+    setFilterType('filtered');
   };
 
   const exportToCSV = () => {
@@ -159,21 +158,11 @@ export function Kardex() {
     document.body.removeChild(link);
   };
 
-  useEffect(() => {
-    productoService.getAll(true).then(setProducts);
-    loadTodayMovements();
-  }, []);
-
-  const loadMovements = async (prodId: number) => {
-    const data = await inventarioService.getMovimientosPorProducto(prodId);
-    setMovements(data);
-  };
-
   const handleSelectProduct = (p: Product) => {
     setSelectedProduct(p);
     setShowProductList(false);
     setSearch('');
-    loadMovements(p.id);
+    setFilterType('filtered');
   };
 
   const filteredProducts = products.filter(p => 
@@ -323,7 +312,7 @@ export function Kardex() {
               columns={columns} 
               data={movements} 
               keyExtractor={(row) => row.id}
-              emptyMessage={selectedProduct ? "No hay movimientos registrados para este producto." : "Selecciona un producto para visualizar su historial."}
+              emptyMessage={loading ? "Consultando movimientos..." : (selectedProduct ? "No hay movimientos registrados para este producto." : "Selecciona un producto para visualizar su historial.")}
             />
           </Card>
         </main>

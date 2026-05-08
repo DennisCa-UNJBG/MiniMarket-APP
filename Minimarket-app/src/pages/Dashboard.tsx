@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useMemo } from 'react';
 import { Package, ShoppingCart, Truck, TrendingUp, AlertTriangle, ArrowRight } from 'lucide-react';
-import { dashboardService, type DashboardStats, type RecentActivity, type ChartData } from '../services/dashboardService';
+import { useQuery } from '@tanstack/react-query';
+import { dashboardService } from '../services/dashboardService';
 import { negocioService } from '../services/negocioService';
 import { Badge } from '../components/ui/Badge';
 import { useNavigate } from 'react-router-dom';
@@ -23,52 +24,54 @@ const statsConfig = [
 
 export function Dashboard() {
   const navigate = useNavigate();
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [isNegocioConfigured, setIsNegocioConfigured] = useState(true);
-  const [activity, setActivity] = useState<RecentActivity[]>([]);
-  const [chartData, setChartData] = useState<ChartData[]>([]);
-  const [lowStock, setLowStock] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  const loadData = async () => {
-    try {
-      const [s, a, rawChart, l, n] = await Promise.all([
-        dashboardService.getStats(),
-        dashboardService.getRecentActivity(),
-        dashboardService.getSalesChartData(),
-        dashboardService.getLowStockProducts(),
-        negocioService.get()
-      ]);
-      
-      setIsNegocioConfigured(!!n.razon_social && !!n.ruc);
+  // Queries
+  const { data: stats, isLoading: isLoadingStats } = useQuery({
+    queryKey: ['dashboard-stats'],
+    queryFn: () => dashboardService.getStats()
+  });
 
-      // Asegurar que tenemos los últimos 7 días representados
-      const last7Days = [];
-      for (let i = 6; i >= 0; i--) {
-        const d = new Date();
-        d.setDate(d.getDate() - i);
-        last7Days.push(d.toISOString().split('T')[0]);
-      }
+  const { data: activity = [], isLoading: isLoadingActivity } = useQuery({
+    queryKey: ['recent-activity'],
+    queryFn: () => dashboardService.getRecentActivity()
+  });
 
-      const formattedChart = last7Days.map(day => {
-        const match = rawChart.find(rc => rc.dia === day);
-        return { dia: day, total: match ? match.total : 0 };
-      });
+  const { data: rawChart = [], isLoading: isLoadingChart } = useQuery({
+    queryKey: ['sales-chart'],
+    queryFn: () => dashboardService.getSalesChartData()
+  });
 
-      setStats(s);
-      setActivity(a);
-      setChartData(formattedChart);
-      setLowStock(l);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setLoading(false);
+  const { data: lowStock = [], isLoading: isLoadingLowStock } = useQuery({
+    queryKey: ['low-stock'],
+    queryFn: () => dashboardService.getLowStockProducts()
+  });
+
+  const { data: negocio, isLoading: isLoadingNegocio } = useQuery({
+    queryKey: ['negocio'],
+    queryFn: () => negocioService.get()
+  });
+
+  const chartData = useMemo(() => {
+    if (!rawChart) return [];
+    // Asegurar que tenemos los últimos 7 días representados
+    const last7Days = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      last7Days.push(d.toISOString().split('T')[0]);
     }
-  };
 
-  useEffect(() => {
-    loadData();
-  }, []);
+    return last7Days.map(day => {
+      const match = rawChart.find(rc => rc.dia === day);
+      return { dia: day, total: match ? match.total : 0 };
+    });
+  }, [rawChart]);
+
+  const isNegocioConfigured = useMemo(() => {
+    return !!negocio?.razon_social && !!negocio?.ruc;
+  }, [negocio]);
+
+  const loading = isLoadingStats || isLoadingActivity || isLoadingChart || isLoadingLowStock || isLoadingNegocio;
 
   if (loading) return (
     <div className="flex items-center justify-center h-[60vh]">
