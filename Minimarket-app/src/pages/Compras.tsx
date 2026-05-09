@@ -79,10 +79,12 @@ export function Compras() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['purchases'] });
       queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['low-stock'] });
       notificationService.success(
         editingPurchaseId ? 'Compra actualizada' : 'Compra completada', 
         editingPurchaseId ? 'Los cambios se han guardado correctamente.' : 'Se ha actualizado el stock y el historial correctamente.'
       );
+
       setShowModal(false);
       resetForm();
     }
@@ -149,6 +151,11 @@ export function Compras() {
   const totalFinal = totalSinIGV + igvAmount;
 
   const handleConfirmarCompra = () => {
+    if (!referencia.trim()) {
+      notificationService.warning('Documento requerido', 'Debes ingresar el número de boleta, factura o referencia de la compra.');
+      return;
+    }
+
     if (cart.length === 0) {
       notificationService.warning('Carrito vacío', 'Agrega al menos un producto a la compra.');
       return;
@@ -156,7 +163,7 @@ export function Compras() {
 
     const purchaseData = {
       usuario_id: user?.id || 1,
-      documento_referencia: referencia || 'S/R',
+      documento_referencia: referencia.trim(),
       items: cart.map(({ producto_id, cantidad, costo_unitario }) => ({
         producto_id,
         cantidad,
@@ -334,9 +341,11 @@ export function Compras() {
             {/* Cabecera del Documento */}
             <div className="grid grid-cols-3 gap-4 p-4 bg-gray-50 dark:bg-gray-700/30 rounded-xl border border-gray-100 dark:border-gray-700">
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">N° Documento</label>
+                <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex justify-between">
+                  <span>N° Documento <span className="text-red-500">*</span></span>
+                </label>
                 <input 
-                  className={`${inputCls} uppercase`} 
+                  className={`${inputCls} uppercase ${!referencia ? 'border-amber-200 dark:border-amber-900/50' : ''}`} 
                   placeholder="Ej. F001-000123" 
                   value={referencia} 
                   onChange={(e) => setReferencia(e.target.value.toUpperCase())} 

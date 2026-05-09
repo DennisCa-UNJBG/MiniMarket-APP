@@ -25,8 +25,9 @@ export const ventaService = {
    * 3. Actualiza el stock de los productos
    * 4. Registra los movimientos en el Kardex
    */
-  async registrarVenta(venta: VentaData): Promise<number> {
+  async registrarVenta(venta: VentaData): Promise<{ ventaId: number, alertas: string[] }> {
     const db = await getDb();
+    const alertas: string[] = [];
     
     // 1. Obtener ID de sucursal local
     const config = await sucursalService.getConfig();
@@ -51,11 +52,16 @@ export const ventaService = {
       );
 
       // 3. Actualizar Stock y Obtener stock posterior
-      const pData = await db.select<any[]>('SELECT stock_actual, nombre FROM productos WHERE id = ?', [item.producto_id]);
+      const pData = await db.select<any[]>('SELECT stock_actual, stock_minimo, nombre FROM productos WHERE id = ?', [item.producto_id]);
       if (pData.length === 0) throw new Error(`Producto ${item.producto_id} no encontrado`);
       
-      const stockAnterior = pData[0].stock_actual;
-      const nuevoStock = stockAnterior - item.cantidad;
+      const { stock_actual, stock_minimo, nombre } = pData[0];
+      const nuevoStock = stock_actual - item.cantidad;
+
+      // Verificar alerta de stock
+      if (nuevoStock <= (stock_minimo || 0)) {
+        alertas.push(nombre);
+      }
 
       await db.execute('UPDATE productos SET stock_actual = ? WHERE id = ?', [nuevoStock, item.producto_id]);
 
@@ -74,7 +80,7 @@ export const ventaService = {
       );
     }
 
-    return ventaId;
+    return { ventaId, alertas };
   },
 
   /**

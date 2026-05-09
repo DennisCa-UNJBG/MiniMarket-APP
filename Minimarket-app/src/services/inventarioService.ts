@@ -27,8 +27,9 @@ export const inventarioService = {
   /**
    * Registra una compra completa con múltiples productos (Lote)
    */
-  async registrarCompraCompleta(compra: CompraCabecera): Promise<void> {
+  async registrarCompraCompleta(compra: CompraCabecera): Promise<{ compraId: number, alertas: string[] }> {
     const db = await getDb();
+    const alertas: string[] = [];
     
     const totalCompra = compra.items.reduce((acc, item) => acc + (item.cantidad * item.costo_unitario), 0);
 
@@ -42,7 +43,7 @@ export const inventarioService = {
       [compra.usuario_id, compra.documento_referencia, totalCompra, sucursalId]
     );
     
-    const compraId = resCabecera.lastInsertId;
+    const compraId = resCabecera.lastInsertId as number;
 
     // 2. Procesar cada producto del lote
     for (const item of compra.items) {
@@ -54,9 +55,14 @@ export const inventarioService = {
       );
 
       // B. Obtener stock actual para el Kardex
-      const pData = await db.select<any[]>('SELECT stock_actual FROM productos WHERE id = ?', [item.producto_id]);
-      const stockAnterior = pData[0]?.stock_actual || 0;
-      const nuevoStock = stockAnterior + item.cantidad;
+      const pData = await db.select<any[]>('SELECT stock_actual, stock_minimo, nombre FROM productos WHERE id = ?', [item.producto_id]);
+      const { stock_actual, stock_minimo, nombre } = pData[0];
+      const nuevoStock = stock_actual + item.cantidad;
+
+      // Verificar si sigue bajo stock mínimo después de la compra
+      if (nuevoStock <= (stock_minimo || 0)) {
+        alertas.push(nombre);
+      }
 
       // C. Registrar en Kardex
       await db.execute(
@@ -83,6 +89,8 @@ export const inventarioService = {
         [item.producto_id, item.costo_unitario, precioVenta]
       );
     }
+
+    return { compraId, alertas };
   },
 
   /**
@@ -209,8 +217,9 @@ export const inventarioService = {
   /**
    * Actualiza una compra existente y ajusta el stock
    */
-  async actualizarCompraCompleta(compraId: number, compra: CompraCabecera): Promise<void> {
+  async actualizarCompraCompleta(compraId: number, compra: CompraCabecera): Promise<{ compraId: number, alertas: string[] }> {
     const db = await getDb();
+    const alertas: string[] = [];
     
     // 1. Obtener datos antiguos para revertir (stock y referencia)
     const oldCabecera = await db.select<any[]>('SELECT documento_referencia FROM compras_ingresos WHERE id = ?', [compraId]);
@@ -241,9 +250,13 @@ export const inventarioService = {
         [compraId, item.producto_id, item.cantidad, item.costo_unitario, item.cantidad * item.costo_unitario]
       );
 
-      const pData = await db.select<any[]>('SELECT stock_actual FROM productos WHERE id = ?', [item.producto_id]);
-      const stockAnterior = pData[0]?.stock_actual || 0;
-      const nuevoStock = stockAnterior + item.cantidad;
+      const pData = await db.select<any[]>('SELECT stock_actual, stock_minimo, nombre FROM productos WHERE id = ?', [item.producto_id]);
+      const { stock_actual, stock_minimo, nombre } = pData[0];
+      const nuevoStock = stock_actual + item.cantidad;
+
+      if (nuevoStock <= (stock_minimo || 0)) {
+        alertas.push(nombre);
+      }
 
       // Actualizar Stock en Productos
       await db.execute('UPDATE productos SET stock_actual = ? WHERE id = ?', [nuevoStock, item.producto_id]);
@@ -262,5 +275,7 @@ export const inventarioService = {
        VALUES (?, ?, ?, ?, ?)`,
       [compra.usuario_id, 'EDICION_COMPRA', 'compras_ingresos', compraId, `Edición de compra. Ref anterior: ${oldRef}, Nueva ref: ${compra.documento_referencia}`]
     );
+
+    return { compraId, alertas };
   }
 };

@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useLocation, Link } from 'react-router-dom';
 import { Bell, User, LogOut, AlertTriangle, Package } from 'lucide-react';
 import { mainNavItems, bottomNavItems } from '../../config/navigation';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button } from './Button';
-import { alertaService, type StockAlerta } from '../../services/alertaService';
+import { alertaService } from '../../services/alertaService';
 import { preferenciasService } from '../../services/preferenciasService';
 
 /** Obtiene el título de la página según la ruta activa */
@@ -20,26 +21,20 @@ function usePageTitle(): string {
 export function TopBar() {
   const pageTitle = usePageTitle();
   const { user, logout } = useAuth();
-  const [alerts, setAlerts] = useState<StockAlerta[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const loadAlerts = async () => {
-    const prefs = preferenciasService.get();
-    if (prefs.stockAlert) {
-      const data = await alertaService.getLowStockAlerts();
-      setAlerts(data);
-    } else {
-      setAlerts([]);
-    }
-  };
-
-  useEffect(() => {
-    loadAlerts();
-    // Actualizar cada 5 minutos
-    const interval = setInterval(loadAlerts, 5 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, []);
+  const { data: alerts = [] } = useQuery({
+    queryKey: ['low-stock'],
+    queryFn: async () => {
+      const prefs = preferenciasService.get();
+      if (prefs.stockAlert) {
+        return await alertaService.getLowStockAlerts();
+      }
+      return [];
+    },
+    refetchInterval: 60000, // Opcional: cada minuto como backup
+  });
 
   // Cerrar dropdown al hacer clic fuera
   useEffect(() => {

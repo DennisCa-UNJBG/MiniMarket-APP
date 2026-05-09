@@ -306,7 +306,7 @@ export function Ayuda() {
                   <p className="text-xs text-gray-500 dark:text-gray-400">Audita qué pasó en un día específico, una semana o un mes completo.</p>
                </div>
                <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-100 dark:border-gray-700">
-                  <h5 className="font-bold text-xs text-amber-600 mb-1">3. Exportación CSV</h5>
+                  <h5 className="font-bold text-xs text-amber-600 mb-1">3. Exportación Excel</h5>
                   <p className="text-xs text-gray-500 dark:text-gray-400">Descarga los datos para contabilidad externa o análisis avanzado en Excel.</p>
                </div>
             </div>

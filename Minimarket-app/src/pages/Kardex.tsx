@@ -16,6 +16,7 @@ import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
+import { notificationService } from '../lib/notifications';
 import { inventarioService } from '../services/inventarioService';
 import { productoService, type Product } from '../services/productoService';
 
@@ -133,29 +134,47 @@ export function Kardex() {
     setFilterType('filtered');
   };
 
-  const exportToCSV = () => {
+  const exportToExcel = () => {
     if (movements.length === 0) return;
     
-    const headers = ['Fecha', 'Producto', 'Tipo', 'Referencia', 'Cantidad', 'Saldo', 'Usuario'];
-    const rows = movements.map(m => [
-      `"${new Date(m.fecha).toLocaleString()}"`,
-      `"${m.producto_nombre}"`,
-      `"${m.tipo_movimiento}"`,
-      `"${m.referencia}"`,
-      m.cantidad,
-      m.saldo_posterior,
-      `"${m.usuario_nombre}"`
-    ]);
+    const headers = ['Fecha', 'Producto', 'Tipo', 'Referencia', 'Cantidad', 'Saldo Resultante', 'Usuario'];
+    
+    // Generamos una tabla HTML que Excel interpreta perfectamente como hoja de cálculo
+    let table = `<table border="1">`;
+    // Encabezados con estilo
+    table += `<tr style="background-color: #4f46e5; color: white; font-weight: bold;">`;
+    headers.forEach(h => table += `<th style="padding: 10px;">${h}</th>`);
+    table += `</tr>`;
+    
+    // Filas de datos
+    movements.forEach(m => {
+      table += `<tr>`;
+      table += `<td style="padding: 5px;">${new Date(m.fecha + " UTC").toLocaleString()}</td>`;
+      table += `<td style="padding: 5px;">${m.producto_nombre}</td>`;
+      table += `<td style="padding: 5px;">${m.tipo_movimiento}</td>`;
+      table += `<td style="padding: 5px;">${m.referencia}</td>`;
+      table += `<td style="padding: 5px; text-align: right;">${m.cantidad}</td>`;
+      table += `<td style="padding: 5px; text-align: right;">${m.saldo_posterior}</td>`;
+      table += `<td style="padding: 5px;">${m.usuario_nombre}</td>`;
+      table += `</tr>`;
+    });
+    table += `</table>`;
 
-    const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
-    const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob(['\ufeff', table], { type: 'application/vnd.ms-excel' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
+    const fileName = `kardex_${new Date().toISOString().split('T')[0]}.xls`;
     link.setAttribute("href", url);
-    link.setAttribute("download", `kardex_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute("download", fileName);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+
+    // Notificar al usuario con botón de aceptar
+    notificationService.successWithConfirm(
+      '¡Exportación Exitosa!', 
+      `El archivo "${fileName}" se ha guardado en tu carpeta de Descargas.`
+    );
   };
 
   const handleSelectProduct = (p: Product) => {
@@ -185,11 +204,11 @@ export function Kardex() {
               variant="secondary" 
               size="sm" 
               icon={<Download size={16} />} 
-              onClick={exportToCSV} 
+              onClick={exportToExcel} 
               disabled={movements.length === 0}
               title="Se exportaran los datos visualizados en la tabla"
             >
-              Exportar CSV
+              Exportar Excel
             </Button>
             <Button variant="secondary" size="sm" onClick={loadAllMovements}>
               Ver Historial Completo
@@ -312,7 +331,17 @@ export function Kardex() {
               columns={columns} 
               data={movements} 
               keyExtractor={(row) => row.id}
-              emptyMessage={loading ? "Consultando movimientos..." : (selectedProduct ? "No hay movimientos registrados para este producto." : "Selecciona un producto para visualizar su historial.")}
+              emptyMessage={
+                loading 
+                  ? "Consultando movimientos..." 
+                  : filterType === 'today'
+                    ? "No se han registrado movimientos el día de hoy."
+                    : filterType === 'all'
+                      ? "El historial de movimientos está vacío."
+                      : selectedProduct
+                        ? `No hay movimientos para "${selectedProduct.nombre}" en este rango.`
+                        : "Selecciona un producto o define un rango para filtrar el historial."
+              }
             />
           </Card>
         </main>

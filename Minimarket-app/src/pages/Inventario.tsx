@@ -10,7 +10,7 @@ type StockStatus = 'ok' | 'low' | 'out';
 
 function getStatus(stock: number, minStock: number): StockStatus {
   if (stock <= 0) return 'out';
-  if (stock < minStock) return 'low';
+  if (stock <= minStock) return 'low';
   return 'ok';
 }
 

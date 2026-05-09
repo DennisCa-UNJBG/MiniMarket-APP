@@ -49,6 +49,7 @@ export function NuevaVenta() {
     onSuccess: async (_, variables) => {
       setShowCheckout(false);
       await notificationService.successWithConfirm('¡Venta completada!', `Vuelto: S/ ${variables.vuelto.toFixed(2)}`);
+      
       setCart([]);
       setAmountPaid('');
       queryClient.invalidateQueries({ queryKey: ['products'] });
