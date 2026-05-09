@@ -6,7 +6,9 @@ export interface Product {
   nombre: string;
   categoria_id: number;
   categoria_nombre?: string;
-  unidad_medida: string;
+  unidad_medida?: string; // Campo antiguo de texto
+  unidad_id?: number;      // Nueva relación
+  unidad_nombre?: string;
   stock_minimo: number;
   stock_actual: number;
   estado: string;
@@ -21,10 +23,12 @@ export const productoService = {
       SELECT 
         p.*, 
         c.nombre as categoria_nombre,
+        u.nombre as unidad_nombre,
         ph.precio_compra,
         ph.precio_venta
       FROM productos p
       LEFT JOIN categorias c ON p.categoria_id = c.id
+      LEFT JOIN unidades_medida u ON p.unidad_id = u.id
       LEFT JOIN precios_historial ph ON p.id = ph.producto_id AND ph.activo = 1
     `;
 
@@ -41,13 +45,13 @@ export const productoService = {
   async create(product: Omit<Product, 'id' | 'estado'>): Promise<void> {
     const db = await getDb();
     const result = await db.execute(
-      `INSERT INTO productos (codigo_barras, nombre, categoria_id, unidad_medida, stock_minimo, stock_actual) 
+      `INSERT INTO productos (codigo_barras, nombre, categoria_id, unidad_id, stock_minimo, stock_actual) 
        VALUES (?, ?, ?, ?, ?, ?)`,
       [
         product.codigo_barras,
         product.nombre,
         product.categoria_id,
-        product.unidad_medida,
+        product.unidad_id,
         product.stock_minimo,
         product.stock_actual
       ]
@@ -75,9 +79,9 @@ export const productoService = {
     const db = await getDb();
     await db.execute(
       `UPDATE productos 
-       SET nombre = ?, categoria_id = ?, unidad_medida = ?, stock_minimo = ?
+       SET nombre = ?, categoria_id = ?, unidad_id = ?, stock_minimo = ?
        WHERE id = ?`,
-      [product.nombre, product.categoria_id, product.unidad_medida, product.stock_minimo, id]
+      [product.nombre, product.categoria_id, product.unidad_id, product.stock_minimo, id]
     );
 
     if (product.precio_venta !== undefined) {

@@ -242,6 +242,24 @@ pub fn run() {
                     logo_path TEXT
                   );",
             kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 10,
+            description: "create_unidades_medida_table",
+            sql: "CREATE TABLE IF NOT EXISTS unidades_medida (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    nombre TEXT NOT NULL UNIQUE,
+                    abreviatura TEXT NOT NULL UNIQUE,
+                    estado TEXT DEFAULT 'activo'
+                  );
+                  INSERT OR IGNORE INTO unidades_medida (nombre, abreviatura) VALUES 
+                  ('Unidad', 'UND'),
+                  ('Kilogramo', 'KG'),
+                  ('Litro', 'LT'),
+                  ('Caja', 'CJ'),
+                  ('Paquete', 'PQT');
+                  ALTER TABLE productos ADD COLUMN unidad_id INTEGER REFERENCES unidades_medida(id);",
+            kind: MigrationKind::Up,
         }
     ];
 

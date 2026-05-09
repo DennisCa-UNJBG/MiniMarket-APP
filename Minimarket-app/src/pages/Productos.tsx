@@ -1,14 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
-import { Package, Tag, Plus, Search, Edit2, PowerOff, RefreshCcw } from 'lucide-react';
+import { Package, Tag, Plus, Search, Edit2, PowerOff, RefreshCcw, AlertTriangle, Scale } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { DataTable, type TableColumn } from '../components/ui/DataTable';
 import { Badge } from '../components/ui/Badge';
 import { Modal } from '../components/ui/Modal';
 import { categoriaService, type Category } from '../services/categoriaService';
 import { productoService, type Product } from '../services/productoService';
+import { unidadMedidaService, type UnidadMedida } from '../services/unidadMedidaService';
 import { notificationService } from '../lib/notifications';
-
-// ── Datos de ejemplo (Eliminados en favor de la DB) ──────────────────────────
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const getRandomColor = () => {
@@ -28,25 +27,29 @@ const generateProductCode = (lastCode: string | null) => {
   return `PROD-${(num + 1).toString().padStart(4, '0')}`;
 };
 
-const units = ['unidad', 'kg', 'bolsa', 'botella', 'tarro', 'litro', 'caja', 'paquete'];
-
-// (El componente Modal fue extraído a src/components/ui/Modal.tsx)
-
 // ── Pestaña Productos ──────────────────────────────────────────────────────────
 function TabProductos({ categories }: { categories: Category[] }) {
   const queryClient = useQueryClient();
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [search, setSearch] = useState('');
-  const [form, setForm] = useState({ code: '', name: '', categoryId: '', unit: 'unidad', sellPrice: '', minStock: '' });
+  const [form, setForm] = useState({ code: '', name: '', categoryId: '', unitId: '', sellPrice: '', minStock: '' });
   const [catSearch, setCatSearch] = useState('');
   const [showCatList, setShowCatList] = useState(false);
+  const [unitSearch, setUnitSearch] = useState('');
+  const [showUnitList, setShowUnitList] = useState(false);
   const nameInputRef = useRef<HTMLInputElement>(null);
 
   // Consulta de productos
   const { data: products = [] } = useQuery({
     queryKey: ['products', false],
     queryFn: () => productoService.getAll(false),
+  });
+
+  // Consulta de unidades de medida
+  const { data: units = [] } = useQuery({
+    queryKey: ['units'],
+    queryFn: () => unidadMedidaService.getAll(true),
   });
 
   // Mutación para guardar (crear/editar)
@@ -60,16 +63,22 @@ function TabProductos({ categories }: { categories: Category[] }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
-      queryClient.invalidateQueries({ queryKey: ['categories'] }); // Por el conteo de productos
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
       notificationService.success(
         editingId ? 'Producto actualizado' : 'Producto guardado',
         editingId ? 'Los cambios se han guardado correctamente.' : 'El producto se ha registrado correctamente.'
       );
-      setForm({ code: '', name: '', categoryId: '', unit: 'unidad', sellPrice: '', minStock: '' });
-      setEditingId(null);
+      resetForm();
       setShowModal(false);
     }
   });
+
+  const resetForm = () => {
+    setForm({ code: '', name: '', categoryId: '', unitId: '', sellPrice: '', minStock: '' });
+    setCatSearch('');
+    setUnitSearch('');
+    setEditingId(null);
+  };
 
   // Mutación para cambiar estado
   const statusMutation = useMutation({
@@ -94,7 +103,7 @@ function TabProductos({ categories }: { categories: Category[] }) {
   const inactiveProducts = products.filter(p => p.estado === 'inactivo');
 
   const handleSave = async () => {
-    if (!form.name || !form.categoryId) {
+    if (!form.name || !form.categoryId || !form.unitId) {
       notificationService.warning('Campos incompletos', 'Por favor, completa todos los campos obligatorios.');
       return;
     }
@@ -102,11 +111,10 @@ function TabProductos({ categories }: { categories: Category[] }) {
     saveMutation.mutate({
       nombre: form.name,
       categoria_id: parseInt(form.categoryId),
-      unidad_medida: form.unit,
+      unidad_id: parseInt(form.unitId),
       precio_venta: parseFloat(form.sellPrice) || 0,
       stock_minimo: parseFloat(form.minStock) || 0,
       codigo_barras: form.code,
-      // Para creación:
       precio_compra: 0,
       stock_actual: 0
     });
@@ -122,7 +130,7 @@ function TabProductos({ categories }: { categories: Category[] }) {
     { key: 'codigo_barras', header: 'Código', render: (row) => <span className="font-mono text-xs text-gray-500 dark:text-gray-400">{row.codigo_barras}</span> },
     { key: 'nombre', header: 'Nombre', render: (row) => <span className="font-medium text-gray-800 dark:text-white">{row.nombre}</span> },
     { key: 'categoria_nombre', header: 'Categoría', render: (row) => <Badge label={row.categoria_nombre || 'Sin cat.'} variant="indigo" /> },
-    { key: 'unidad_medida', header: 'Unidad' },
+    { key: 'unidad_nombre', header: 'Unidad', render: (row) => <span className="text-gray-600 dark:text-gray-400">{row.unidad_nombre || row.unidad_medida || 'S/U'}</span> },
     { key: 'precio_compra', header: 'Precio Compra', align: 'right', render: (row) => <span className="text-gray-600 dark:text-gray-300">S/ {(row.precio_compra || 0).toFixed(2)}</span> },
     { key: 'precio_venta', header: 'Precio Venta', align: 'right', render: (row) => <span className="font-medium text-gray-800 dark:text-white">S/ {(row.precio_venta || 0).toFixed(2)}</span> },
     { key: 'stock_minimo', header: 'Stock Mínimo', align: 'center' },
@@ -137,12 +145,14 @@ function TabProductos({ categories }: { categories: Category[] }) {
                 code: row.codigo_barras, 
                 name: row.nombre, 
                 categoryId: row.categoria_id.toString(), 
-                unit: row.unidad_medida, 
+                unitId: (row.unidad_id || '').toString(), 
                 sellPrice: (row.precio_venta || 0).toString(), 
                 minStock: (row.stock_minimo || 0).toString() 
               });
               const cat = categories.find(c => c.id === row.categoria_id);
               setCatSearch(cat ? cat.nombre : '');
+              const unit = units.find(u => u.id === row.unidad_id);
+              setUnitSearch(unit ? `${unit.nombre} (${unit.abreviatura})` : (row.unidad_medida || ''));
               setShowModal(true);
             }}
             title="Editar producto"
@@ -184,12 +194,11 @@ function TabProductos({ categories }: { categories: Category[] }) {
         <div className="flex items-center gap-3">
           <p className="hidden sm:block text-sm text-gray-500 dark:text-gray-400">{filteredProducts.length} productos</p>
           <button
-            id="add-product-modal-btn"
             onClick={async () => {
               const lastCode = await productoService.getLastCode();
               const nextCode = generateProductCode(lastCode);
-              setForm({ code: nextCode, name: '', categoryId: '', unit: 'unidad', sellPrice: '', minStock: '' });
-              setCatSearch('');
+              resetForm();
+              setForm(f => ({ ...f, code: nextCode }));
               setShowModal(true);
             }}
             className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-xl transition-colors shadow-sm shadow-indigo-200 dark:shadow-none"
@@ -250,11 +259,54 @@ function TabProductos({ categories }: { categories: Category[] }) {
                 value={form.code} 
               />
             </div>
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Unidad de medida</label>
-              <select className={inputCls} value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })}>
-                {units.map((u) => <option key={u} value={u}>{u}</option>)}
-              </select>
+            <div className="flex flex-col gap-1.5 relative">
+              <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Unidad de medida *</label>
+              <div className="relative">
+                <input 
+                  type="text"
+                  className={inputCls}
+                  placeholder="Buscar unidad..."
+                  value={unitSearch}
+                  onFocus={() => setShowUnitList(true)}
+                  onChange={(e) => {
+                    setUnitSearch(e.target.value);
+                    setShowUnitList(true);
+                    const exact = units.find(u => u.nombre.toLowerCase() === e.target.value.toLowerCase() || u.abreviatura.toLowerCase() === e.target.value.toLowerCase());
+                    if (exact) setForm({ ...form, unitId: exact.id.toString() });
+                    else if (form.unitId) setForm({ ...form, unitId: '' });
+                  }}
+                />
+                <Scale size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+              </div>
+
+              {showUnitList && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setShowUnitList(false)}></div>
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl shadow-xl z-20 max-h-48 overflow-y-auto py-1 animate-in fade-in zoom-in duration-150">
+                    {units.filter(u => u.nombre.toLowerCase().includes(unitSearch.toLowerCase()) || u.abreviatura.toLowerCase().includes(unitSearch.toLowerCase())).length > 0 ? (
+                      units
+                        .filter(u => u.nombre.toLowerCase().includes(unitSearch.toLowerCase()) || u.abreviatura.toLowerCase().includes(unitSearch.toLowerCase()))
+                        .map((u) => (
+                          <button
+                            key={u.id}
+                            type="button"
+                            onClick={() => {
+                              setForm({ ...form, unitId: u.id.toString() });
+                              setUnitSearch(`${u.nombre} (${u.abreviatura})`);
+                              setShowUnitList(false);
+                            }}
+                            className={`w-full text-left px-4 py-2 text-sm hover:bg-indigo-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 ${form.unitId === u.id.toString() ? 'bg-indigo-50 dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 font-medium' : 'text-gray-700 dark:text-gray-300'}`}
+                          >
+                            <Scale size={12} className="opacity-50" />
+                            {u.nombre} ({u.abreviatura})
+                          </button>
+                        ))
+                    ) : (
+                      <div className="px-4 py-2 text-sm text-gray-400 italic">No se encontraron unidades</div>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
             <div className="col-span-2 flex flex-col gap-1.5">
               <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Nombre del producto *</label>
@@ -278,7 +330,6 @@ function TabProductos({ categories }: { categories: Category[] }) {
                   onChange={(e) => {
                     setCatSearch(e.target.value);
                     setShowCatList(true);
-                    // Si el texto coincide exactamente con una categoría, seleccionarla
                     const exact = categories.find(c => c.nombre.toLowerCase() === e.target.value.toLowerCase());
                     if (exact) setForm({ ...form, categoryId: exact.id.toString() });
                     else if (form.categoryId) setForm({ ...form, categoryId: '' });
@@ -321,8 +372,14 @@ function TabProductos({ categories }: { categories: Category[] }) {
               <input type="number" step="0.01" className={inputCls} placeholder="0.00" value={form.sellPrice} onChange={(e) => setForm({ ...form, sellPrice: e.target.value })} />
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Stock mínimo <span>(Para pedidos)</span></label>
+              <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Stock mínimo</label>
               <input type="number" className={inputCls} placeholder="0" value={form.minStock} onChange={(e) => setForm({ ...form, minStock: e.target.value })} />
+              <div className="flex items-start gap-1.5 mt-0.5">
+                <AlertTriangle size={10} className="text-amber-500 mt-0.5 shrink-0" />
+                <p className="text-[10px] text-amber-600 dark:text-amber-500 italic font-medium leading-tight">
+                  Aviso: Este valor activa las alertas críticas de reabastecimiento.
+                </p>
+              </div>
             </div>
           </div>
           <div className="flex justify-end gap-3 mt-6">
@@ -400,149 +457,98 @@ function TabCategorias({ onUpdate }: { onUpdate: () => void }) {
       notificationService.warning('Campo incompleto', 'Por favor, ingresa un nombre para la categoría.');
       return;
     }
-    saveMutation.mutate({ name: form.name.trim(), color: form.color });
+    saveMutation.mutate(form);
   };
 
-  const handleDeactivate = (id: number) => {
-    statusMutation.mutate({ id, status: 'inactivo' });
-  };
+  const columns: TableColumn<Category>[] = [
+    { 
+      key: 'color', header: 'Color', 
+      render: (row) => <div style={{ backgroundColor: row.color }} className="w-6 h-6 rounded-lg shadow-sm"></div> 
+    },
+    { key: 'nombre', header: 'Nombre Categoría', render: (row) => <span className="font-bold text-gray-800 dark:text-white">{row.nombre}</span> },
+    { key: 'product_count', header: 'Productos', align: 'center', render: (row) => <Badge label={`${row.productCount || 0} items`} variant="gray" /> },
+    {
+      key: 'acciones', header: '', align: 'right',
+      render: (row) => (
+        <div className="flex items-center gap-1 justify-end">
+          <button 
+            onClick={() => {
+              setEditingId(row.id);
+              setForm({ name: row.nombre, color: row.color || getRandomColor(), productCount: row.productCount || 0 });
+              setShowModal(true);
+            }}
+            className="p-1.5 rounded-lg hover:bg-indigo-50 dark:hover:bg-gray-700 text-gray-400 hover:text-indigo-600 transition-colors"
+          >
+            <Edit2 size={14} />
+          </button>
+          <button 
+            onClick={() => statusMutation.mutate({ id: row.id, status: 'inactivo' })}
+            className="p-1.5 rounded-lg hover:bg-orange-50 dark:hover:bg-gray-700 text-gray-400 hover:text-orange-500 transition-colors"
+          >
+            <PowerOff size={14} />
+          </button>
+        </div>
+      ),
+    },
+  ];
 
   return (
     <>
-      <div className="flex justify-between items-center mb-4">
-        <p className="text-sm text-gray-500 dark:text-gray-400">{categories.length} categorías registradas</p>
+      <div className="flex justify-end mb-4">
         <button
-          id="add-category-btn"
           onClick={() => {
             setForm({ name: '', color: getRandomColor(), productCount: 0 });
+            setEditingId(null);
             setShowModal(true);
           }}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-xl transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-xl transition-colors shadow-sm"
         >
           <Plus size={15} /> Nueva categoría
         </button>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4">
-        {activeCategories.map((cat) => (
-          <div key={cat.id} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-5 flex flex-col gap-3 hover:shadow-md transition-shadow">
-            <div style={{ backgroundColor: cat.color }} className={`w-10 h-10 rounded-xl flex items-center justify-center`}>
-              <Tag size={18} className="text-white" />
-            </div>
-            <div>
-              <p className="font-semibold text-gray-800 dark:text-white">{cat.nombre}</p>
-              <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{cat.productCount} productos</p>
-            </div>
-            <div className="flex gap-1 pt-1 border-t border-gray-100 dark:border-gray-700">
-              <button 
-                onClick={() => {
-                  setEditingId(cat.id);
-                  setForm({ name: cat.nombre, color: cat.color, productCount: cat.productCount || 0 });
-                  setShowModal(true);
-                }}
-                title="Editar categoría"
-                className="flex-1 flex items-center justify-center gap-1 py-1.5 text-xs text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-gray-700 rounded-lg transition-colors"
-              >
-                <Edit2 size={12} /> Editar
-              </button>
-              <button
-                onClick={() => handleDeactivate(cat.id)}
-                title="Desactivar categoría"
-                className="flex-1 flex items-center justify-center gap-1 py-1.5 text-xs text-orange-500 hover:bg-orange-50 dark:hover:bg-gray-700 rounded-lg transition-colors"
-              >
-                <PowerOff size={12} /> Desactivar
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
+      <DataTable columns={columns} data={activeCategories} keyExtractor={(row) => row.id} emptyMessage="No hay categorías registradas." />
 
       {inactiveCategories.length > 0 && (
-        <div className="mt-12">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700"></div>
-            <h3 className="text-sm font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">Categorías desactivadas</h3>
-            <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700"></div>
-          </div>
-          
-          <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4 opacity-70">
-            {inactiveCategories.map((cat) => (
-              <div key={cat.id} className="bg-gray-50 dark:bg-gray-800/40 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 p-5 flex flex-col gap-3">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-gray-200 dark:bg-gray-700">
-                  <Tag size={18} className="text-gray-400 dark:text-gray-500" />
-                </div>
-                <div>
-                  <p className="font-semibold text-gray-500 dark:text-gray-400">{cat.nombre}</p>
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{cat.productCount} productos</p>
-                </div>
-                <div className="flex gap-1 pt-1 border-t border-gray-100 dark:border-gray-700">
-                  <button 
-                    onClick={() => {
-                      setEditingId(cat.id);
-                      setForm({ name: cat.nombre, color: cat.color, productCount: cat.productCount || 0 });
-                      setShowModal(true);
-                    }}
-                    title="Editar categoría"
-                    className="flex-1 flex items-center justify-center gap-1 py-1.5 text-xs text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                  >
-                    <Edit2 size={12} /> Editar
+        <div className="mt-8 opacity-60">
+          <h4 className="text-xs font-bold text-gray-400 uppercase mb-4 tracking-widest">Categorías inactivas</h4>
+          <DataTable 
+            columns={[
+              ...columns.filter(c => c.key !== 'acciones'),
+              {
+                key: 'acciones', header: '', align: 'right',
+                render: (row) => (
+                  <button onClick={() => statusMutation.mutate({ id: row.id, status: 'activo' })} className="text-xs text-green-600 font-bold hover:underline">
+                    Reactivar
                   </button>
-                  <button 
-                    onClick={() => statusMutation.mutate({ id: cat.id, status: 'activo' })}
-                    title="Reactivar categoría"
-                    className="flex-1 flex items-center justify-center gap-1 py-1.5 text-xs text-green-600 dark:text-green-500 hover:bg-green-50 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                  >
-                    <RefreshCcw size={12} /> Activar
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
+                )
+              }
+            ]} 
+            data={inactiveCategories} 
+            keyExtractor={(row) => row.id} 
+          />
         </div>
       )}
 
       {showModal && (
-        <Modal title={editingId ? "Editar categoría" : "Nueva categoría"} onClose={() => { setShowModal(false); setEditingId(null); }}>
+        <Modal title={editingId ? "Editar categoría" : "Nueva categoría"} onClose={() => setShowModal(false)}>
           <div className="space-y-4">
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Nombre de la categoría *</label>
-              <input
-                ref={nameInputRef}
-                className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
-                placeholder="Ej. Frutas y verduras"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-              />
+              <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Nombre de categoría</label>
+              <input ref={nameInputRef} className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
             </div>
-            <div className="flex flex-col gap-2">
-              <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Color de la categoría</label>
-              <div className="flex items-center gap-3">
-                <input
-                  type="color"
-                  value={form.color}
-                  onChange={(e) => setForm({ ...form, color: e.target.value })}
-                  className="w-1/2 h-10 rounded-lg cursor-pointer bg-transparent border-0"
-                />
-                <span className="text-sm font-mono text-gray-600 dark:text-gray-400 uppercase">{form.color}</span>
-              </div>
-            </div>
-            {/* Preview */}
-            <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
-              <div style={{ backgroundColor: form.color }} className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0`}>
-                <Tag size={16} className="text-white" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-gray-800 dark:text-white">{form.name || 'Nombre de categoría'}</p>
-                <p className="text-xs text-gray-400 dark:text-gray-500">{form.productCount} productos</p>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Color distintivo</label>
+              <div className="flex gap-2">
+                <input type="color" className="w-12 h-10 p-1 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 cursor-pointer" value={form.color} onChange={(e) => setForm({ ...form, color: e.target.value })} />
+                <input className="flex-1 px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700" value={form.color} onChange={(e) => setForm({ ...form, color: e.target.value })} />
               </div>
             </div>
           </div>
           <div className="flex justify-end gap-3 mt-6">
-            <button onClick={() => setShowModal(false)} className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-              Cancelar
-            </button>
-            <button onClick={handleSave} className="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl transition-colors">
-              {editingId ? 'Actualizar' : 'Crear'} categoría
+            <button onClick={() => setShowModal(false)} className="px-4 py-2 text-sm text-gray-600 rounded-xl hover:bg-gray-100">Cancelar</button>
+            <button onClick={handleSave} className="px-4 py-2 text-sm bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700">
+              {editingId ? 'Guardar cambios' : 'Crear categoría'}
             </button>
           </div>
         </Modal>
@@ -551,43 +557,170 @@ function TabCategorias({ onUpdate }: { onUpdate: () => void }) {
   );
 }
 
-// ── Página principal Productos ─────────────────────────────────────────────────
-type Tab = 'productos' | 'categorias';
-
-export function Productos() {
+// ── Pestaña Unidades de Medida ────────────────────────────────────────────────
+function TabUnidades() {
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<Tab>('productos');
+  const [showModal, setShowModal] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [form, setForm] = useState({ nombre: '', abreviatura: '' });
 
-  // Consulta de categorías (compartida)
-  const { data: categories = [] } = useQuery({
-    queryKey: ['categories'],
-    queryFn: () => categoriaService.getAll(),
+  const { data: units = [] } = useQuery({
+    queryKey: ['units-full'],
+    queryFn: () => unidadMedidaService.getAll(false),
   });
 
-  const loadCategories = () => {
-    queryClient.invalidateQueries({ queryKey: ['categories'] });
-  };
+  const saveMutation = useMutation({
+    mutationFn: async (payload: any) => {
+      if (editingId) {
+        return unidadMedidaService.update(editingId, payload.nombre, payload.abreviatura);
+      } else {
+        return unidadMedidaService.create(payload.nombre, payload.abreviatura);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['units'] });
+      queryClient.invalidateQueries({ queryKey: ['units-full'] });
+      notificationService.success(editingId ? 'Unidad actualizada' : 'Unidad creada');
+      setForm({ nombre: '', abreviatura: '' });
+      setEditingId(null);
+      setShowModal(false);
+    }
+  });
 
-  const tabs: { key: Tab; label: string; icon: React.ElementType }[] = [
-    { key: 'productos',  label: 'Productos',   icon: Package },
-    { key: 'categorias', label: 'Categorías',  icon: Tag     },
+  const statusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: number, status: 'activo' | 'inactivo' }) => 
+      unidadMedidaService.updateStatus(id, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['units'] });
+      queryClient.invalidateQueries({ queryKey: ['units-full'] });
+    }
+  });
+
+  const activeUnits = units.filter(u => u.estado === 'activo');
+  const inactiveUnits = units.filter(u => u.estado === 'inactivo');
+
+  const columns: TableColumn<UnidadMedida>[] = [
+    { key: 'nombre', header: 'Nombre', render: (row) => <span className="font-bold">{row.nombre}</span> },
+    { key: 'abreviatura', header: 'Abreviatura', render: (row) => <Badge label={row.abreviatura} variant="indigo" /> },
+    {
+      key: 'acciones', header: '', align: 'right',
+      render: (row) => (
+        <div className="flex items-center gap-1 justify-end">
+          <button 
+            onClick={() => {
+              setEditingId(row.id);
+              setForm({ nombre: row.nombre, abreviatura: row.abreviatura });
+              setShowModal(true);
+            }}
+            className="p-1.5 rounded-lg hover:bg-indigo-50 text-gray-400 hover:text-indigo-600 transition-colors"
+          >
+            <Edit2 size={14} />
+          </button>
+          <button 
+            onClick={() => statusMutation.mutate({ id: row.id, status: 'inactivo' })}
+            className="p-1.5 rounded-lg hover:bg-orange-50 text-gray-400 hover:text-orange-500 transition-colors"
+          >
+            <PowerOff size={14} />
+          </button>
+        </div>
+      ),
+    },
   ];
 
   return (
-    <div className="space-y-5">
-      {/* Encabezado */}
-      <div>
-        <h2 className="text-xl font-bold text-gray-800 dark:text-white">Productos</h2>
-        <p className="text-sm text-gray-500 dark:text-gray-400">Gestión de catálogo de productos y categorías</p>
+    <>
+      <div className="flex justify-end mb-4">
+        <button
+          onClick={() => {
+            setForm({ nombre: '', abreviatura: '' });
+            setEditingId(null);
+            setShowModal(true);
+          }}
+          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-xl transition-colors shadow-sm"
+        >
+          <Plus size={15} /> Nueva unidad
+        </button>
       </div>
 
-      {/* Pestañas */}
-      <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-xl p-1 w-fit border border-gray-200 dark:border-gray-700">
+      <DataTable columns={columns} data={activeUnits} keyExtractor={(u) => u.id} emptyMessage="No hay unidades registradas." />
+
+      {inactiveUnits.length > 0 && (
+        <div className="mt-8 opacity-60">
+          <h4 className="text-xs font-bold text-gray-400 uppercase mb-4 tracking-widest">Unidades inactivas</h4>
+          <DataTable 
+            columns={[
+              ...columns.filter(c => c.key !== 'acciones'),
+              {
+                key: 'acciones', header: '', align: 'right',
+                render: (row) => (
+                  <button onClick={() => statusMutation.mutate({ id: row.id, status: 'activo' })} className="text-xs text-green-600 font-bold hover:underline">
+                    Reactivar
+                  </button>
+                )
+              }
+            ]} 
+            data={inactiveUnits} 
+            keyExtractor={(u) => u.id} 
+          />
+        </div>
+      )}
+
+      {showModal && (
+        <Modal title={editingId ? "Editar unidad" : "Nueva unidad"} onClose={() => setShowModal(false)}>
+          <div className="space-y-4">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Nombre (ej. Kilogramos)</label>
+              <input 
+                className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition" 
+                value={form.nombre} 
+                onChange={(e) => setForm({ ...form, nombre: e.target.value })} 
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Abreviatura (ej. KG)</label>
+              <input 
+                className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition uppercase" 
+                value={form.abreviatura} 
+                onChange={(e) => setForm({ ...form, abreviatura: e.target.value.toUpperCase() })} 
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-3 mt-6">
+            <button onClick={() => setShowModal(false)} className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Cancelar</button>
+            <button onClick={() => saveMutation.mutate(form)} className="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl transition-colors">
+              {editingId ? 'Guardar cambios' : 'Crear unidad'}
+            </button>
+          </div>
+        </Modal>
+      )}
+    </>
+  );
+}
+
+// ── Componente Principal ──────────────────────────────────────────────────────
+export function Productos() {
+  const [activeTab, setActiveTab] = useState<'productos' | 'categorias' | 'unidades'>('productos');
+
+  // Cargamos categorías aquí para compartirlas entre pestañas (especialmente para TabProductos)
+  const { data: categories = [], refetch: loadCategories } = useQuery({
+    queryKey: ['categories'],
+    queryFn: () => categoriaService.getAll(false),
+  });
+
+  const tabs = [
+    { key: 'productos', label: 'Productos', icon: Package },
+    { key: 'categorias', label: 'Categorías', icon: Tag },
+    { key: 'unidades', label: 'Unidades', icon: Scale },
+  ];
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-2 p-1 bg-gray-100 dark:bg-gray-800/50 rounded-xl w-fit">
         {tabs.map(({ key, label, icon: Icon }) => (
           <button
             key={key}
             id={`tab-${key}`}
-            onClick={() => setActiveTab(key)}
+            onClick={() => setActiveTab(key as any)}
             className={[
               'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all',
               activeTab === key
@@ -604,6 +737,7 @@ export function Productos() {
       {/* Contenido de la pestaña activa */}
       {activeTab === 'productos'  && <TabProductos categories={categories} />}
       {activeTab === 'categorias' && <TabCategorias onUpdate={loadCategories} />}
+      {activeTab === 'unidades'   && <TabUnidades />}
     </div>
   );
 }
