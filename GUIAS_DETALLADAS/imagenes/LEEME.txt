@@ -1,0 +1,1 @@
+Coloca aquí las capturas de pantalla de la aplicación con los nombres especificados en los archivos Markdown (ej: dashboard.png, productos.png, etc.) para que se visualicen correctamente en la guía.
