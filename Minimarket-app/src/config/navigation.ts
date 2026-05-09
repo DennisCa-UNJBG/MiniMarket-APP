@@ -12,6 +12,7 @@ import {
   Building2,
   UserCog,
   CloudSync,
+  HelpCircle,
   type LucideIcon,
 } from 'lucide-react';
 import React from 'react';
@@ -30,6 +31,7 @@ import { NuevaVenta }    from '../pages/NuevaVenta';
 import { Sucursales }    from '../pages/Sucursales';
 import { Usuarios }      from '../pages/Usuarios';
 import { Sincronizacion } from '../pages/Sincronizacion';
+import { Ayuda } from '../pages/Ayuda';
 
 export interface NavItem {
   icon: LucideIcon;
@@ -56,6 +58,7 @@ export const mainNavItems: NavItem[] = [
 ];
 
 export const bottomNavItems: NavItem[] = [
+  { icon: HelpCircle, label: 'Ayuda', to: '/ayuda', component: Ayuda },
   { icon: Settings, label: 'Configuración', to: '/configuracion', component: Configuracion, requiredPermission: 'configuracion' },
 ];
 
