@@ -75,8 +75,17 @@ export const productoService = {
     );
   },
 
-  async update(id: number, product: Omit<Product, 'id' | 'estado' | 'stock_actual'>): Promise<void> {
+  async update(id: number, product: Omit<Product, 'id' | 'estado' | 'stock_actual'>, usuarioId: number): Promise<void> {
     const db = await getDb();
+    
+    // Obtener precio anterior para el log
+    const oldPriceData = await db.select<any[]>(
+      'SELECT precio_venta, precio_compra FROM precios_historial WHERE producto_id = ? AND activo = 1',
+      [id]
+    );
+    const oldVenta = oldPriceData[0]?.precio_venta || 0;
+    const oldCompra = oldPriceData[0]?.precio_compra || 0;
+
     await db.execute(
       `UPDATE productos 
        SET nombre = ?, categoria_id = ?, unidad_id = ?, stock_minimo = ?
@@ -85,16 +94,28 @@ export const productoService = {
     );
 
     if (product.precio_venta !== undefined) {
+      // Solo registrar log si el precio realmente cambió
+      if (oldVenta !== product.precio_venta) {
+        const { logService } = await import('../lib/logService');
+        await logService.register({
+          usuario_id: usuarioId,
+          accion: 'CAMBIO_PRECIO',
+          tabla: 'productos',
+          registro_id: id,
+          detalles: `Precio de venta cambiado de S/ ${oldVenta} a S/ ${product.precio_venta} para el producto: ${product.nombre}`
+        });
+      }
+
       // Desactivar precios anteriores para este producto
       await db.execute(
         'UPDATE precios_historial SET activo = 0 WHERE producto_id = ?',
         [id]
       );
-      // Insertar el nuevo precio como activo
+      // Insertar el nuevo precio como activo (manteniendo el precio de compra actual si existe)
       await db.execute(
         `INSERT INTO precios_historial (producto_id, precio_compra, precio_venta, activo) 
-         VALUES (?, 0, ?, 1)`,
-        [id, product.precio_venta]
+         VALUES (?, ?, ?, 1)`,
+        [id, product.precio_compra ?? oldCompra, product.precio_venta]
       );
     }
   },

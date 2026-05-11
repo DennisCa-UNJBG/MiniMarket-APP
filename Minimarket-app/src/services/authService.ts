@@ -54,13 +54,29 @@ export const authService = {
         console.error("Error al analizar permisos del usuario:", e);
       }
       
-      return {
+      const userData = {
         id: user.id,
         username: user.username,
         nombre_completo: user.nombre_completo,
         rol_id: user.rol_id,
         permisos: parsedPermisos
       };
+
+      // REGISTRO DE LOG: Inicio de sesión
+      try {
+        const { logService } = await import('../lib/logService');
+        await logService.register({
+          usuario_id: user.id,
+          accion: 'LOGIN',
+          tabla: 'usuarios',
+          registro_id: user.id,
+          detalles: `El usuario ${user.username} ha iniciado sesión.`
+        });
+      } catch (logError) {
+        console.error("Error al registrar log de login:", logError);
+      }
+
+      return userData;
     }
 
 

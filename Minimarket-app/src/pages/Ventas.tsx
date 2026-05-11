@@ -1,15 +1,19 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { ShoppingCart, Plus, Receipt, TrendingUp, DollarSign, Calendar, Clock, User, CreditCard, Banknote, Printer } from 'lucide-react';
+import { ShoppingCart, Plus, Receipt, TrendingUp, DollarSign, Calendar, Clock, User, CreditCard, Banknote, Printer, Edit, Trash2 } from 'lucide-react';
 import { DataTable, type TableColumn } from '../components/ui/DataTable';
 import { PageHeader } from '../components/ui/PageHeader';
 import { Badge } from '../components/ui/Badge';
 import { Modal } from '../components/ui/Modal';
 import { ventaService } from '../services/ventaService';
 import { Voucher } from '../components/shared/Voucher';
+import { useAuth } from '../contexts/AuthContext';
+import { notificationService } from '../lib/notifications';
+import { useQueryClient } from '@tanstack/react-query';
+import { esRegistroEditable } from '../lib/dateUtils';
 
-const getColumns = (onViewDetail: (sale: any) => void): TableColumn<any>[] => [
+const getColumns = (onViewDetail: (sale: any) => void, onEdit: (sale: any) => void): TableColumn<any>[] => [
   {
     key: 'id',
     header: 'N° Venta',
@@ -71,21 +75,45 @@ const getColumns = (onViewDetail: (sale: any) => void): TableColumn<any>[] => [
     header: '',
     align: 'right',
     render: (row) => (
-      <button 
-        onClick={() => onViewDetail(row)}
-        className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-tighter text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 px-2 py-1.5 rounded-lg border border-indigo-100 dark:border-indigo-800 transition-all"
-      >
-        <Receipt size={13} /> Ver Boleta
-      </button>
+      <div className="flex items-center justify-end gap-2">
+        {esRegistroEditable(row.fecha) ? (
+          <button 
+            onClick={() => onEdit(row)}
+            className="p-2 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors border border-amber-100 dark:border-amber-900/30"
+            title="Editar Venta"
+          >
+            <Edit size={14} />
+          </button>
+        ) : (
+          <div 
+            className="p-2 text-gray-400 cursor-not-allowed opacity-50"
+            title="Edición deshabilitada (pasaron 12h)"
+          >
+            <Edit size={14} />
+          </div>
+        )}
+        <button 
+          onClick={() => onViewDetail(row)}
+          className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-tighter text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 px-2 py-1.5 rounded-lg border border-indigo-100 dark:border-indigo-800 transition-all"
+        >
+          <Receipt size={13} /> Ver Boleta
+        </button>
+      </div>
     ),
   },
 ];
 
 export function Ventas() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [search, setSearch] = useState('');
   const [selectedSale, setSelectedSale] = useState<any>(null);
   const [saleDetails, setSaleDetails] = useState<any[]>([]);
+
+  // Estado para Edición
+  const [editingSale, setEditingSale] = useState<any>(null);
+  const [editItems, setEditItems] = useState<any[]>([]);
 
   // Queries
   const { data: sales = [] } = useQuery({
@@ -106,13 +134,61 @@ export function Ventas() {
     }
   });
 
+  const fetchEditDetailsMutation = useMutation({
+    mutationFn: (id: number) => ventaService.getVentaDetalles(id),
+    onSuccess: (details, id) => {
+      setEditItems(details);
+      setEditingSale(sales.find(s => s.id === id));
+    }
+  });
+
   const handleViewDetail = (sale: any) => {
     fetchDetailsMutation.mutate(sale.id);
+  };
+
+  const handleEdit = (sale: any) => {
+    fetchEditDetailsMutation.mutate(sale.id);
   };
 
   const handlePrint = () => {
     if (!selectedSale) return;
     window.print();
+  };
+
+  const updateVentaMutation = useMutation({
+    mutationFn: (payload: any) => ventaService.actualizarVenta(editingSale.id, payload, user?.id || 1),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sales'] });
+      queryClient.invalidateQueries({ queryKey: ['sales-summary'] });
+      notificationService.success('Venta Actualizada', 'Los cambios se han guardado y el stock ha sido ajustado.');
+      setEditingSale(null);
+    }
+  });
+
+  const handleUpdateItemQuantity = (productoId: number, newQty: number) => {
+    if (newQty <= 0) return;
+    setEditItems(prev => prev.map(item => 
+      item.producto_id === productoId ? { ...item, cantidad: newQty, subtotal: newQty * item.precio_unitario } : item
+    ));
+  };
+
+  const handleRemoveItem = (productoId: number) => {
+    if (editItems.length <= 1) {
+      notificationService.warning('Acción no permitida', 'Una venta no puede quedar vacía. Cancela la venta si es necesario.');
+      return;
+    }
+    setEditItems(prev => prev.filter(item => item.producto_id !== productoId));
+  };
+
+  const handleSaveEdit = () => {
+    const total = editItems.reduce((acc, item) => acc + item.subtotal, 0);
+    // Para simplificar, asumimos que el monto pagado sigue siendo el mismo o se ajusta al total
+    const payload = {
+      ...editingSale,
+      total,
+      items: editItems
+    };
+    updateVentaMutation.mutate(payload);
   };
 
   const filtered = sales.filter((s) => s.id.toString().includes(search.toLowerCase()));
@@ -171,11 +247,98 @@ export function Ventas() {
 
       {/* ✅ Tabla reutilizable — misma lógica, cero duplicación */}
       <DataTable
-        columns={getColumns(handleViewDetail)}
+        columns={getColumns(handleViewDetail, handleEdit)}
         data={filtered}
         keyExtractor={(row) => row.id}
         emptyMessage="No se encontraron ventas registradas."
       />
+
+      {/* Modal de Edición de Venta */}
+      {editingSale && (
+        <Modal
+          onClose={() => setEditingSale(null)}
+          title={`Editando Venta #${editingSale.id.toString().padStart(5, '0')}`}
+          maxWidth="2xl"
+        >
+          <div className="space-y-6">
+            <div className="p-4 bg-amber-50 dark:bg-amber-900/10 rounded-2xl border border-amber-100 dark:border-amber-900/30 flex items-center gap-3">
+              <Edit className="text-amber-600" size={20} />
+              <p className="text-xs text-amber-800 dark:text-amber-200 font-medium">
+                Al guardar los cambios, el stock de los productos se recalculará automáticamente. Esta acción quedará registrada en el historial de auditoría.
+              </p>
+            </div>
+
+            <div className="border border-gray-100 dark:border-gray-700 rounded-2xl overflow-hidden">
+              <table className="w-full text-left border-collapse">
+                <thead className="bg-gray-50 dark:bg-gray-700/50">
+                  <tr>
+                    <th className="px-4 py-2 text-[10px] font-bold text-gray-500 uppercase">Producto</th>
+                    <th className="px-4 py-2 text-[10px] font-bold text-gray-500 uppercase text-center">Cant.</th>
+                    <th className="px-4 py-2 text-[10px] font-bold text-gray-500 uppercase text-right">Precio</th>
+                    <th className="px-4 py-2 text-[10px] font-bold text-gray-500 uppercase text-right">Subtotal</th>
+                    <th className="px-4 py-2 text-[10px] font-bold text-gray-500 uppercase text-center">Acción</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
+                  {editItems.map((item) => (
+                    <tr key={item.producto_id}>
+                      <td className="px-4 py-3 text-sm font-medium text-gray-800 dark:text-gray-200">{item.producto_nombre}</td>
+                      <td className="px-4 py-3 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <button 
+                            onClick={() => handleUpdateItemQuantity(item.producto_id, item.cantidad - 1)}
+                            className="w-6 h-6 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-lg text-gray-600 hover:bg-gray-200"
+                          >-</button>
+                          <span className="text-sm font-bold w-8 text-center">{item.cantidad}</span>
+                          <button 
+                            onClick={() => handleUpdateItemQuantity(item.producto_id, item.cantidad + 1)}
+                            className="w-6 h-6 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-lg text-gray-600 hover:bg-gray-200"
+                          >+</button>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-right">S/ {item.precio_unitario.toFixed(2)}</td>
+                      <td className="px-4 py-3 text-sm font-bold text-right">S/ {item.subtotal.toFixed(2)}</td>
+                      <td className="px-4 py-3 text-center">
+                        <button 
+                          onClick={() => handleRemoveItem(item.producto_id)}
+                          className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-colors"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="bg-gray-50/50 dark:bg-gray-700/20 font-black">
+                    <td colSpan={3} className="px-4 py-4 text-right text-sm">NUEVO TOTAL:</td>
+                    <td className="px-4 py-4 text-right text-lg text-indigo-600 dark:text-indigo-400">
+                      S/ {editItems.reduce((acc, item) => acc + item.subtotal, 0).toFixed(2)}
+                    </td>
+                    <td></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-700">
+              <button
+                onClick={() => setEditingSale(null)}
+                className="px-6 py-2 text-sm font-bold text-gray-500 hover:bg-gray-50 rounded-xl transition-all"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSaveEdit}
+                disabled={updateVentaMutation.isPending}
+                className="px-8 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-indigo-100 dark:shadow-none disabled:opacity-50"
+              >
+                {updateVentaMutation.isPending ? 'Guardando...' : 'Guardar Cambios'}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
 
       {/* Modal de Detalle de Venta */}
       {selectedSale && (

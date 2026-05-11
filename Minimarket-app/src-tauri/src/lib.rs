@@ -260,6 +260,22 @@ pub fn run() {
                   ('Paquete', 'PQT');
                   ALTER TABLE productos ADD COLUMN unidad_id INTEGER REFERENCES unidades_medida(id);",
             kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 11,
+            description: "create_cajas_table",
+            sql: "CREATE TABLE IF NOT EXISTS cajas (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    usuario_id INTEGER NOT NULL,
+                    monto_inicial REAL NOT NULL,
+                    monto_final REAL,
+                    fecha_apertura TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    fecha_cierre TIMESTAMP,
+                    estado TEXT DEFAULT 'abierta',
+                    sucursal_id TEXT,
+                    FOREIGN KEY (usuario_id) REFERENCES usuarios (id)
+                  );",
+            kind: MigrationKind::Up,
         }
     ];
 

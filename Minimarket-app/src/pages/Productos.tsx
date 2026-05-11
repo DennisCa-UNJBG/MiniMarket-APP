@@ -8,6 +8,7 @@ import { categoriaService, type Category } from '../services/categoriaService';
 import { productoService, type Product } from '../services/productoService';
 import { unidadMedidaService, type UnidadMedida } from '../services/unidadMedidaService';
 import { notificationService } from '../lib/notifications';
+import { useAuth } from '../contexts/AuthContext';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const getRandomColor = () => {
@@ -30,6 +31,7 @@ const generateProductCode = (lastCode: string | null) => {
 // ── Pestaña Productos ──────────────────────────────────────────────────────────
 function TabProductos({ categories }: { categories: Category[] }) {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [search, setSearch] = useState('');
@@ -56,7 +58,7 @@ function TabProductos({ categories }: { categories: Category[] }) {
   const saveMutation = useMutation({
     mutationFn: async (payload: any) => {
       if (editingId) {
-        return productoService.update(editingId, payload);
+        return productoService.update(editingId, payload, user?.id || 1);
       } else {
         return productoService.create(payload);
       }

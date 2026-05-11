@@ -1,5 +1,6 @@
 import { getDb } from '../lib/db';
 import { sucursalService } from './sucursalService';
+import { esRegistroEditable } from '../lib/dateUtils';
 
 export interface InventarioIngreso {
   id?: number;
@@ -221,6 +222,14 @@ export const inventarioService = {
     const db = await getDb();
     const alertas: string[] = [];
     
+    // 0. Verificar ventana de edición de 12 horas
+    const compraActual = await db.select<any[]>('SELECT fecha FROM compras_ingresos WHERE id = ?', [compraId]);
+    if (compraActual.length === 0) throw new Error("La compra no existe.");
+
+    if (!esRegistroEditable(compraActual[0].fecha)) {
+      throw new Error("No se puede editar: Esta compra fue creada hace más de 12 horas.");
+    }
+
     // 1. Obtener datos antiguos para revertir (stock y referencia)
     const oldCabecera = await db.select<any[]>('SELECT documento_referencia FROM compras_ingresos WHERE id = ?', [compraId]);
     const oldRef = oldCabecera[0]?.documento_referencia || `COMPRA #${compraId}`;

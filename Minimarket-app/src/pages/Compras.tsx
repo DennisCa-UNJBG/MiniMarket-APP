@@ -9,6 +9,7 @@ import { inventarioService, type CompraDetalle } from '../services/inventarioSer
 import { productoService, type Product } from '../services/productoService';
 import { notificationService } from '../lib/notifications';
 import { useAuth } from '../contexts/AuthContext';
+import { esRegistroEditable } from '../lib/dateUtils';
 
 interface PurchaseRecord {
   id: number;
@@ -249,13 +250,22 @@ export function Compras() {
           >
             Ver detalle
           </button>
-          <button 
-            onClick={() => handleEdit(row)}
-            className="p-1.5 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/20 text-amber-500 transition-colors"
-            title="Editar compra"
-          >
-            <Edit2 size={14} />
-          </button>
+          {esRegistroEditable(row.fecha) ? (
+            <button 
+              onClick={() => handleEdit(row)}
+              className="p-1.5 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/20 text-amber-500 transition-colors"
+              title="Editar compra"
+            >
+              <Edit2 size={14} />
+            </button>
+          ) : (
+            <div 
+              className="p-1.5 text-gray-400 cursor-not-allowed opacity-50"
+              title="Edición deshabilitada (pasaron 12h)"
+            >
+              <Edit2 size={14} />
+            </div>
+          )}
         </div>
       )
     }

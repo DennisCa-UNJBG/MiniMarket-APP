@@ -1,5 +1,6 @@
 import { getDb } from '../lib/db';
 import { sucursalService } from './sucursalService';
+import { esRegistroEditable } from '../lib/dateUtils';
 
 export interface VentaItem {
   producto_id: number;
@@ -143,5 +144,77 @@ export const ventaService = {
     const db = await getDb();
     const res = await db.select<any[]>('SELECT count(*) as count FROM ventas WHERE sincronizado = 0');
     return res[0].count;
+  },
+
+  /**
+   * Actualiza una venta ya emitida:
+   * 1. Revierte el stock de los items anteriores.
+   * 2. Actualiza la cabecera.
+   * 3. Borra items anteriores e inserta los nuevos.
+   * 4. Descuenta el nuevo stock.
+   * 5. Registra el Log de auditoría.
+   */
+  async actualizarVenta(ventaId: number, venta: VentaData, usuarioId: number): Promise<void> {
+    const db = await getDb();
+
+    // 0. Verificar si el registro aún es editable (ventana de 12 horas)
+    const ventaActual = await db.select<any[]>('SELECT fecha FROM ventas WHERE id = ?', [ventaId]);
+    if (ventaActual.length === 0) throw new Error("La venta no existe.");
+
+    if (!esRegistroEditable(ventaActual[0].fecha)) {
+      throw new Error("No se puede editar: Esta venta fue creada hace más de 12 horas.");
+    }
+
+    // 0. Obtener items anteriores para revertir stock
+    const oldItems = await db.select<any[]>(
+      'SELECT producto_id, cantidad FROM ventas_detalle WHERE venta_id = ?',
+      [ventaId]
+    );
+
+    // 1. Revertir stock
+    for (const item of oldItems) {
+      await db.execute(
+        'UPDATE productos SET stock_actual = stock_actual + ? WHERE id = ?',
+        [item.cantidad, item.producto_id]
+      );
+    }
+
+    // 2. Actualizar Cabecera
+    await db.execute(
+      `UPDATE ventas SET total = ?, metodo_pago = ?, monto_pagado = ?, vuelto = ? WHERE id = ?`,
+      [venta.total, venta.metodo_pago, venta.monto_pagado, venta.vuelto, ventaId]
+    );
+
+    // 3. Borrar detalles antiguos e insertar nuevos
+    await db.execute('DELETE FROM ventas_detalle WHERE venta_id = ?', [ventaId]);
+
+    for (const item of venta.items) {
+      const subtotal = item.cantidad * item.precio_unitario;
+      await db.execute(
+        `INSERT INTO ventas_detalle (venta_id, producto_id, cantidad, precio_unitario, subtotal) 
+         VALUES (?, ?, ?, ?, ?)`,
+        [ventaId, item.producto_id, item.cantidad, item.precio_unitario, subtotal]
+      );
+
+      // 4. Descontar nuevo stock
+      await db.execute(
+        'UPDATE productos SET stock_actual = stock_actual - ? WHERE id = ?',
+        [item.cantidad, item.producto_id]
+      );
+    }
+
+    // 5. Registrar Log de Auditoría
+    try {
+      const { logService } = await import('../lib/logService');
+      await logService.register({
+        usuario_id: usuarioId,
+        accion: 'EDICION_VENTA',
+        tabla: 'ventas',
+        registro_id: ventaId,
+        detalles: `Venta #${ventaId} editada. Nuevo total: S/ ${venta.total.toFixed(2)}. Items actualizados.`
+      });
+    } catch (e) {
+      console.error("Error al registrar log de edición de venta:", e);
+    }
   }
 };
