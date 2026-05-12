@@ -9,6 +9,13 @@ import { Login } from './pages/Login';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { notificationService } from './lib/notifications';
 import { ConnectionError } from './lib/errors';
+import { useGlobalShortcuts } from './hooks/useGlobalShortcuts';
+import { GlobalBrightnessOverlay } from './components/GlobalBrightnessOverlay';
+
+function GlobalShortcutsHandler() {
+  useGlobalShortcuts();
+  return null;
+}
 
 // Configuración de TanStack Query con manejo de errores global
 const queryClient = new QueryClient({
@@ -66,6 +73,7 @@ function AppContent() {
 
   return (
     <HashRouter>
+      <GlobalShortcutsHandler />
       {!isAuthenticated ? (
         <Login onLogin={login} />
       ) : (
@@ -95,6 +103,7 @@ function App() {
       <ThemeProvider>
         <SidebarProvider>
           <AuthProvider>
+            <GlobalBrightnessOverlay />
             <AppContent />
           </AuthProvider>
         </SidebarProvider>

@@ -242,7 +242,10 @@ export function Dashboard() {
         <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-bold text-gray-800 dark:text-white">Actividad Reciente</h3>
-            <button className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest flex items-center gap-1 hover:underline">
+            <button 
+              onClick={() => navigate('/kardex')}
+              className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest flex items-center gap-1 hover:underline"
+            >
               Ver Todo <ArrowRight size={12} />
             </button>
           </div>

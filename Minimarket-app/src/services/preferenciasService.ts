@@ -2,6 +2,8 @@ export interface AppPreferences {
   stockAlert: boolean;
   inactivityTimeout: number;
   enableAutoLogout: boolean;
+  shortcuts: Record<string, string>;
+  brightness: number;
 }
 
 const PREFS_KEY = 'minimarket_prefs';
@@ -10,6 +12,8 @@ const defaultPrefs: AppPreferences = {
   stockAlert: true,
   inactivityTimeout: 25,
   enableAutoLogout: false,
+  shortcuts: {},
+  brightness: 100,
 };
 
 export const preferenciasService = {
@@ -25,12 +29,13 @@ export const preferenciasService = {
 
   save(prefs: AppPreferences) {
     localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+    window.dispatchEvent(new Event('preferences-updated'));
   },
 
   toggle(key: keyof AppPreferences) {
     const current = this.get();
     const updated = { ...current, [key]: !current[key] };
-    this.save(updated);
-    return updated;
+    this.save(updated as AppPreferences);
+    return updated as AppPreferences;
   }
 };

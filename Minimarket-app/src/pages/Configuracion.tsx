@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Store, Database, Bell, Save, Shield, Server, RefreshCw, Eye, EyeOff } from 'lucide-react';
+import { Store, Database, Bell, Save, Shield, Server, RefreshCw, Eye, EyeOff, Keyboard, Plus, Trash2, ArrowRight } from 'lucide-react';
 import { Badge } from '../components/ui/Badge';
 import { notificationService } from '../lib/notifications';
 import { databaseService } from '../services/databaseService';
@@ -11,6 +11,7 @@ import { syncService } from '../services/syncService';
 import { negocioService, type DatosNegocio } from '../services/negocioService';
 import { useAuth } from '../contexts/AuthContext';
 import { authService } from '../services/authService';
+import { allNavItems } from '../config/navigation';
 
 function Section({ icon: Icon, title, description, children }: { icon: React.ElementType; title: string; description: string; children: React.ReactNode }) {
   return (
@@ -91,6 +92,11 @@ export function Configuracion() {
     confirmPassword: ''
   });
 
+  // Atajos de teclado
+  const [newShortcutCombo, setNewShortcutCombo] = useState('');
+  const [newShortcutPath, setNewShortcutPath] = useState(allNavItems[0].to);
+  const [isRecordingCombo, setIsRecordingCombo] = useState(false);
+
   // Queries
   const { data: dbStats = { size: 0, path: 'Cargando...' } } = useQuery({
     queryKey: ['db-stats'],
@@ -147,14 +153,46 @@ export function Configuracion() {
 
   const handleToggle = (key: keyof AppPreferences) => {
     const updated = preferenciasService.toggle(key);
-    setPrefs(updated);
+    setPrefs(updated as AppPreferences);
+    
+    if (key === 'stockAlert') {
+      queryClient.invalidateQueries({ queryKey: ['low-stock'] });
+    }
   };
 
   const handleUpdatePref = (key: keyof AppPreferences, value: any) => {
     const current = preferenciasService.get();
     const updated = { ...current, [key]: value };
-    preferenciasService.save(updated);
-    setPrefs(updated);
+    preferenciasService.save(updated as AppPreferences);
+    setPrefs(updated as AppPreferences);
+  };
+
+  const handleAddShortcut = () => {
+    if (!newShortcutCombo) {
+      notificationService.warning('Atajo incompleto', 'Debes presionar una combinación de teclas primero.');
+      return;
+    }
+    
+    const current = preferenciasService.get();
+    const updatedShortcuts = { ...current.shortcuts, [newShortcutCombo]: newShortcutPath };
+    const updated = { ...current, shortcuts: updatedShortcuts };
+    
+    preferenciasService.save(updated as AppPreferences);
+    setPrefs(updated as AppPreferences);
+    
+    setNewShortcutCombo('');
+    setIsRecordingCombo(false);
+    notificationService.success('Atajo Guardado', `La combinación ${newShortcutCombo} ahora abre una nueva vista.`);
+  };
+
+  const handleRemoveShortcut = (combo: string) => {
+    const current = preferenciasService.get();
+    const updatedShortcuts = { ...current.shortcuts };
+    delete updatedShortcuts[combo];
+    const updated = { ...current, shortcuts: updatedShortcuts };
+    
+    preferenciasService.save(updated as AppPreferences);
+    setPrefs(updated as AppPreferences);
   };
 
   const handleSucursalSave = (e: React.FormEvent) => {
@@ -527,6 +565,121 @@ export function Configuracion() {
                 </div>
               </div>
             )}
+
+            {/* Brillo */}
+            <div className="flex items-center justify-between py-3 border-t border-gray-50 dark:border-gray-700 mt-2 pt-4">
+              <div className="min-w-0 pr-4">
+                <p className="text-sm font-bold text-gray-700 dark:text-gray-200 truncate">Brillo General</p>
+                <p className="text-[10px] text-gray-400 dark:text-gray-500">Ajusta la iluminación para cuidar tu vista.</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <input 
+                  type="range" 
+                  min="30" 
+                  max="100" 
+                  value={prefs.brightness ?? 100}
+                  onChange={(e) => handleUpdatePref('brightness', parseInt(e.target.value))}
+                  className="w-24 accent-indigo-500"
+                />
+                <span className="text-xs font-bold text-gray-500 w-8 text-right">{prefs.brightness ?? 100}%</span>
+              </div>
+            </div>
+          </div>
+        </Section>
+
+        {/* Atajos de Teclado */}
+        <Section 
+          icon={Keyboard} 
+          title="Atajos de Teclado" 
+          description="Configura atajos rápidos para navegar entre las vistas."
+        >
+          <div className="space-y-4">
+            <div className="bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-100 dark:border-gray-800 p-4 space-y-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">Seleccionar Vista</label>
+                <select 
+                  value={newShortcutPath}
+                  onChange={(e) => setNewShortcutPath(e.target.value)}
+                  className="w-full px-4 py-2.5 text-sm font-medium border border-gray-100 dark:border-gray-700 rounded-2xl bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                >
+                  {allNavItems.map(item => (
+                    <option key={item.to} value={item.to}>{item.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">Combinación de Teclas</label>
+                <div className="flex gap-2">
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      setIsRecordingCombo(true);
+                      setNewShortcutCombo('');
+                    }}
+                    onKeyDown={(e) => {
+                      if (!isRecordingCombo) return;
+                      e.preventDefault();
+                      
+                      const keys = [];
+                      if (e.ctrlKey) keys.push('Ctrl');
+                      if (e.altKey) keys.push('Alt');
+                      if (e.shiftKey) keys.push('Shift');
+                      
+                      if (e.key !== 'Control' && e.key !== 'Alt' && e.key !== 'Shift' && e.key !== 'Meta') {
+                        const keyName = e.key === ' ' ? 'Space' : e.key.toUpperCase();
+                        keys.push(keyName);
+                      }
+
+                      if (keys.length > 0) {
+                        setNewShortcutCombo(keys.join('+'));
+                        if (e.key !== 'Control' && e.key !== 'Alt' && e.key !== 'Shift' && e.key !== 'Meta') {
+                          setIsRecordingCombo(false);
+                        }
+                      }
+                    }}
+                    className={`flex-1 px-4 py-2.5 text-sm font-medium border rounded-2xl transition-all text-left ${isRecordingCombo ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 shadow-[0_0_0_2px_rgba(99,102,241,0.2)]' : 'border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-500'}`}
+                  >
+                    {isRecordingCombo ? 'Presiona una combinación...' : (newShortcutCombo || 'Haz clic aquí para grabar')}
+                  </button>
+                  <button 
+                    onClick={handleAddShortcut}
+                    disabled={!newShortcutCombo}
+                    className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl transition-all disabled:opacity-50 disabled:hover:bg-indigo-600"
+                  >
+                    <Plus size={18} />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              {Object.entries(prefs.shortcuts || {}).length > 0 ? (
+                Object.entries(prefs.shortcuts || {}).map(([combo, path]) => {
+                  const viewLabel = allNavItems.find(i => i.to === path)?.label || path;
+                  return (
+                    <div key={combo} className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm">
+                      <div className="flex items-center gap-3">
+                        <div className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-xs font-mono font-bold rounded-lg border border-gray-200 dark:border-gray-600">
+                          {combo}
+                        </div>
+                        <span className="text-sm font-medium text-gray-500 dark:text-gray-400 flex items-center gap-2">
+                          <ArrowRight size={14} />
+                          {viewLabel}
+                        </span>
+                      </div>
+                      <button 
+                        onClick={() => handleRemoveShortcut(combo)}
+                        className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  );
+                })
+              ) : (
+                <p className="text-sm text-gray-400 dark:text-gray-500 italic text-center py-4">No hay atajos configurados.</p>
+              )}
+            </div>
           </div>
         </Section>
       </div>

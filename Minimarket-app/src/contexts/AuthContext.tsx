@@ -34,38 +34,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!user) return;
 
-    const prefs = preferenciasService.get();
-    if (!prefs.enableAutoLogout) return;
-
-    let timeoutId: number;
-
-    const resetTimer = () => {
-      if (timeoutId) clearTimeout(timeoutId);
-      
-      // Convertir minutos a milisegundos
-      const ms = prefs.inactivityTimeout * 60 * 1000;
-      
-      timeoutId = window.setTimeout(() => {
-        logout();
-        notificationService.info('Seguridad', 'Tu sesión se ha cerrado por inactividad.');
-      }, ms);
-    };
-
+    // @ts-ignore
+    window.__lastActivityTime = Date.now();
+    
     // Eventos que reinician el temporizador
     const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
     
-    events.forEach(event => {
-      document.addEventListener(event, resetTimer);
-    });
+    // Solo actualizamos el timestamp global si ha pasado al menos 1 segundo
+    // para no sobrecargar el CPU con eventos como mousemove
+    const updateActivity = () => {
+      const now = Date.now();
+      // @ts-ignore
+      if (now - (window.__lastActivityTime || 0) > 1000) {
+        // @ts-ignore
+        window.__lastActivityTime = now;
+      }
+    };
 
-    // Iniciar el primer temporizador
-    resetTimer();
+    let currentPrefs = preferenciasService.get();
+    const handlePrefsUpdate = () => {
+      currentPrefs = preferenciasService.get();
+    };
+
+    const checkInactivity = () => {
+      if (!currentPrefs.enableAutoLogout) return;
+      
+      // @ts-ignore
+      const lastActivity = window.__lastActivityTime;
+      const timeoutMs = currentPrefs.inactivityTimeout * 60 * 1000;
+      
+      if (Date.now() - lastActivity >= timeoutMs) {
+        logout();
+        notificationService.info('Seguridad', 'Tu sesión se ha cerrado por inactividad.');
+      }
+    };
+
+    // Comprobar la inactividad cada segundo de manera robusta
+    const intervalId = setInterval(checkInactivity, 1000);
+
+    // Escuchar eventos pasivamente para mejor rendimiento
+    events.forEach(event => document.addEventListener(event, updateActivity, { passive: true }));
+    window.addEventListener('preferences-updated', handlePrefsUpdate);
 
     return () => {
-      if (timeoutId) clearTimeout(timeoutId);
-      events.forEach(event => {
-        document.removeEventListener(event, resetTimer);
-      });
+      clearInterval(intervalId);
+      events.forEach(event => document.removeEventListener(event, updateActivity));
+      window.removeEventListener('preferences-updated', handlePrefsUpdate);
     };
   }, [user]);
 

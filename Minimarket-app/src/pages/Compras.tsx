@@ -515,13 +515,21 @@ export function Compras() {
                 <p className="text-xs text-indigo-200 font-medium">Total de Inversión (Inc. IGV)</p>
                 <p className="text-3xl font-black">S/ {totalFinal.toFixed(2)}</p>
               </div>
-              <button 
-                onClick={handleConfirmarCompra}
-                disabled={savePurchaseMutation.isPending}
-                className="flex items-center gap-2 px-6 py-3 bg-white text-indigo-600 font-bold rounded-xl hover:bg-indigo-50 transition-colors disabled:opacity-50"
-              >
-                {savePurchaseMutation.isPending ? 'Procesando...' : 'Completar Registro'} <ArrowUpRight size={20} />
-              </button>
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={() => setShowModal(false)}
+                  className="px-6 py-3 bg-indigo-700/50 hover:bg-indigo-700 text-white font-bold rounded-xl transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  onClick={handleConfirmarCompra}
+                  disabled={savePurchaseMutation.isPending}
+                  className="flex items-center gap-2 px-6 py-3 bg-white text-indigo-600 font-bold rounded-xl hover:bg-indigo-50 transition-colors disabled:opacity-50"
+                >
+                  {savePurchaseMutation.isPending ? 'Procesando...' : 'Completar Registro'} <ArrowUpRight size={20} />
+                </button>
+              </div>
             </div>
           </div>
         </Modal>

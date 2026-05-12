@@ -7,6 +7,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Button } from './Button';
 import { alertaService } from '../../services/alertaService';
 import { preferenciasService } from '../../services/preferenciasService';
+import { AutoLogoutTimer } from '../auth/AutoLogoutTimer';
 
 /** Obtiene el título de la página según la ruta activa */
 function usePageTitle(): string {
@@ -56,6 +57,10 @@ export function TopBar() {
 
       {/* Acciones del lado derecho */}
       <div className="flex items-center gap-4">
+        
+        {/* Temporizador de Cierre de Sesión */}
+        <AutoLogoutTimer />
+
         {/* Notificaciones */}
         <div className="relative" ref={dropdownRef}>
           <button
