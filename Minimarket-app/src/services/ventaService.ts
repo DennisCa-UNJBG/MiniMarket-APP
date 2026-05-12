@@ -1,6 +1,7 @@
 import { getDb } from '../lib/db';
 import { sucursalService } from './sucursalService';
 import { esRegistroEditable } from '../lib/dateUtils';
+import { logService } from '../lib/logService';
 
 export interface VentaItem {
   producto_id: number;
@@ -205,7 +206,6 @@ export const ventaService = {
 
     // 5. Registrar Log de Auditoría
     try {
-      const { logService } = await import('../lib/logService');
       await logService.register({
         usuario_id: usuarioId,
         accion: 'EDICION_VENTA',

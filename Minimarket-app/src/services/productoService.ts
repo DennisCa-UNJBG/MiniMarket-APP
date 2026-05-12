@@ -1,4 +1,5 @@
 import { getDb } from '../lib/db';
+import { logService } from '../lib/logService';
 
 export interface Product {
   id: number;
@@ -96,7 +97,6 @@ export const productoService = {
     if (product.precio_venta !== undefined) {
       // Solo registrar log si el precio realmente cambió
       if (oldVenta !== product.precio_venta) {
-        const { logService } = await import('../lib/logService');
         await logService.register({
           usuario_id: usuarioId,
           accion: 'CAMBIO_PRECIO',

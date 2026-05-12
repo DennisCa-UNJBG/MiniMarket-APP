@@ -1,6 +1,7 @@
 import { getDb } from '../lib/db';
 import { AuthError, ConnectionError } from '../lib/errors';
 import bcrypt from 'bcryptjs';
+import { logService } from '../lib/logService';
 
 export interface UserData {
   id: number;
@@ -64,7 +65,6 @@ export const authService = {
 
       // REGISTRO DE LOG: Inicio de sesión
       try {
-        const { logService } = await import('../lib/logService');
         await logService.register({
           usuario_id: user.id,
           accion: 'LOGIN',

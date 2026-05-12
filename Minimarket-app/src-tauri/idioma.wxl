@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WixLocalization Culture="es-es" xmlns="http://schemas.microsoft.com/wix/2006/localization">
+  <String Id="WelcomeDlgTitle">Instalador del Sistema Minimarket-app</String>
+  <String Id="WelcomeDlgDescription">Este asistente le guiará paso a paso a través de la instalación del sistema en su computadora.</String>
+  <String Id="InstallDirDlgDescription">Haga clic en Siguiente para instalar en la carpeta por defecto, o haga clic en Cambiar para elegir otra.</String>
+</WixLocalization>
