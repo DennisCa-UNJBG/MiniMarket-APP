@@ -174,7 +174,20 @@ export function Configuracion() {
     }
     
     const current = preferenciasService.get();
-    const updatedShortcuts = { ...current.shortcuts, [newShortcutCombo]: newShortcutPath };
+    const currentShortcuts = current.shortcuts || {};
+
+    const existingComboForPath = Object.keys(currentShortcuts).find(key => currentShortcuts[key] === newShortcutPath);
+    if (existingComboForPath) {
+      notificationService.warning('Vista ya asignada', `Esta vista ya tiene el atajo ${existingComboForPath}. Elimínalo primero.`);
+      return;
+    }
+
+    if (currentShortcuts[newShortcutCombo]) {
+      notificationService.warning('Atajo en uso', 'Esta combinación de teclas ya está asignada a otra vista.');
+      return;
+    }
+
+    const updatedShortcuts = { ...currentShortcuts, [newShortcutCombo]: newShortcutPath };
     const updated = { ...current, shortcuts: updatedShortcuts };
     
     preferenciasService.save(updated as AppPreferences);
@@ -602,9 +615,14 @@ export function Configuracion() {
                   onChange={(e) => setNewShortcutPath(e.target.value)}
                   className="w-full px-4 py-2.5 text-sm font-medium border border-gray-100 dark:border-gray-700 rounded-2xl bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                 >
-                  {allNavItems.map(item => (
-                    <option key={item.to} value={item.to}>{item.label}</option>
-                  ))}
+                  {allNavItems.map(item => {
+                    const isAssigned = Object.values(prefs.shortcuts || {}).includes(item.to);
+                    return (
+                      <option key={item.to} value={item.to}>
+                        {item.label} {isAssigned ? '(Ya asignado)' : ''}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
               <div className="flex flex-col gap-1.5">
