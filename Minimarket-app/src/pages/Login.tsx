@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Package2, Lock, User, ArrowRight } from 'lucide-react';
+import { getVersion } from '@tauri-apps/api/app';
 import { authService, type UserData } from '../services/authService';
 import { notificationService } from '../lib/notifications';
 import { AuthError, ConnectionError } from '../lib/errors';
@@ -17,6 +18,7 @@ export function Login({ onLogin }: LoginProps) {
   const [account, setAccount] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [appVersion, setAppVersion] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Enfocar el input de cuenta al montar el componente
@@ -24,6 +26,9 @@ export function Login({ onLogin }: LoginProps) {
     if (inputRef.current) {
       inputRef.current.focus();
     }
+    
+    // Obtener la versión real de la app
+    getVersion().then(version => setAppVersion(version)).catch(console.error);
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -76,7 +81,7 @@ export function Login({ onLogin }: LoginProps) {
           <div className="relative z-10 flex items-center gap-4 text-sm text-indigo-200/80">
             <span>© 2026 Sistema de Inventario</span>
             <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full"></span>
-            <span>Versión 1.0.0</span>
+            <span>Versión {appVersion || '...'}</span>
           </div>
         </div>
 

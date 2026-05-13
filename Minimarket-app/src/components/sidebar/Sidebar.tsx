@@ -1,4 +1,6 @@
+import { useState, useEffect } from 'react';
 import { Store, Sun, Moon } from 'lucide-react';
+import { getVersion } from '@tauri-apps/api/app';
 import { useSidebar } from '../../contexts/SidebarContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -9,6 +11,11 @@ export function Sidebar() {
   const { isCollapsed, toggleSidebar } = useSidebar();
   const { theme, toggleTheme } = useTheme();
   const { user } = useAuth();
+  const [appVersion, setAppVersion] = useState('');
+
+  useEffect(() => {
+    getVersion().then(v => setAppVersion(v)).catch(console.error);
+  }, []);
 
   // Filtramos los items de navegación según el rol del usuario
   const filterItems = (items: typeof mainNavItems) => {
@@ -59,8 +66,13 @@ export function Sidebar() {
             <p className="text-sm font-bold text-gray-800 dark:text-white leading-tight truncate">
               Minimarket
             </p>
-            <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5 truncate">
+            <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5 truncate flex items-center gap-1.5">
               Sistema de Inventario
+              {appVersion && (
+                <span className="px-1.5 py-0.5 bg-gray-200/60 dark:bg-gray-700/60 rounded text-[9px] font-bold text-gray-500 dark:text-gray-400">
+                  v {appVersion}
+                </span>
+              )}
             </p>
           </div>
         )}
