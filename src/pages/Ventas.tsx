@@ -1,12 +1,13 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { ShoppingCart, Plus, Receipt, TrendingUp, DollarSign, Calendar, Clock, User, CreditCard, Banknote, Printer, Edit, Trash2 } from 'lucide-react';
+import { Search, ShoppingBag, Trash2, Edit, TrendingUp, DollarSign, ShoppingCart, Plus, Minus, ArrowUpRight, Receipt, Calendar, Clock, User, CreditCard, Banknote, Printer } from 'lucide-react';
 import { DataTable, type TableColumn } from '../components/ui/DataTable';
 import { PageHeader } from '../components/ui/PageHeader';
 import { Badge } from '../components/ui/Badge';
 import { Modal } from '../components/ui/Modal';
 import { ventaService } from '../services/ventaService';
+import { productoService } from '../services/productoService';
 import { Voucher } from '../components/shared/Voucher';
 import { useAuth } from '../contexts/AuthContext';
 import { notificationService } from '../lib/notifications';
@@ -125,6 +126,18 @@ export function Ventas() {
   // Estado para Edición
   const [editingSale, setEditingSale] = useState<any>(null);
   const [editItems, setEditItems] = useState<any[]>([]);
+  
+  // Estados para búsqueda de productos en el modal de edición
+  const [prodSearch, setProdSearch] = useState('');
+  const [showProductList, setShowProductList] = useState(false);
+  const [selectedProd, setSelectedProd] = useState<any>(null);
+  const [qty, setQty] = useState('1');
+  const qtyInputRef = useRef<HTMLInputElement>(null);
+
+  const { data: products = [] } = useQuery({
+    queryKey: ['products', true],
+    queryFn: () => productoService.getAll(true)
+  });
 
   // Queries
   const { data: sales = [] } = useQuery({
@@ -148,8 +161,14 @@ export function Ventas() {
   const fetchEditDetailsMutation = useMutation({
     mutationFn: (id: number) => ventaService.getVentaDetalles(id),
     onSuccess: (details, id) => {
-      setEditItems(details);
-      setEditingSale(sales.find(s => s.id === id));
+      const sale = sales.find(s => s.id === id);
+      if (sale) {
+        setEditingSale({ 
+          ...sale, 
+          igv_percent: sale.igv_porcentaje || 0
+        });
+        setEditItems(details);
+      }
     }
   });
 
@@ -171,6 +190,8 @@ export function Ventas() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sales'] });
       queryClient.invalidateQueries({ queryKey: ['sales-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['movements'] });
       notificationService.success('Venta Actualizada', 'Los cambios se han guardado y el stock ha sido ajustado.');
       setEditingSale(null);
     }
@@ -178,9 +199,70 @@ export function Ventas() {
 
   const handleUpdateItemQuantity = (productoId: number, newQty: number) => {
     if (newQty <= 0) return;
+
+    // Buscar el producto en la lista maestra para saber su stock actual
+    const productInfo = products.find(p => p.id === productoId);
+    if (!productInfo) return;
+
+    // Buscar cuánta cantidad tenía originalmente este producto en esta venta
+    const originalSaleData = sales.find(s => s.id === editingSale.id);
+    // Necesitaríamos los items originales, pero como simplificación podemos usar el stock actual 
+    // y sumarle lo que ya tenemos en el carrito de edición si es que vino de la DB
+    
+    // Para una validación perfecta, comparamos con el stock real disponible:
+    // (Stock en DB + Stock que ya está en esta venta antes de editar)
+    const originalItem = fetchEditDetailsMutation.data?.find((i: any) => i.producto_id === productoId);
+    const oldQty = originalItem ? originalItem.cantidad : 0;
+    const stockDisponibleReal = (productInfo.stock_actual || 0) + oldQty;
+
+    if (newQty > stockDisponibleReal) {
+      notificationService.warning(
+        'Stock insuficiente', 
+        `Solo tienes ${stockDisponibleReal} unidades disponibles de "${productInfo.nombre}" (incluyendo las de esta venta).`
+      );
+      return;
+    }
+
     setEditItems(prev => prev.map(item => 
       item.producto_id === productoId ? { ...item, cantidad: newQty, subtotal: newQty * item.precio_unitario } : item
     ));
+  };
+
+  const handleAddItem = () => {
+    if (!selectedProd || !qty) return;
+    
+    const cantidad = parseFloat(qty);
+    const existing = editItems.find(i => i.producto_id === selectedProd.id);
+    const totalQtySolicitada = existing ? existing.cantidad + cantidad : cantidad;
+
+    // Validación de stock para producto nuevo o incremento
+    const originalItem = fetchEditDetailsMutation.data?.find((i: any) => i.producto_id === selectedProd.id);
+    const oldQty = originalItem ? originalItem.cantidad : 0;
+    const stockDisponibleReal = (selectedProd.stock_actual || 0) + oldQty;
+
+    if (totalQtySolicitada > stockDisponibleReal) {
+      notificationService.warning(
+        'Stock insuficiente', 
+        `No puedes agregar esa cantidad. Stock disponible real: ${stockDisponibleReal}`
+      );
+      return;
+    }
+    
+    if (existing) {
+      handleUpdateItemQuantity(selectedProd.id, totalQtySolicitada);
+    } else {
+      setEditItems([...editItems, {
+        producto_id: selectedProd.id,
+        producto_nombre: selectedProd.nombre,
+        cantidad: cantidad,
+        precio_unitario: selectedProd.precio_venta,
+        subtotal: cantidad * selectedProd.precio_venta
+      }]);
+    }
+    
+    setSelectedProd(null);
+    setProdSearch('');
+    setQty('1');
   };
 
   const handleRemoveItem = (productoId: number) => {
@@ -192,11 +274,30 @@ export function Ventas() {
   };
 
   const handleSaveEdit = () => {
-    const total = editItems.reduce((acc, item) => acc + item.subtotal, 0);
-    // Para simplificar, asumimos que el monto pagado sigue siendo el mismo o se ajusta al total
+    const itemsTotal = editItems.reduce((acc, item) => acc + item.subtotal, 0);
+    const igvPercent = parseFloat(editingSale.igv_percent) || 0;
+    
+    // El IGV en soles se calcula basado en el porcentaje decidido por el usuario
+    const igvAmount = Math.round((itemsTotal * (igvPercent / 100)) * 100) / 100;
+    const finalTotal = Math.round((itemsTotal + igvAmount) * 100) / 100;
+    const paidAmount = parseFloat(editingSale.monto_pagado) || 0;
+
+    // Validación de monto suficiente
+    if (paidAmount < finalTotal) {
+      notificationService.warning(
+        'Monto insuficiente', 
+        `El monto pagado (S/ ${paidAmount.toFixed(2)}) no cubre el nuevo total de la venta (S/ ${finalTotal.toFixed(2)}).`
+      );
+      return;
+    }
+
     const payload = {
       ...editingSale,
-      total,
+      total: finalTotal,
+      igv: igvAmount,
+      igv_porcentaje: igvPercent, // Nuevo campo persistente
+      monto_pagado: paidAmount,
+      vuelto: Math.round((paidAmount - finalTotal) * 100) / 100,
       items: editItems
     };
     updateVentaMutation.mutate(payload);
@@ -226,7 +327,6 @@ export function Ventas() {
         }
       />
 
-      {/* Tarjetas resumen */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {summaryCards.map(({ label, value, sub, icon: Icon, color }) => (
           <div key={label} className="bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-100 dark:border-gray-700 shadow-sm flex items-center gap-4">
@@ -242,7 +342,6 @@ export function Ventas() {
         ))}
       </div>
 
-      {/* Búsqueda */}
       <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 shadow-sm">
         <div className="relative max-w-sm">
           <input
@@ -256,7 +355,6 @@ export function Ventas() {
         </div>
       </div>
 
-      {/* ✅ Tabla reutilizable — misma lógica, cero duplicación */}
       <DataTable
         columns={getColumns(handleViewDetail, handleEdit)}
         data={filtered}
@@ -279,14 +377,13 @@ export function Ventas() {
         }
       />
 
-      {/* Modal de Edición de Venta */}
       {editingSale && (
-        <Modal
+        <Modal 
+          title={`Editando Venta #${editingSale.id.toString().padStart(5, '0')}`} 
           onClose={() => setEditingSale(null)}
-          title={`Editando Venta #${editingSale.id.toString().padStart(5, '0')}`}
           maxWidth="2xl"
         >
-          <div className="space-y-6">
+          <div className="flex flex-col gap-6">
             <div className="p-4 bg-amber-50 dark:bg-amber-900/10 rounded-2xl border border-amber-100 dark:border-amber-900/30 flex items-center gap-3">
               <Edit className="text-amber-600" size={20} />
               <p className="text-xs text-amber-800 dark:text-amber-200 font-medium">
@@ -294,81 +391,195 @@ export function Ventas() {
               </p>
             </div>
 
-            <div className="border border-gray-100 dark:border-gray-700 rounded-2xl overflow-hidden">
-              <table className="w-full text-left border-collapse">
-                <thead className="bg-gray-50 dark:bg-gray-700/50">
+            <div className="grid grid-cols-3 gap-4 p-4 bg-gray-50 dark:bg-gray-700/30 rounded-xl border border-gray-100 dark:border-gray-700">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Monto Pagado (S/)</label>
+                <input 
+                  type="number"
+                  step="0.01"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
+                  value={editingSale.monto_pagado} 
+                  onChange={(e) => setEditingSale({ ...editingSale, monto_pagado: e.target.value })} 
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Impuesto IGV (%)</label>
+                <div className="relative">
+                  <input 
+                    type="number"
+                    className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 font-bold focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
+                    value={editingSale.igv_percent} 
+                    onChange={(e) => setEditingSale({ ...editingSale, igv_percent: e.target.value })} 
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">%</span>
+                </div>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Vuelto Calculado</label>
+                <div className="w-full px-3 py-2 text-sm border border-transparent rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-500 font-black flex items-center">
+                  S/ {Math.max(0, (parseFloat(editingSale.monto_pagado) || 0) - ( editItems.reduce((acc, item) => acc + item.subtotal, 0) * (1 + (parseFloat(editingSale.igv_percent) || 0) / 100) )).toFixed(2)}
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                <ShoppingBag size={16} /> Agregar productos a la venta
+              </h3>
+              <div className="grid grid-cols-12 gap-3 items-end">
+                <div className="col-span-8 relative">
+                  <label className="text-[10px] font-medium text-gray-400 mb-1 block uppercase tracking-wider">Buscar Producto</label>
+                  <div className="relative">
+                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input 
+                      type="text" 
+                      className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition uppercase" 
+                      placeholder="Nombre o código de barras..." 
+                      value={prodSearch}
+                      onFocus={() => setShowProductList(true)}
+                      onChange={(e) => {
+                        setProdSearch(e.target.value.toUpperCase());
+                        setShowProductList(true);
+                      }}
+                    />
+                  </div>
+                  {showProductList && (
+                    <>
+                      <div className="fixed inset-0 z-[5]" onClick={() => setShowProductList(false)}></div>
+                      <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl shadow-xl z-[60] max-h-40 overflow-y-auto py-1">
+                        {products.filter(p => 
+                          p.nombre.toLowerCase().includes(prodSearch.toLowerCase()) || 
+                          (p.codigo_barras && p.codigo_barras.toLowerCase().includes(prodSearch.toLowerCase()))
+                        ).length > 0 ? (
+                          products.filter(p => 
+                            p.nombre.toLowerCase().includes(prodSearch.toLowerCase()) || 
+                            (p.codigo_barras && p.codigo_barras.toLowerCase().includes(prodSearch.toLowerCase()))
+                          ).map(p => (
+                            <button
+                              key={p.id}
+                              className="w-full text-left px-3 py-2 text-sm hover:bg-indigo-50 dark:hover:bg-gray-700 flex justify-between items-center"
+                              onClick={() => {
+                                setSelectedProd(p);
+                                setProdSearch(p.nombre);
+                                setShowProductList(false);
+                                setTimeout(() => qtyInputRef.current?.focus(), 50);
+                              }}
+                            >
+                              <div>
+                                <span className="block font-medium">{p.nombre}</span>
+                                <span className="text-[10px] text-gray-400">{p.codigo_barras}</span>
+                              </div>
+                               <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">S/ {(p.precio_venta ?? 0).toFixed(2)}</span>
+                            </button>
+                          ))
+                        ) : (
+                          <div className="px-3 py-2 text-xs text-gray-400 italic">No se encontraron productos</div>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+                <div className="col-span-2">
+                  <label className="text-[10px] font-medium text-gray-400 mb-1 block uppercase tracking-wider">Cant.</label>
+                  <input 
+                    ref={qtyInputRef} 
+                    type="number" 
+                    className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition" 
+                    placeholder="1" 
+                    value={qty} 
+                    onChange={(e) => setQty(e.target.value)} 
+                  />
+                </div>
+                <div className="col-span-2">
+                  <Button 
+                    onClick={handleAddItem}
+                    className="w-full h-[38px] p-0 flex items-center justify-center"
+                    icon={<Plus size={20} />}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="border border-gray-100 dark:border-gray-700 rounded-xl overflow-hidden bg-white dark:bg-gray-800/50">
+              <table className="w-full text-sm border-collapse">
+                <thead className="bg-gray-50 dark:bg-gray-800/80 text-gray-500 dark:text-gray-400 text-[10px] uppercase tracking-widest">
                   <tr>
-                    <th className="px-4 py-2 text-[10px] font-bold text-gray-500 uppercase">Producto</th>
-                    <th className="px-4 py-2 text-[10px] font-bold text-gray-500 uppercase text-center">Cant.</th>
-                    <th className="px-4 py-2 text-[10px] font-bold text-gray-500 uppercase text-right">Precio</th>
-                    <th className="px-4 py-2 text-[10px] font-bold text-gray-500 uppercase text-right">Subtotal</th>
-                    <th className="px-4 py-2 text-[10px] font-bold text-gray-500 uppercase text-center">Acción</th>
+                    <th className="px-4 py-2 text-left font-bold">Producto</th>
+                    <th className="px-4 py-2 text-center font-bold">Cant.</th>
+                    <th className="px-4 py-2 text-right font-bold">Precio</th>
+                    <th className="px-4 py-2 text-right font-bold">Subtotal</th>
+                    <th className="px-4 py-2 text-center font-bold">Acción</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                   {editItems.map((item) => (
-                    <tr key={item.producto_id}>
-                      <td className="px-4 py-3 text-sm font-medium text-gray-800 dark:text-gray-200">{item.producto_nombre}</td>
-                      <td className="px-4 py-3 text-center">
+                    <tr key={item.producto_id} className="hover:bg-gray-50/50 dark:hover:bg-gray-700/20 transition-colors">
+                      <td className="px-4 py-3 font-medium text-gray-700 dark:text-gray-300">
+                        {item.producto_nombre}
+                      </td>
+                      <td className="px-4 py-3">
                         <div className="flex items-center justify-center gap-2">
-                          <Button 
-                            variant="secondary"
-                            size="sm"
-                            className="w-6 h-6 p-0 rounded-lg"
+                          <button 
                             onClick={() => handleUpdateItemQuantity(item.producto_id, item.cantidad - 1)}
-                          >-</Button>
-                          <span className="text-sm font-bold w-8 text-center">{item.cantidad}</span>
-                          <Button 
-                            variant="secondary"
-                            size="sm"
-                            className="w-6 h-6 p-0 rounded-lg"
+                            className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-400"
+                          >
+                            <Minus size={14} />
+                          </button>
+                          <span className="w-8 text-center font-bold">{item.cantidad}</span>
+                          <button 
                             onClick={() => handleUpdateItemQuantity(item.producto_id, item.cantidad + 1)}
-                          >+</Button>
+                            className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-400"
+                          >
+                            <Plus size={14} />
+                          </button>
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-sm text-right">S/ {item.precio_unitario.toFixed(2)}</td>
-                      <td className="px-4 py-3 text-sm font-bold text-right">S/ {item.subtotal.toFixed(2)}</td>
+                      <td className="px-4 py-3 text-right text-gray-500">S/ {item.precio_unitario.toFixed(2)}</td>
+                      <td className="px-4 py-3 text-right font-bold text-gray-900 dark:text-white">S/ {item.subtotal.toFixed(2)}</td>
                       <td className="px-4 py-3 text-center">
-                        <Tooltip text="Eliminar ítem" position="top-right">
-                          <Button 
-                            variant="ghost"
-                            size="sm"
-                            className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20"
-                            onClick={() => handleRemoveItem(item.producto_id)}
-                            icon={<Trash2 size={14} />}
-                          />
-                        </Tooltip>
+                        <button 
+                          onClick={() => handleRemoveItem(item.producto_id)}
+                          className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                        >
+                          <Trash2 size={16} />
+                        </button>
                       </td>
                     </tr>
                   ))}
                 </tbody>
-                <tfoot>
-                  <tr className="bg-gray-50/50 dark:bg-gray-700/20 font-black">
-                    <td colSpan={3} className="px-4 py-4 text-right text-sm">NUEVO TOTAL:</td>
-                    <td className="px-4 py-4 text-right text-lg text-indigo-600 dark:text-indigo-400">
-                      S/ {editItems.reduce((acc, item) => acc + item.subtotal, 0).toFixed(2)}
-                    </td>
-                    <td></td>
-                  </tr>
-                </tfoot>
               </table>
             </div>
 
-            <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-700">
-              <Button
-                variant="ghost"
-                onClick={() => setEditingSale(null)}
-                className="text-gray-500 font-bold"
-              >
-                Cancelar
-              </Button>
-              <Button
-                onClick={handleSaveEdit}
-                isLoading={updateVentaMutation.isPending}
-                className="px-8 font-bold"
-              >
-                Guardar Cambios
-              </Button>
+            {/* Total y Acción Final */}
+            <div className="flex items-center justify-between p-6 -mx-6 -mb-6 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-700 rounded-b-2xl mt-4">
+              <div>
+                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-0.5">Total de Venta</p>
+                <p className="text-3xl font-black text-gray-900 dark:text-white">
+                  S/ {(editItems.reduce((acc, item) => acc + item.subtotal, 0) * (1 + (parseFloat(editingSale.igv_percent) || 0) / 100)).toFixed(2)}
+                </p>
+                <div className="flex gap-3 text-[10px] text-gray-400 dark:text-gray-500 mt-1">
+                  <span>Base: S/ {editItems.reduce((acc, item) => acc + item.subtotal, 0).toFixed(2)}</span>
+                  <span>IGV: S/ {(editItems.reduce((acc, item) => acc + item.subtotal, 0) * (parseFloat(editingSale.igv_percent) || 0) / 100).toFixed(2)}</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="secondary"
+                  onClick={() => setEditingSale(null)}
+                  className="px-6 py-2.5 font-bold"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={handleSaveEdit}
+                  isLoading={updateVentaMutation.isPending}
+                  className="px-8 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-lg shadow-indigo-200 dark:shadow-none transition-all active:scale-95 border-none"
+                  icon={<ArrowUpRight size={20} />}
+                  iconPosition="right"
+                >
+                  Guardar Cambios
+                </Button>
+              </div>
             </div>
           </div>
         </Modal>
@@ -424,6 +635,10 @@ export function Ventas() {
                   ))}
                 </tbody>
                 <tfoot className="bg-gray-50/50 dark:bg-gray-700/20">
+                  <tr>
+                    <td colSpan={3} className="px-4 py-2 text-right font-medium text-gray-500 text-xs italic">IGV ({selectedSale.igv_porcentaje || 0}%):</td>
+                    <td className="px-4 py-2 text-right text-sm font-bold text-gray-700 dark:text-gray-300">S/ {(selectedSale.igv || 0).toFixed(2)}</td>
+                  </tr>
                   <tr>
                     <td colSpan={3} className="px-4 py-2 text-right font-medium text-gray-500 text-xs italic">Subtotal items:</td>
                     <td className="px-4 py-2 text-right text-sm font-bold text-gray-700 dark:text-gray-300">S/ {selectedSale.total.toFixed(2)}</td>

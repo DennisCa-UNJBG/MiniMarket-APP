@@ -83,6 +83,7 @@ export function Compras() {
       queryClient.invalidateQueries({ queryKey: ['purchases'] });
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['low-stock'] });
+      queryClient.invalidateQueries({ queryKey: ['movements'] });
       notificationService.success(
         editingPurchaseId ? 'Compra actualizada' : 'Compra completada', 
         editingPurchaseId ? 'Los cambios se han guardado correctamente.' : 'Se ha actualizado el stock y el historial correctamente.'
@@ -522,23 +523,25 @@ export function Compras() {
             </div>
 
             {/* Total y Acción Final */}
-            <div className="flex items-center justify-between p-4 bg-indigo-600 rounded-2xl text-white shadow-lg shadow-indigo-200 dark:shadow-none">
+            <div className="flex items-center justify-between p-6 -mx-6 -mb-6 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-700 rounded-b-2xl mt-4">
               <div>
-                <p className="text-xs text-indigo-200 font-medium">Total de Inversión (Inc. IGV)</p>
-                <p className="text-3xl font-black">S/ {totalFinal.toFixed(2)}</p>
+                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-0.5">Total de Inversión</p>
+                <p className="text-3xl font-black text-gray-900 dark:text-white">
+                  S/ {totalFinal.toFixed(2)}
+                </p>
               </div>
               <div className="flex items-center gap-3">
                 <Button 
-                  variant="ghost"
+                  variant="secondary"
                   onClick={() => setShowModal(false)}
-                  className="px-6 py-3 text-white hover:bg-indigo-700 font-bold"
+                  className="px-6 py-2.5 font-bold"
                 >
                   Cancelar
                 </Button>
                 <Button 
                   onClick={handleConfirmarCompra}
                   isLoading={savePurchaseMutation.isPending}
-                  className="px-6 py-3 bg-white text-indigo-600 font-bold hover:bg-indigo-50"
+                  className="px-8 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-lg shadow-indigo-200 dark:shadow-none transition-all active:scale-95 border-none"
                   icon={<ArrowUpRight size={20} />}
                   iconPosition="right"
                 >

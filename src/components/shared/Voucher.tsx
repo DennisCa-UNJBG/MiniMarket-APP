@@ -60,7 +60,15 @@ export function Voucher({ venta, detalles }: VoucherProps) {
       <div className="border-b border-dashed border-black my-2"></div>
 
       <div className="text-[10px] space-y-1">
-        <div className="flex justify-between font-bold">
+        <div className="flex justify-between">
+          <span>SUBTOTAL:</span>
+          <span>S/ {(venta.total - (venta.igv || 0)).toFixed(2)}</span>
+        </div>
+        <div className="flex justify-between">
+          <span>IGV ({venta.igv_porcentaje || 0}%):</span>
+          <span>S/ {(venta.igv || 0).toFixed(2)}</span>
+        </div>
+        <div className="flex justify-between font-bold text-xs pt-1 border-t border-black/10">
           <span>TOTAL A PAGAR:</span>
           <span>S/ {venta.total.toFixed(2)}</span>
         </div>

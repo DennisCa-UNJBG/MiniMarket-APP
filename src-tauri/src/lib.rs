@@ -276,6 +276,18 @@ pub fn run() {
                     FOREIGN KEY (usuario_id) REFERENCES usuarios (id)
                   );",
             kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 12,
+            description: "add_igv_to_ventas",
+            sql: "ALTER TABLE ventas ADD COLUMN igv REAL DEFAULT 0;",
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 13,
+            description: "add_igv_porcentaje_to_ventas",
+            sql: "ALTER TABLE ventas ADD COLUMN igv_porcentaje REAL DEFAULT 0;",
+            kind: MigrationKind::Up,
         }
     ];
 

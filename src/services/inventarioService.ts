@@ -230,60 +230,92 @@ export const inventarioService = {
       throw new Error("No se puede editar: Esta compra fue creada hace más de 12 horas.");
     }
 
-    // 1. Obtener datos antiguos para revertir (stock y referencia)
-    const oldCabecera = await db.select<any[]>('SELECT documento_referencia FROM compras_ingresos WHERE id = ?', [compraId]);
-    const oldRef = oldCabecera[0]?.documento_referencia || `COMPRA #${compraId}`;
-    
+    // 1. Obtener datos antiguos para revertir (stock)
     const oldItems = await db.select<any[]>('SELECT producto_id, cantidad FROM compras_detalle WHERE compra_id = ?', [compraId]);
     
+    // 1. Revertir stock (Silencioso)
     for (const item of oldItems) {
-      await db.execute('UPDATE productos SET stock_actual = stock_actual - ? WHERE id = ?', [item.cantidad, item.producto_id]);
+      await db.execute(
+        'UPDATE productos SET stock_actual = stock_actual - ? WHERE id = ?',
+        [Number(item.cantidad), item.producto_id]
+      );
     }
 
-    // 2. Limpiar detalles antiguos y movimientos de kardex previos
+    // 2. Limpiar detalles antiguos
     await db.execute('DELETE FROM compras_detalle WHERE compra_id = ?', [compraId]);
-    await db.execute('DELETE FROM kardex WHERE referencia = ?', [oldRef]);
 
     // 3. Actualizar Cabecera
-    const totalCompra = compra.items.reduce((acc, item) => acc + (item.cantidad * item.costo_unitario), 0);
+    const totalCompra = compra.items.reduce((acc, item) => acc + (Number(item.cantidad) * Number(item.costo_unitario)), 0);
     await db.execute(
       `UPDATE compras_ingresos SET documento_referencia = ?, total = ?, usuario_id = ? WHERE id = ?`,
       [compra.documento_referencia, totalCompra, compra.usuario_id, compraId]
     );
 
-    // 4. Insertar nuevos detalles, actualizar stock e insertar en Kardex
+    // 4. Insertar nuevos detalles y aplicar Ajuste Neto en Kardex
     for (const item of compra.items) {
+      const cantidadNueva = Number(item.cantidad);
+      const costoNuevo = Number(item.costo_unitario);
+
       await db.execute(
         `INSERT INTO compras_detalle (compra_id, producto_id, cantidad, costo_unitario, subtotal) 
          VALUES (?, ?, ?, ?, ?)`,
-        [compraId, item.producto_id, item.cantidad, item.costo_unitario, item.cantidad * item.costo_unitario]
+        [compraId, item.producto_id, cantidadNueva, costoNuevo, cantidadNueva * costoNuevo]
       );
 
       const pData = await db.select<any[]>('SELECT stock_actual, stock_minimo, nombre FROM productos WHERE id = ?', [item.producto_id]);
-      const { stock_actual, stock_minimo, nombre } = pData[0];
-      const nuevoStock = stock_actual + item.cantidad;
+      const stockActualDB = Number(pData[0]?.stock_actual || 0);
+      const stockMinimo = Number(pData[0]?.stock_minimo || 0);
+      const nombreProd = pData[0]?.nombre || 'Producto';
+      
+      const nuevoStockFinal = stockActualDB + cantidadNueva;
 
-      if (nuevoStock <= (stock_minimo || 0)) {
-        alertas.push(nombre);
+      if (nuevoStockFinal <= stockMinimo) {
+        alertas.push(nombreProd);
       }
 
       // Actualizar Stock en Productos
-      await db.execute('UPDATE productos SET stock_actual = ? WHERE id = ?', [nuevoStock, item.producto_id]);
+      await db.execute('UPDATE productos SET stock_actual = ? WHERE id = ?', [nuevoStockFinal, item.producto_id]);
 
-      // Registrar nuevo movimiento en Kardex
-      await db.execute(
-        `INSERT INTO kardex (producto_id, usuario_id, tipo_movimiento, cantidad, saldo_posterior, costo_unitario, referencia) 
-         VALUES (?, ?, 'INGRESO', ?, ?, ?, ?)`,
-        [item.producto_id, compra.usuario_id, item.cantidad, nuevoStock, item.costo_unitario, compra.documento_referencia || `COMPRA #${compraId}`]
-      );
+      // Registro de Ajuste Neto en Kardex
+      const oldItem = oldItems.find(oi => oi.producto_id === item.producto_id);
+      const oldQty = oldItem ? Number(oldItem.cantidad) : 0;
+      const diferencia = cantidadNueva - oldQty;
+
+      if (diferencia !== 0) {
+        const tipoMov = diferencia > 0 ? 'INGRESO' : 'SALIDA';
+        const cantMov = Math.abs(diferencia);
+        
+        await db.execute(
+          `INSERT INTO kardex (producto_id, usuario_id, tipo_movimiento, cantidad, saldo_posterior, costo_unitario, referencia) 
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [item.producto_id, compra.usuario_id, tipoMov, cantMov, nuevoStockFinal, costoNuevo, `EDICIÓN COMPRA #${compraId}`]
+        );
+      }
     }
 
-    // 5. Registrar Log de Auditoría
+    // 5. Manejar productos que fueron eliminados de la compra original
+    for (const oldItem of oldItems) {
+      const existsInNew = compra.items.some(ni => ni.producto_id === oldItem.producto_id);
+      if (!existsInNew) {
+        const pData = await db.select<any[]>('SELECT stock_actual FROM productos WHERE id = ?', [oldItem.producto_id]);
+        const stockActualDB = Number(pData[0]?.stock_actual || 0);
+        
+        await db.execute(
+          `INSERT INTO kardex (producto_id, usuario_id, tipo_movimiento, cantidad, saldo_posterior, costo_unitario, referencia) 
+           VALUES (?, ?, 'SALIDA', ?, ?, 0, ?)`,
+          [oldItem.producto_id, compra.usuario_id, Number(oldItem.cantidad), stockActualDB, `EDICIÓN COMPRA #${compraId}`]
+        );
+      }
+    }
+
+    // 6. Registrar Log de Auditoría
     await db.execute(
       `INSERT INTO logs (usuario_id, accion, tabla, registro_id, detalles) 
        VALUES (?, ?, ?, ?, ?)`,
-      [compra.usuario_id, 'EDICION_COMPRA', 'compras_ingresos', compraId, `Edición de compra. Ref anterior: ${oldRef}, Nueva ref: ${compra.documento_referencia}`]
+      [compra.usuario_id, 'EDICION_COMPRA', 'compras_ingresos', compraId, `Edición de compra #${compraId}. Ref: ${compra.documento_referencia}`]
     );
+
+    return { compraId, alertas };
 
     return { compraId, alertas };
   }

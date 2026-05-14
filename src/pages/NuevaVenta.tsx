@@ -33,6 +33,10 @@ export function NuevaVenta() {
   const [paymentMethod, setPaymentMethod] = useState<'EFECTIVO' | 'TARJETA'>('EFECTIVO');
   const [amountPaid, setAmountPaid] = useState('');
 
+  // Lógica de Impuestos (IGV)
+  const [hasIGV, setHasIGV] = useState(true);
+  const [igvPercent, setIgvPercent] = useState(18);
+
   // Queries
   const { data: products = [] } = useQuery({
     queryKey: ['products', true],
@@ -60,6 +64,7 @@ export function NuevaVenta() {
       queryClient.invalidateQueries({ queryKey: ['recent-activity'] });
       queryClient.invalidateQueries({ queryKey: ['sales-chart'] });
       queryClient.invalidateQueries({ queryKey: ['low-stock'] });
+      queryClient.invalidateQueries({ queryKey: ['movements'] });
     }
   });
 
@@ -100,7 +105,10 @@ export function NuevaVenta() {
     setCart(prev => prev.filter(item => item.product.id !== id));
   };
 
-  const total = cart.reduce((sum, item) => sum + ((item.product.precio_venta || 0) * item.quantity), 0);
+  const subtotalBase = cart.reduce((sum, item) => sum + ((item.product.precio_venta || 0) * item.quantity), 0);
+  const igvAmount = hasIGV ? (subtotalBase * (igvPercent / 100)) : 0;
+  const total = subtotalBase + igvAmount;
+  
   const paidNumber = parseFloat(amountPaid) || 0;
   const change = Math.max(0, paidNumber - total);
 
@@ -288,18 +296,51 @@ export function NuevaVenta() {
           </div>
 
           {/* Resumen Totales */}
-          <div className="p-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 space-y-3">
-            <div className="flex justify-between text-sm text-gray-500 dark:text-gray-400">
-              <span>Subtotal</span>
-              <span>S/ {(total / 1.18).toFixed(2)}</span>
+          <div className="p-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 space-y-4">
+            
+            {/* Control de IGV */}
+            <div className="bg-white dark:bg-gray-700/50 p-3 rounded-xl border border-gray-100 dark:border-gray-600 flex items-center justify-between">
+              <div className="flex flex-col gap-0.5">
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Impuestos IGV</span>
+                <div className="flex items-center gap-2">
+                  <label className="relative inline-flex items-center cursor-pointer scale-75 origin-left">
+                    <input type="checkbox" className="sr-only peer" checked={hasIGV} onChange={(e) => setHasIGV(e.target.checked)} />
+                    <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
+                  </label>
+                  <span className={`text-[10px] font-black uppercase ${hasIGV ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400'}`}>
+                    {hasIGV ? 'ACTIVO' : 'NO APLICA'}
+                  </span>
+                </div>
+              </div>
+
+              {hasIGV && (
+                <div className="relative w-16">
+                  <input 
+                    type="number" 
+                    className="w-full pl-2 pr-5 py-1 text-xs font-bold bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg text-indigo-600 dark:text-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                    value={igvPercent}
+                    onChange={(e) => setIgvPercent(parseFloat(e.target.value) || 0)}
+                  />
+                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-400 font-bold">%</span>
+                </div>
+              )}
             </div>
-            <div className="flex justify-between text-sm text-gray-500 dark:text-gray-400">
-              <span>IGV (18%)</span>
-              <span>S/ {(total - (total / 1.18)).toFixed(2)}</span>
-            </div>
-            <div className="border-t border-gray-200 dark:border-gray-600 pt-3 flex justify-between items-center">
-              <span className="text-lg font-bold text-gray-800 dark:text-white">Total</span>
-              <span className="text-2xl font-black text-indigo-600 dark:text-indigo-400">S/ {total.toFixed(2)}</span>
+
+            <div className="space-y-1.5 px-1">
+              <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
+                <span>Subtotal Base</span>
+                <span>S/ {subtotalBase.toFixed(2)}</span>
+              </div>
+              {hasIGV && (
+                <div className="flex justify-between text-xs text-indigo-500/70 dark:text-indigo-400/70 italic">
+                  <span>IGV ({igvPercent}%)</span>
+                  <span>+ S/ {igvAmount.toFixed(2)}</span>
+                </div>
+              )}
+              <div className="border-t border-gray-200 dark:border-gray-600 pt-2 flex justify-between items-center">
+                <span className="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-tighter">Total a Cobrar</span>
+                <span className="text-2xl font-black text-indigo-600 dark:text-indigo-400">S/ {total.toFixed(2)}</span>
+              </div>
             </div>
             
             <Button 
@@ -391,6 +432,8 @@ export function NuevaVenta() {
                   const ventaData = {
                     usuario_id: user?.id || 1,
                     total,
+                    igv: igvAmount,
+                    igv_porcentaje: hasIGV ? igvPercent : 0,
                     metodo_pago: paymentMethod,
                     monto_pagado: paidNumber,
                     vuelto: change,
