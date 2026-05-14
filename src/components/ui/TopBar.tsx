@@ -5,6 +5,7 @@ import { Bell, User, LogOut, AlertTriangle, Package } from 'lucide-react';
 import { mainNavItems, bottomNavItems } from '../../config/navigation';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button } from './Button';
+import { Tooltip } from './Tooltip';
 import { alertaService } from '../../services/alertaService';
 import { preferenciasService } from '../../services/preferenciasService';
 import { AutoLogoutTimer } from '../auth/AutoLogoutTimer';
@@ -63,25 +64,27 @@ export function TopBar() {
 
         {/* Notificaciones */}
         <div className="relative" ref={dropdownRef}>
-          <button
-            id="notifications-btn"
-            aria-label="Notificaciones"
-            onClick={() => setShowDropdown(!showDropdown)}
-            className={`relative p-2 rounded-xl transition-all ${
-              showDropdown 
-                ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600' 
-                : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-            }`}
-          >
-            <Bell size={20} />
-            {alerts.length > 0 && (
-              <span className="absolute top-1 right-1 flex h-4 w-4">
-                <span className="relative inline-flex rounded-full h-4 w-4 bg-red-500 text-[9px] font-bold text-white items-center justify-center">
-                  {alerts.length}
+          <Tooltip text="Notificaciones" position="bottom"> 
+            <button
+              id="notifications-btn"
+              aria-label="Notificaciones"
+              onClick={() => setShowDropdown(!showDropdown)}
+              className={`relative p-2 rounded-xl transition-all ${
+                showDropdown 
+                  ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600' 
+                  : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+              }`}
+            >
+              <Bell size={20} />
+              {alerts.length > 0 && (
+                <span className="absolute top-1 right-1 flex h-4 w-4">
+                  <span className="relative inline-flex rounded-full h-4 w-4 bg-red-500 text-[9px] font-bold text-white items-center justify-center">
+                    {alerts.length}
+                  </span>
                 </span>
-              </span>
-            )}
-          </button>
+              )}
+            </button>
+          </Tooltip>
 
           {/* Panel de Notificaciones Dropdown */}
           {showDropdown && (
@@ -159,15 +162,16 @@ export function TopBar() {
             <User size={16} className="text-white" />
           </div>
 
-          <Button 
-            variant="danger" 
-            size="sm" 
-            onClick={logout}
-            className="p-2 bg-red-500 hover:bg-red-200 text-white shadow-lg shadow-red-200 dark:shadow-none border-none rounded-xl transition-all"
-            title="Cerrar Sesión"
-          >
-            <LogOut size={18} strokeWidth={3} />
-          </Button>
+          <Tooltip text="Cerrar Sesión" position="bottom">
+            <Button 
+              variant="danger" 
+              size="sm" 
+              onClick={logout}
+              className="p-2 bg-red-500 hover:bg-red-200 text-white shadow-lg shadow-red-200 dark:shadow-none border-none rounded-xl transition-all"
+            >
+              <LogOut size={18} strokeWidth={3} />
+            </Button>
+          </Tooltip>
         </div>
       </div>
     </header>

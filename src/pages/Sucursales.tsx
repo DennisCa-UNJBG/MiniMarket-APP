@@ -1,9 +1,12 @@
 import { useState } from 'react';
-import { Building2, Plus, Search, MapPin, Key, RefreshCw, Pencil, Copy, Clock, AlertCircle, Power, RotateCcw } from 'lucide-react';
+import { Building2, Plus, Search, MapPin, Key, Pencil, Copy, Clock, AlertCircle, Power, RotateCcw } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { sucursalService } from '../services/sucursalService';
 import { notificationService } from '../lib/notifications';
 import { Badge } from '../components/ui/Badge';
+import { Tooltip } from '../components/ui/Tooltip';
+import { Button } from '../components/ui/Button';
+import { DataTable, type TableColumn } from '../components/ui/DataTable';
 
 export function Sucursales() {
   const queryClient = useQueryClient();
@@ -19,7 +22,7 @@ export function Sucursales() {
   });
 
   // Queries
-  const { data: sedes = [], isLoading: loading } = useQuery({
+  const { data: sedes = [] } = useQuery({
     queryKey: ['sedes'],
     queryFn: () => sucursalService.getAll()
   });
@@ -113,6 +116,142 @@ export function Sucursales() {
      s.codigo.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
+  const getColumns = (onCopy: (s: any) => void, onEdit: (s: any) => void, onToggle: (id: number, st: string) => void): TableColumn<any>[] => [
+    {
+      key: 'nombre',
+      header: 'Sucursal / Código',
+      render: (row) => (
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-xl">
+            <Building2 size={18} />
+          </div>
+          <div>
+            <p className="text-sm font-bold text-gray-800 dark:text-white">{row.nombre}</p>
+            <div className="flex items-center gap-1 text-[10px] font-mono text-gray-400">
+              <Key size={10} />
+              {row.codigo}
+            </div>
+          </div>
+        </div>
+      )
+    },
+    {
+      key: 'direccion',
+      header: 'Ubicación / Sincro',
+      render: (row) => (
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+            <MapPin size={12} />
+            {row.direccion || 'No especificada'}
+          </div>
+          <div className="flex items-center gap-2 text-[10px] text-gray-400">
+            <Clock size={10} />
+            {row.ultima_sincronizacion ? new Date(row.ultima_sincronizacion).toLocaleString() : 'Sin sincronización'}
+          </div>
+        </div>
+      )
+    },
+    {
+      key: 'estado',
+      header: 'Estado Real',
+      align: 'center',
+      render: (row) => {
+        const { label, variant } = getStatus(row.ultima_sincronizacion, row.estado);
+        return <Badge label={label} variant={variant} />;
+      }
+    },
+    {
+      key: 'acciones',
+      header: 'Acciones',
+      align: 'right',
+      render: (row) => (
+        <div className="flex items-center justify-end gap-2">
+          <Tooltip text="Copiar nombre y llave" position="top-right">
+            <Button 
+              variant="ghost"
+              size="sm"
+              icon={<Copy size={16} />}
+              className="p-2 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-xl bg-emerald-50/50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-800"
+              onClick={() => onCopy(row)}
+            />
+          </Tooltip>
+
+          <Tooltip text="Editar" position="top-right">
+            <Button 
+              variant="ghost"
+              size="sm"
+              icon={<Pencil size={16} />}
+              className="p-2 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-xl bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-800"
+              onClick={() => onEdit(row)}
+            />
+          </Tooltip>
+
+          <Tooltip text={row.estado === 'activo' ? 'Desactivar' : 'Reactivar'} position="top-right">
+            <Button 
+              variant="ghost"
+              size="sm"
+              icon={row.estado === 'activo' ? <Power size={16} /> : <RotateCcw size={16} />}
+              className={`p-2 rounded-xl border ${
+                row.estado === 'activo' 
+                ? 'text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/30 bg-amber-50/50 dark:bg-amber-900/10 border-amber-100 dark:border-amber-800' 
+                : 'text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 bg-emerald-50/50 dark:bg-emerald-900/10 border-emerald-100 dark:border-emerald-800'
+              }`}
+              onClick={() => onToggle(row.id, row.estado)}
+            />
+          </Tooltip>
+        </div>
+      )
+    }
+  ];
+
+  const inactiveColumns: TableColumn<any>[] = [
+    {
+      key: 'nombre',
+      header: 'Sucursal / Código',
+      render: (row) => (
+        <div className="flex items-center gap-3">
+          <Building2 size={18} className="text-gray-400" />
+          <div>
+            <p className="text-sm font-bold text-gray-500 dark:text-gray-400">{row.nombre}</p>
+            <p className="text-[10px] font-mono text-gray-400">{row.codigo}</p>
+          </div>
+        </div>
+      )
+    },
+    {
+      key: 'acciones',
+      header: 'Acciones',
+      align: 'right',
+      render: (row) => (
+        <div className="flex items-center justify-end gap-2">
+          <Tooltip text="Editar" position="top-right">
+            <Button 
+              variant="ghost"
+              size="sm"
+              icon={<Pencil size={16} />}
+              className="p-2 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl"
+              onClick={() => handleOpenEdit(row)}
+            />
+          </Tooltip>
+          <Tooltip text="Reactivar" position="top-right">
+            <Button 
+              variant="ghost"
+              size="sm"
+              icon={<RotateCcw size={16} />}
+              className="p-2 text-emerald-600 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 rounded-xl"
+              onClick={() => handleToggleStatus(row.id, row.estado)}
+            />
+          </Tooltip>
+        </div>
+      )
+    }
+  ];
+
+  const handleCopy = (sede: any) => {
+    navigator.clipboard.writeText(`Sede: ${sede.nombre}\nCódigo: ${sede.codigo}`);
+    notificationService.success('Copiado', 'Datos de sede listos para configurar.');
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-10">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -120,13 +259,13 @@ export function Sucursales() {
           <h2 className="text-2xl font-black text-gray-800 dark:text-white tracking-tight">Gestión de Sucursales</h2>
           <p className="text-sm text-gray-500 dark:text-gray-400">Registra y administra las sucursales del minimarket.</p>
         </div>
-        <button 
+        <Button 
           onClick={handleOpenCreate}
-          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-2xl transition-all shadow-lg shadow-indigo-200 dark:shadow-none"
+          icon={<Plus size={18} />}
+          className="px-4 py-2.5 font-bold rounded-2xl"
         >
-          <Plus size={18} />
           Registrar Nueva Sucursal
-        </button>
+        </Button>
       </div>
 
       {/* Buscador */}
@@ -141,107 +280,12 @@ export function Sucursales() {
         />
       </div>
 
-      {/* Tabla de Sedes Activas */}
-      <div className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-gray-50/50 dark:bg-gray-900/50">
-                <th className="px-6 py-4 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Sucursal / Código</th>
-                <th className="px-6 py-4 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Ubicación / Sincro</th>
-                <th className="px-6 py-4 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest text-center">Estado Real</th>
-                <th className="px-6 py-4 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest text-right">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50 dark:divide-gray-700/50">
-              {loading ? (
-                <tr>
-                  <td colSpan={4} className="px-6 py-12 text-center text-gray-400 italic">
-                    <RefreshCw size={24} className="animate-spin mx-auto mb-2" />
-                    Cargando sucursales...
-                  </td>
-                </tr>
-              ) : activeSedes.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="px-6 py-12 text-center text-gray-400 italic">No hay sucursales activas.</td>
-                </tr>
-              ) : (
-                activeSedes.map((sede) => (
-                  <tr key={sede.id} className="group hover:bg-gray-50/50 dark:hover:bg-gray-900/20 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-xl">
-                          <Building2 size={18} />
-                        </div>
-                        <div>
-                          <p className="text-sm font-bold text-gray-800 dark:text-white">{sede.nombre}</p>
-                          <div className="flex items-center gap-1 text-[10px] font-mono text-gray-400">
-                            <Key size={10} />
-                            {sede.codigo}
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col gap-1">
-                        <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                          <MapPin size={12} />
-                          {sede.direccion || 'No especificada'}
-                        </div>
-                        <div className="flex items-center gap-2 text-[10px] text-gray-400">
-                          <Clock size={10} />
-                          {sede.ultima_sincronizacion ? new Date(sede.ultima_sincronizacion).toLocaleString() : 'Sin sincronización'}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      {(() => {
-                        const { label, variant } = getStatus(sede.ultima_sincronizacion, sede.estado);
-                        return <Badge label={label} variant={variant} />;
-                      })()}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center justify-end gap-2">
-                        <div className="relative group/tooltip">
-                          <button 
-                            onClick={() => {
-                              navigator.clipboard.writeText(`Sede: ${sede.nombre}\nCódigo: ${sede.codigo}`);
-                              notificationService.success('Copiado', 'Datos de sede listos para configurar.');
-                            }}
-                            className="p-2 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-xl transition-all bg-emerald-50/50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-800"
-                          >
-                            <Copy size={16} />
-                          </button>
-                          <div className="absolute bottom-full right-0 mb-2 w-48 p-2 bg-gray-900 text-white text-[10px] leading-tight rounded-lg opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all z-20 shadow-xl pointer-events-none">
-                            Copiar nombre y llave de acceso
-                            <div className="absolute top-full right-4 border-8 border-transparent border-t-gray-900" />
-                          </div>
-                        </div>
-
-                        <button 
-                          onClick={() => handleOpenEdit(sede)}
-                          className="p-2 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-xl transition-all bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-800"
-                          title="Editar"
-                        >
-                          <Pencil size={16} />
-                        </button>
-
-                        <button 
-                          onClick={() => handleToggleStatus(sede.id, sede.estado)}
-                          className="p-2 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/30 rounded-xl transition-all bg-amber-50/50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-800"
-                          title="Desactivar"
-                        >
-                          <Power size={16} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <DataTable 
+        columns={getColumns(handleCopy, handleOpenEdit, handleToggleStatus)}
+        data={activeSedes}
+        keyExtractor={(row) => row.id}
+        emptyMessage="No hay sucursales activas."
+      />
 
       {/* Sedes Inactivas */}
       {inactiveSedes.length > 0 && (
@@ -255,49 +299,12 @@ export function Sucursales() {
           </div>
 
           <div className="bg-gray-50/50 dark:bg-gray-900/20 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden opacity-60">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-gray-100/50 dark:bg-gray-800/50">
-                    <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Sucursal / Código</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                  {inactiveSedes.map((sede) => (
-                    <tr key={sede.id} className="hover:bg-gray-100/50 transition-colors">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <Building2 size={18} className="text-gray-400" />
-                          <div>
-                            <p className="text-sm font-bold text-gray-500 dark:text-gray-400">{sede.nombre}</p>
-                            <p className="text-[10px] font-mono text-gray-400">{sede.codigo}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center justify-end gap-2">
-                          <button 
-                            onClick={() => handleOpenEdit(sede)}
-                            className="p-2 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl transition-all"
-                            title="Editar"
-                          >
-                            <Pencil size={16} />
-                          </button>
-                          <button 
-                            onClick={() => handleToggleStatus(sede.id, sede.estado)}
-                            className="p-2 text-emerald-600 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 rounded-xl transition-all"
-                            title="Reactivar"
-                          >
-                            <RotateCcw size={16} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <DataTable 
+              columns={inactiveColumns}
+              data={inactiveSedes}
+              keyExtractor={(row) => row.id}
+              emptyMessage="No hay sucursales inactivas."
+            />
           </div>
         </div>
       )}
@@ -310,9 +317,13 @@ export function Sucursales() {
               <h3 className="text-lg font-black text-gray-800 dark:text-white">
                 {editingId ? 'Editar Sucursal' : 'Registrar Nueva Sucursal'}
               </h3>
-              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors">
-                <Plus className="rotate-45" size={24} />
-              </button>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setShowModal(false)} 
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-white p-1"
+                icon={<Plus className="rotate-45" size={24} />}
+              />
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div className="space-y-1.5">
@@ -353,12 +364,14 @@ export function Sucursales() {
               </div>
 
               {/* El estado ahora se gestiona exclusivamente desde la tabla mediante handleToggleStatus */}
-              <button 
+              <Button 
                 type="submit"
-                className="w-full py-3 mt-4 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-2xl transition-all shadow-lg shadow-indigo-200 dark:shadow-none"
+                fullWidth
+                isLoading={saveMutation.isPending}
+                className="py-3 mt-4 font-bold rounded-2xl"
               >
                 {editingId ? 'Guardar Cambios' : 'Registrar y Generar Acceso'}
-              </button>
+              </Button>
             </form>
           </div>
         </div>

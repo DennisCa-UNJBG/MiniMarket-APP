@@ -1,9 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
-import { Package, Tag, Plus, Search, Edit2, PowerOff, RefreshCcw, AlertTriangle, Scale } from 'lucide-react';
+import { Package, Tag, Plus, Search, Edit2, PowerOff, RefreshCcw, Scale, AlertTriangle } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { DataTable, type TableColumn } from '../components/ui/DataTable';
 import { Badge } from '../components/ui/Badge';
 import { Modal } from '../components/ui/Modal';
+import { EmptyState } from '../components/ui/EmptyState';
+import { Tooltip } from '../components/ui/Tooltip';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
 import { categoriaService, type Category } from '../services/categoriaService';
 import { productoService, type Product } from '../services/productoService';
 import { unidadMedidaService, type UnidadMedida } from '../services/unidadMedidaService';
@@ -40,7 +44,17 @@ function TabProductos({ categories }: { categories: Category[] }) {
   const [showCatList, setShowCatList] = useState(false);
   const [unitSearch, setUnitSearch] = useState('');
   const [showUnitList, setShowUnitList] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
   const nameInputRef = useRef<HTMLInputElement>(null);
+
+  const errors = {
+    name: !form.name.trim() ? 'El nombre es obligatorio' : null,
+    categoryId: !form.categoryId ? 'Seleccione una categoría' : null,
+    unitId: !form.unitId ? 'Seleccione una unidad' : null,
+    sellPrice: parseFloat(form.sellPrice) < 0 ? 'El precio no puede ser negativo' : null,
+    minStock: parseFloat(form.minStock) < 0 ? 'El stock no puede ser negativo' : null,
+  };
+  const isValid = !Object.values(errors).some(Boolean);
 
   // Consulta de productos
   const { data: products = [] } = useQuery({
@@ -80,6 +94,7 @@ function TabProductos({ categories }: { categories: Category[] }) {
     setCatSearch('');
     setUnitSearch('');
     setEditingId(null);
+    setIsSubmitted(false);
   };
 
   // Mutación para cambiar estado
@@ -105,8 +120,9 @@ function TabProductos({ categories }: { categories: Category[] }) {
   const inactiveProducts = products.filter(p => p.estado === 'inactivo');
 
   const handleSave = async () => {
-    if (!form.name || !form.categoryId || !form.unitId) {
-      notificationService.warning('Campos incompletos', 'Por favor, completa todos los campos obligatorios.');
+    setIsSubmitted(true);
+    if (!isValid) {
+      notificationService.warning('Campos incompletos', 'Por favor, corrige los errores en el formulario.');
       return;
     }
     
@@ -140,35 +156,39 @@ function TabProductos({ categories }: { categories: Category[] }) {
       key: 'acciones', header: '', align: 'right',
       render: (row) => (
         <div className="flex items-center gap-1 justify-end">
-          <button 
-            onClick={() => {
-              setEditingId(row.id);
-              setForm({ 
-                code: row.codigo_barras, 
-                name: row.nombre, 
-                categoryId: row.categoria_id.toString(), 
-                unitId: (row.unidad_id || '').toString(), 
-                sellPrice: (row.precio_venta || 0).toString(), 
-                minStock: (row.stock_minimo || 0).toString() 
-              });
-              const cat = categories.find(c => c.id === row.categoria_id);
-              setCatSearch(cat ? cat.nombre : '');
-              const unit = units.find(u => u.id === row.unidad_id);
-              setUnitSearch(unit ? `${unit.nombre} (${unit.abreviatura})` : (row.unidad_medida || ''));
-              setShowModal(true);
-            }}
-            title="Editar producto"
-            className="p-1.5 rounded-lg hover:bg-indigo-50 dark:hover:bg-gray-700 text-gray-400 hover:text-indigo-600 transition-colors"
-          >
-            <Edit2 size={14} />
-          </button>
-          <button 
-            onClick={() => handleDeactivate(row.id)} 
-            title="Desactivar producto"
-            className="p-1.5 rounded-lg hover:bg-orange-50 dark:hover:bg-gray-700 text-gray-400 hover:text-orange-500 transition-colors"
-          >
-            <PowerOff size={14} />
-          </button>
+          <Tooltip text="Editar producto" position="top-right">
+            <Button 
+              variant="ghost"
+              size="sm"
+              icon={<Edit2 size={14} />}
+              className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-gray-700"
+              onClick={() => {
+                setEditingId(row.id);
+                setForm({ 
+                  code: row.codigo_barras, 
+                  name: row.nombre, 
+                  categoryId: row.categoria_id.toString(), 
+                  unitId: (row.unidad_id || '').toString(), 
+                  sellPrice: (row.precio_venta || 0).toString(), 
+                  minStock: (row.stock_minimo || 0).toString() 
+                });
+                const cat = categories.find(c => c.id === row.categoria_id);
+                setCatSearch(cat ? cat.nombre : '');
+                const unit = units.find(u => u.id === row.unidad_id);
+                setUnitSearch(unit ? `${unit.nombre} (${unit.abreviatura})` : (row.unidad_medida || ''));
+                setShowModal(true);
+              }}
+            />
+          </Tooltip>
+          <Tooltip text="Desactivar producto" position="top-right">
+            <Button 
+              variant="ghost"
+              size="sm"
+              icon={<PowerOff size={14} />}
+              className="p-1.5 text-gray-400 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-gray-700"
+              onClick={() => handleDeactivate(row.id)} 
+            />
+          </Tooltip>
         </div>
       ),
     },
@@ -195,7 +215,7 @@ function TabProductos({ categories }: { categories: Category[] }) {
         </div>
         <div className="flex items-center gap-3">
           <p className="hidden sm:block text-sm text-gray-500 dark:text-gray-400">{filteredProducts.length} productos</p>
-          <button
+          <Button
             onClick={async () => {
               const lastCode = await productoService.getLastCode();
               const nextCode = generateProductCode(lastCode);
@@ -203,10 +223,10 @@ function TabProductos({ categories }: { categories: Category[] }) {
               setForm(f => ({ ...f, code: nextCode }));
               setShowModal(true);
             }}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-xl transition-colors shadow-sm shadow-indigo-200 dark:shadow-none"
+            icon={<Plus size={15} />}
           >
-            <Plus size={15} /> Nuevo producto
-          </button>
+            Nuevo producto
+          </Button>
         </div>
       </div>
 
@@ -214,7 +234,29 @@ function TabProductos({ categories }: { categories: Category[] }) {
         columns={columns}
         data={filteredProducts}
         keyExtractor={(row) => row.id}
-        emptyMessage="No hay productos registrados."
+        emptyState={
+          <EmptyState
+            icon={Package}
+            title="Inventario vacío"
+            description={search ? "No se encontraron productos que coincidan con la búsqueda." : "Aún no tienes productos registrados en tu inventario."}
+            action={
+              !search ? (
+                <Button
+                  onClick={async () => {
+                    const lastCode = await productoService.getLastCode();
+                    const nextCode = generateProductCode(lastCode);
+                    resetForm();
+                    setForm(f => ({ ...f, code: nextCode }));
+                    setShowModal(true);
+                  }}
+                  icon={<Plus size={15} />}
+                >
+                  Agregar producto
+                </Button>
+              ) : undefined
+            }
+          />
+        }
         defaultPageSize={5}
       />
 
@@ -233,13 +275,15 @@ function TabProductos({ categories }: { categories: Category[] }) {
                 {
                   key: 'acciones', header: '', align: 'right',
                   render: (row) => (
-                    <button 
+                    <Button 
                       onClick={() => statusMutation.mutate({ id: row.id, status: 'activo' })}
-                      title="Reactivar producto"
-                      className="flex items-center gap-1 px-3 py-1 text-xs text-green-600 dark:text-green-500 hover:bg-green-50 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                      variant="ghost"
+                      size="sm"
+                      icon={<RefreshCcw size={12} />}
+                      className="text-green-600 dark:text-green-500 hover:bg-green-50 dark:hover:bg-gray-700 font-bold"
                     >
-                      <RefreshCcw size={12} /> Activar
-                    </button>
+                      Activar
+                    </Button>
                   )
                 }
               ]}
@@ -266,7 +310,7 @@ function TabProductos({ categories }: { categories: Category[] }) {
               <div className="relative">
                 <input 
                   type="text"
-                  className={inputCls}
+                  className={`${inputCls} ${isSubmitted && errors.unitId ? 'border-red-300 dark:border-red-500/50' : ''}`}
                   placeholder="Buscar unidad..."
                   value={unitSearch}
                   onFocus={() => setShowUnitList(true)}
@@ -280,6 +324,7 @@ function TabProductos({ categories }: { categories: Category[] }) {
                 />
                 <Scale size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
               </div>
+              {isSubmitted && errors.unitId && <p className="text-xs font-medium text-red-500 mt-1">{errors.unitId}</p>}
 
               {showUnitList && (
                 <>
@@ -311,13 +356,13 @@ function TabProductos({ categories }: { categories: Category[] }) {
               )}
             </div>
             <div className="col-span-2 flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Nombre del producto *</label>
-              <input 
+              <Input 
                 ref={nameInputRef}
-                className={inputCls} 
+                label="Nombre del producto *"
                 placeholder="Ej. Arroz Costeño 1kg" 
                 value={form.name} 
                 onChange={(e) => setForm({ ...form, name: e.target.value })} 
+                error={isSubmitted && errors.name ? errors.name : undefined}
               />
             </div>
             <div className="col-span-2 flex flex-col gap-1.5 relative">
@@ -325,7 +370,7 @@ function TabProductos({ categories }: { categories: Category[] }) {
               <div className="relative">
                 <input 
                   type="text"
-                  className={inputCls}
+                  className={`${inputCls} ${isSubmitted && errors.categoryId ? 'border-red-300 dark:border-red-500/50' : ''}`}
                   placeholder="Buscar o seleccionar categoría..."
                   value={catSearch}
                   onFocus={() => setShowCatList(true)}
@@ -339,6 +384,7 @@ function TabProductos({ categories }: { categories: Category[] }) {
                 />
                 <Search size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
               </div>
+              {isSubmitted && errors.categoryId && <p className="text-xs font-medium text-red-500 mt-1">{errors.categoryId}</p>}
               
               {showCatList && (
                 <>
@@ -370,27 +416,41 @@ function TabProductos({ categories }: { categories: Category[] }) {
               )}
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Precio de venta (S/)</label>
-              <input type="number" step="0.01" className={inputCls} placeholder="0.00" value={form.sellPrice} onChange={(e) => setForm({ ...form, sellPrice: e.target.value })} />
+              <Input 
+                type="number" step="0.01" 
+                label="Precio de venta (S/)"
+                placeholder="0.00" 
+                value={form.sellPrice} 
+                onChange={(e) => setForm({ ...form, sellPrice: e.target.value })} 
+                error={isSubmitted && errors.sellPrice ? errors.sellPrice : undefined}
+              />
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Stock mínimo</label>
-              <input type="number" className={inputCls} placeholder="0" value={form.minStock} onChange={(e) => setForm({ ...form, minStock: e.target.value })} />
-              <div className="flex items-start gap-1.5 mt-0.5">
-                <AlertTriangle size={10} className="text-amber-500 mt-0.5 shrink-0" />
-                <p className="text-[10px] text-amber-600 dark:text-amber-500 italic font-medium leading-tight">
-                  Aviso: Este valor activa las alertas críticas de reabastecimiento.
-                </p>
-              </div>
+              <Input 
+                type="number" 
+                label="Stock mínimo"
+                placeholder="0" 
+                value={form.minStock} 
+                onChange={(e) => setForm({ ...form, minStock: e.target.value })} 
+                error={isSubmitted && errors.minStock ? errors.minStock : undefined}
+              />
+              {!(isSubmitted && errors.minStock) && (
+                <div className="flex items-start gap-1.5 mt-0.5 pl-1">
+                  <AlertTriangle size={10} className="text-amber-500 mt-0.5 shrink-0" />
+                  <p className="text-[10px] text-amber-600 dark:text-amber-500 italic font-medium leading-tight">
+                    Aviso: Este valor activa las alertas críticas de reabastecimiento.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
           <div className="flex justify-end gap-3 mt-6">
-            <button onClick={() => setShowModal(false)} className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+            <Button variant="ghost" onClick={() => setShowModal(false)} className="text-gray-600 dark:text-gray-300">
               Cancelar
-            </button>
-            <button onClick={handleSave} className="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl transition-colors">
+            </Button>
+            <Button onClick={handleSave} isLoading={saveMutation.isPending}>
               {editingId ? 'Actualizar' : 'Guardar'} producto
-            </button>
+            </Button>
           </div>
         </Modal>
       )}
@@ -473,22 +533,28 @@ function TabCategorias({ onUpdate }: { onUpdate: () => void }) {
       key: 'acciones', header: '', align: 'right',
       render: (row) => (
         <div className="flex items-center gap-1 justify-end">
-          <button 
-            onClick={() => {
-              setEditingId(row.id);
-              setForm({ name: row.nombre, color: row.color || getRandomColor(), productCount: row.productCount || 0 });
-              setShowModal(true);
-            }}
-            className="p-1.5 rounded-lg hover:bg-indigo-50 dark:hover:bg-gray-700 text-gray-400 hover:text-indigo-600 transition-colors"
-          >
-            <Edit2 size={14} />
-          </button>
-          <button 
-            onClick={() => statusMutation.mutate({ id: row.id, status: 'inactivo' })}
-            className="p-1.5 rounded-lg hover:bg-orange-50 dark:hover:bg-gray-700 text-gray-400 hover:text-orange-500 transition-colors"
-          >
-            <PowerOff size={14} />
-          </button>
+          <Tooltip text="Editar categoría" position="top-right">
+            <Button 
+              variant="ghost"
+              size="sm"
+              icon={<Edit2 size={14} />}
+              className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-gray-700"
+              onClick={() => {
+                setEditingId(row.id);
+                setForm({ name: row.nombre, color: row.color || getRandomColor(), productCount: row.productCount || 0 });
+                setShowModal(true);
+              }}
+            />
+          </Tooltip>
+          <Tooltip text="Desactivar categoría" position="top-right">
+            <Button 
+              variant="ghost"
+              size="sm"
+              icon={<PowerOff size={14} />}
+              className="p-1.5 text-gray-400 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-gray-700"
+              onClick={() => statusMutation.mutate({ id: row.id, status: 'inactivo' })}
+            />
+          </Tooltip>
         </div>
       ),
     },
@@ -497,16 +563,16 @@ function TabCategorias({ onUpdate }: { onUpdate: () => void }) {
   return (
     <>
       <div className="flex justify-end mb-4">
-        <button
+        <Button
           onClick={() => {
             setForm({ name: '', color: getRandomColor(), productCount: 0 });
             setEditingId(null);
             setShowModal(true);
           }}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-xl transition-colors shadow-sm"
+          icon={<Plus size={15} />}
         >
-          <Plus size={15} /> Nueva categoría
-        </button>
+          Nueva categoría
+        </Button>
       </div>
 
       <DataTable columns={columns} data={activeCategories} keyExtractor={(row) => row.id} emptyMessage="No hay categorías registradas." />
@@ -548,10 +614,10 @@ function TabCategorias({ onUpdate }: { onUpdate: () => void }) {
             </div>
           </div>
           <div className="flex justify-end gap-3 mt-6">
-            <button onClick={() => setShowModal(false)} className="px-4 py-2 text-sm text-gray-600 rounded-xl hover:bg-gray-100">Cancelar</button>
-            <button onClick={handleSave} className="px-4 py-2 text-sm bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700">
+            <Button variant="ghost" onClick={() => setShowModal(false)} className="text-gray-600">Cancelar</Button>
+            <Button onClick={handleSave} isLoading={saveMutation.isPending}>
               {editingId ? 'Guardar cambios' : 'Crear categoría'}
-            </button>
+            </Button>
           </div>
         </Modal>
       )}
@@ -608,22 +674,28 @@ function TabUnidades() {
       key: 'acciones', header: '', align: 'right',
       render: (row) => (
         <div className="flex items-center gap-1 justify-end">
-          <button 
-            onClick={() => {
-              setEditingId(row.id);
-              setForm({ nombre: row.nombre, abreviatura: row.abreviatura });
-              setShowModal(true);
-            }}
-            className="p-1.5 rounded-lg hover:bg-indigo-50 text-gray-400 hover:text-indigo-600 transition-colors"
-          >
-            <Edit2 size={14} />
-          </button>
-          <button 
-            onClick={() => statusMutation.mutate({ id: row.id, status: 'inactivo' })}
-            className="p-1.5 rounded-lg hover:bg-orange-50 text-gray-400 hover:text-orange-500 transition-colors"
-          >
-            <PowerOff size={14} />
-          </button>
+          <Tooltip text="Editar unidad" position="top-right">
+            <Button 
+              variant="ghost"
+              size="sm"
+              icon={<Edit2 size={14} />}
+              className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50"
+              onClick={() => {
+                setEditingId(row.id);
+                setForm({ nombre: row.nombre, abreviatura: row.abreviatura });
+                setShowModal(true);
+              }}
+            />
+          </Tooltip>
+          <Tooltip text="Desactivar unidad" position="top-right">
+            <Button 
+              variant="ghost"
+              size="sm"
+              icon={<PowerOff size={14} />}
+              className="p-1.5 text-gray-400 hover:text-orange-500 hover:bg-orange-50"
+              onClick={() => statusMutation.mutate({ id: row.id, status: 'inactivo' })}
+            />
+          </Tooltip>
         </div>
       ),
     },
@@ -632,16 +704,16 @@ function TabUnidades() {
   return (
     <>
       <div className="flex justify-end mb-4">
-        <button
+        <Button
           onClick={() => {
             setForm({ nombre: '', abreviatura: '' });
             setEditingId(null);
             setShowModal(true);
           }}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-xl transition-colors shadow-sm"
+          icon={<Plus size={15} />}
         >
-          <Plus size={15} /> Nueva unidad
-        </button>
+          Nueva unidad
+        </Button>
       </div>
 
       <DataTable columns={columns} data={activeUnits} keyExtractor={(u) => u.id} emptyMessage="No hay unidades registradas." />
@@ -688,10 +760,10 @@ function TabUnidades() {
             </div>
           </div>
           <div className="flex justify-end gap-3 mt-6">
-            <button onClick={() => setShowModal(false)} className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Cancelar</button>
-            <button onClick={() => saveMutation.mutate(form)} className="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl transition-colors">
+            <Button variant="ghost" onClick={() => setShowModal(false)} className="text-gray-600 dark:text-gray-300">Cancelar</Button>
+            <Button onClick={() => saveMutation.mutate(form)} isLoading={saveMutation.isPending}>
               {editingId ? 'Guardar cambios' : 'Crear unidad'}
-            </button>
+            </Button>
           </div>
         </Modal>
       )}

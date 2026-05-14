@@ -3,6 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { notificationService } from '../lib/notifications';
 import { Badge } from '../components/ui/Badge';
+import { Button } from '../components/ui/Button';
 import { sucursalService } from '../services/sucursalService';
 import { syncService } from '../services/syncService';
 import { ventaService } from '../services/ventaService';
@@ -155,23 +156,19 @@ export function Sincronizacion() {
               </div>
 
               <div className="mt-auto pt-6 flex flex-col sm:flex-row items-center gap-4">
-                <button 
+                <Button 
                   onClick={handleToggleServer}
-                  className={`group relative flex-1 w-full sm:w-auto flex items-center justify-center gap-3 px-8 py-4 rounded-2xl font-black transition-all active:scale-95 ${
+                  isLoading={toggleServerMutation.isPending}
+                  variant={isCentral ? 'warning' : 'primary'}
+                  className={`group relative flex-1 w-full sm:w-auto px-8 py-4 font-black ${
                     isCentral 
                     ? 'bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/10 dark:text-red-400' 
-                    : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-xl shadow-indigo-200 dark:shadow-none'
+                    : 'shadow-xl shadow-indigo-200 dark:shadow-none'
                   }`}
+                  icon={!isCentral && !toggleServerMutation.isPending ? <Wifi className="animate-pulse" size={20} /> : undefined}
                 >
-                  {isCentral ? (
-                    <>Detener Servidor de Red</>
-                  ) : (
-                    <>
-                      <Wifi className="animate-pulse" size={20} />
-                      Iniciar Servidor Central
-                    </>
-                  )}
-                </button>
+                  {isCentral ? 'Detener Servidor de Red' : 'Iniciar Servidor Central'}
+                </Button>
                 
                 {isCentral && (
                   <div className="flex items-center gap-3 px-6 py-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-100 dark:border-gray-700">
@@ -180,15 +177,16 @@ export function Sincronizacion() {
                       <span className="text-[9px] font-black text-gray-400 uppercase">IP Local</span>
                       <span className="text-sm font-mono font-bold text-gray-800 dark:text-white tracking-wider">{serverIp}</span>
                     </div>
-                    <button 
+                    <Button 
+                      variant="ghost"
+                      size="sm"
+                      icon={<Copy size={16} />}
                       onClick={() => {
                         navigator.clipboard.writeText(`http://${serverIp}:8080`);
                         notificationService.success('Copiado', 'Dirección de conexión copiada');
                       }}
-                      className="ml-2 p-2 hover:bg-white dark:hover:bg-gray-800 rounded-xl transition-all text-gray-400 hover:text-indigo-500"
-                    >
-                      <Copy size={16} />
-                    </button>
+                      className="ml-2 p-2 text-gray-400 hover:text-indigo-500 hover:bg-white dark:hover:bg-gray-800"
+                    />
                   </div>
                 )}
               </div>
@@ -249,25 +247,37 @@ export function Sincronizacion() {
             </div>
           ) : (
             <>
-              <div className="p-8 bg-indigo-600 rounded-[2.5rem] text-white shadow-xl shadow-indigo-200 dark:shadow-none">
-                <CloudSync className="mb-6 opacity-50" size={32} />
-                <h4 className="text-xl font-black mb-4">Sincronización Local</h4>
-                <p className="text-sm text-indigo-100 mb-6 leading-relaxed">
-                  Envía tus ventas realizadas y descarga los últimos productos y personal autorizado desde la Sede Central.
-                </p>
+              <div className="p-8 bg-white dark:bg-gray-800 rounded-[2.5rem] border border-gray-100 dark:border-gray-700 shadow-sm relative overflow-hidden group">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full -mr-16 -mt-16 transition-transform group-hover:scale-110" />
                 
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between text-xs text-indigo-200 font-bold border-b border-white/10 pb-2">
-                    <span>Ventas pendientes:</span>
-                    <span className="bg-white/20 px-2 py-0.5 rounded-full">{pendingSales}</span>
+                <div className="relative">
+                  <div className="w-12 h-12 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-2xl flex items-center justify-center mb-6">
+                    <CloudSync size={24} />
                   </div>
                   
-                  <button 
-                    onClick={handlePushData}
-                    className="w-full py-3 bg-white text-indigo-600 rounded-2xl font-black text-sm hover:bg-indigo-50 active:scale-95 transition-all shadow-lg"
-                  >
-                    Sincronizar Ahora
-                  </button>
+                  <h4 className="text-xl font-black text-gray-800 dark:text-white mb-4">Sincronización Local</h4>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 leading-relaxed">
+                    Envía tus ventas realizadas y descarga los últimos productos y personal autorizado desde la Sede Central.
+                  </p>
+                  
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between text-xs font-bold border-b border-gray-50 dark:border-gray-700 pb-2">
+                      <span className="text-gray-400 uppercase tracking-wider">Ventas pendientes</span>
+                      <span className="bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 px-3 py-1 rounded-full text-[10px]">
+                        {pendingSales} registros
+                      </span>
+                    </div>
+                    
+                    <Button 
+                      onClick={handlePushData}
+                      isLoading={syncMutation.isPending}
+                      fullWidth
+                      size="lg"
+                      className="rounded-2xl font-black shadow-lg shadow-indigo-100 dark:shadow-none"
+                    >
+                      Sincronizar Ahora
+                    </Button>
+                  </div>
                 </div>
               </div>
 

@@ -5,13 +5,15 @@ import { dashboardService } from '../services/dashboardService';
 import { negocioService } from '../services/negocioService';
 import { Badge } from '../components/ui/Badge';
 import { useNavigate } from 'react-router-dom';
+import { Tooltip } from '../components/ui/Tooltip';
+import { Button } from '../components/ui/Button';
 import { 
   AreaChart, 
   Area, 
   XAxis, 
   YAxis, 
   CartesianGrid, 
-  Tooltip, 
+  Tooltip as RechartsTooltip, 
   ResponsiveContainer 
 } from 'recharts';
 
@@ -106,13 +108,18 @@ export function Dashboard() {
               <p className="text-[11px] text-amber-700 dark:text-amber-400">Los datos de tu negocio no han sido configurados. Tus boletas y reportes podrían aparecer con nombres genéricos.</p>
             </div>
           </div>
-          <button 
-            onClick={() => navigate('/configuracion')}
-            className="flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl transition-all shadow-lg shadow-amber-200 dark:shadow-none whitespace-nowrap"
-          >
-            Configurar Ahora
-            <ArrowRight size={14} />
-          </button>
+          <Tooltip text="Completar la información básica de tu negocio" position="top-right">
+            <Button 
+              onClick={() => navigate('/configuracion')}
+              variant="warning"
+              size="sm"
+              icon={<ArrowRight size={14} />}
+              iconPosition="right"
+              className="bg-amber-600 hover:bg-amber-700 shadow-amber-200 text-white rounded-xl font-bold"
+            >
+              Configurar Ahora
+            </Button>
+          </Tooltip>
         </div>
       )}
 
@@ -178,7 +185,7 @@ export function Dashboard() {
                     tickLine={false}
                     tick={{ fontSize: 10, fontWeight: 600, fill: '#94a3b8' }}
                   />
-                  <Tooltip 
+                  <RechartsTooltip 
                     contentStyle={{ 
                       borderRadius: '12px', 
                       border: 'none', 
@@ -242,12 +249,18 @@ export function Dashboard() {
         <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-bold text-gray-800 dark:text-white">Actividad Reciente</h3>
-            <button 
-              onClick={() => navigate('/kardex')}
-              className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest flex items-center gap-1 hover:underline"
-            >
-              Ver Todo <ArrowRight size={12} />
-            </button>
+            <Tooltip text="Ver todos los movimientos" position="top-right">
+              <Button 
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate('/kardex')}
+                icon={<ArrowRight size={12} />}
+                iconPosition="right"
+                className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest p-1 px-2 hover:bg-indigo-50 dark:hover:bg-indigo-900/20"
+              >
+                Ver Todo
+              </Button>
+            </Tooltip>
           </div>
           <div className="space-y-6">
             {activity.length > 0 ? activity.map((item, i) => (

@@ -17,6 +17,7 @@ interface DataTableProps<T extends object> {
   data: T[];
   keyExtractor: (row: T, index: number) => string | number;
   emptyMessage?: string;
+  emptyState?: ReactNode;
   /** Filas por página por defecto (default: 10) */
   defaultPageSize?: number;
   /** Opciones del selector de filas por página */
@@ -36,6 +37,7 @@ export function DataTable<T extends object>({
   data,
   keyExtractor,
   emptyMessage = 'No hay registros para mostrar.',
+  emptyState,
   defaultPageSize = 10,
   pageSizeOptions = [5, 10, 25, 50],
 }: DataTableProps<T>) {
@@ -96,9 +98,13 @@ export function DataTable<T extends object>({
               <tr>
                 <td
                   colSpan={columns.length}
-                  className="px-4 py-12 text-center text-sm text-gray-400 dark:text-gray-500"
+                  className="px-4 py-12 text-center text-sm text-gray-400 dark:text-gray-500 p-0"
                 >
-                  {emptyMessage}
+                  {emptyState ? emptyState : (
+                    <div className="py-12">
+                      {emptyMessage}
+                    </div>
+                  )}
                 </td>
               </tr>
             ) : (

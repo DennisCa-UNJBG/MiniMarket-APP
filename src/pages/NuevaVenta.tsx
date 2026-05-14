@@ -8,6 +8,7 @@ import { Card } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
 import { Badge } from '../components/ui/Badge';
+import { Tooltip } from '../components/ui/Tooltip';
 import { productoService, type Product } from '../services/productoService';
 import { categoriaService } from '../services/categoriaService';
 import { ventaService } from '../services/ventaService';
@@ -153,28 +154,32 @@ export function NuevaVenta() {
             
             {/* Scroll horizontal de categorías */}
             <div className="flex overflow-x-auto pb-1 gap-2 no-scrollbar">
-                <button
+                <Button
+                  variant={activeCategory === 'Todos' ? 'primary' : 'secondary'}
+                  size="sm"
                   onClick={() => setActiveCategory('Todos')}
-                  className={`px-4 py-1.5 text-sm font-medium rounded-full whitespace-nowrap transition-colors ${
+                  className={`px-4 py-1.5 rounded-full whitespace-nowrap border-none ${
                     activeCategory === 'Todos' 
                       ? 'bg-gray-800 text-white dark:bg-gray-100 dark:text-gray-900' 
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
                   }`}
                 >
                   Todos
-                </button>
+                </Button>
               {categories.map(cat => (
-                <button
+                <Button
                   key={cat.id}
+                  variant={activeCategory === cat.id ? 'primary' : 'secondary'}
+                  size="sm"
                   onClick={() => setActiveCategory(cat.id)}
-                  className={`px-4 py-1.5 text-sm font-medium rounded-full whitespace-nowrap transition-colors ${
+                  className={`px-4 py-1.5 rounded-full whitespace-nowrap border-none ${
                     activeCategory === cat.id 
                       ? 'bg-gray-800 text-white dark:bg-gray-100 dark:text-gray-900' 
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
                   }`}
                 >
                   {cat.nombre}
-                </button>
+                </Button>
               ))}
             </div>
           </div>
@@ -251,27 +256,29 @@ export function NuevaVenta() {
                       <p className="text-xs text-gray-500 dark:text-gray-400">S/ {(item.product.precio_venta || 0).toFixed(2)} c/u</p>
                       
                       <div className="flex items-center gap-1.5 bg-gray-100 dark:bg-gray-900/50 p-1 rounded-lg border border-gray-200/50 dark:border-gray-700">
-                        <Button 
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => item.quantity === 1 ? removeFromCart(item.product.id) : updateQuantity(item.product.id, -1)}
-                          className="w-8 h-8 p-0 px-0 min-h-0 bg-white dark:bg-gray-700 shadow-sm border border-gray-200 dark:border-gray-600 hover:border-indigo-400 dark:hover:border-indigo-500"
-                          title={item.quantity === 1 ? "Eliminar del carrito" : "Disminuir cantidad"}
-                        >
-                          {item.quantity === 1 ? <Trash2 size={16} className="text-red-500" /> : <Minus size={18} strokeWidth={3} className="text-gray-800 dark:text-white" />}
-                        </Button>
+                        <Tooltip text={item.quantity === 1 ? "Eliminar" : "Disminuir"} position="top-right">
+                          <Button 
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => item.quantity === 1 ? removeFromCart(item.product.id) : updateQuantity(item.product.id, -1)}
+                            className="h-8 p-0 px-0 min-h-0 bg-white dark:bg-gray-700 shadow-sm border border-gray-200 dark:border-gray-600 hover:border-indigo-400 dark:hover:border-indigo-500"
+                          >
+                            {item.quantity === 1 ? <Trash2 size={16} className="text-red-500" /> : <Minus size={18} strokeWidth={3} className="text-gray-800 dark:text-white" />}
+                          </Button>
+                        </Tooltip>
                         <span className="w-10 text-center text-base font-black text-gray-900 dark:text-white">
                           {item.quantity}
                         </span>
-                        <Button 
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => updateQuantity(item.product.id, 1)}
-                          className="w-8 h-8 p-0 px-0 min-h-0 bg-white dark:bg-gray-700 shadow-sm border-2 border-gray-200 dark:border-gray-600 hover:border-indigo-500 dark:hover:border-indigo-400 active:bg-gray-100"
-                          title="Aumentar cantidad"
-                        >
-                          <Plus size={18} strokeWidth={3} className="text-gray-800 dark:text-white" />
-                        </Button>
+                        <Tooltip text="Aumentar" position="top-right">
+                          <Button 
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => updateQuantity(item.product.id, 1)}
+                            className=" h-8 p-0 px-0 min-h-0 bg-white dark:bg-gray-700 shadow-sm border-2 border-gray-200 dark:border-gray-600 hover:border-indigo-500 dark:hover:border-indigo-400 active:bg-gray-100"
+                          >
+                            <Plus size={18} strokeWidth={3} className="text-gray-800 dark:text-white" />
+                          </Button>
+                        </Tooltip>
                       </div>
                     </div>
                   </li>

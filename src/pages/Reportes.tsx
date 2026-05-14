@@ -2,6 +2,8 @@ import { TrendingUp, Package, ShoppingCart, Calendar, Info, Download } from 'luc
 import { useQuery } from '@tanstack/react-query';
 import { reporteService } from '../services/reporteService';
 import { Badge } from '../components/ui/Badge';
+import { Tooltip } from '../components/ui/Tooltip';
+import { Button } from '../components/ui/Button';
 import { notificationService } from '../lib/notifications';
 import { ReporteDocumento } from '../components/shared/ReporteDocumento';
 import { VentasBarChart, RankingProductos } from '../components/reportes/ReportComponents';
@@ -75,13 +77,15 @@ export function Reportes() {
           <p className="text-sm text-gray-500 dark:text-gray-400">Análisis detallado de tus ventas y productos</p>
         </div>
         <div className="flex items-center gap-2">
-          <button 
-            onClick={handleExportPDF}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-bold rounded-xl hover:bg-indigo-700 transition shadow-lg shadow-indigo-200 dark:shadow-none"
-          >
-            <Download size={16} />
-            Exportar PDF
-          </button>
+          <Tooltip text="Exportar reporte del mes actual" position="bottom">
+            <Button 
+              onClick={handleExportPDF}
+              icon={<Download size={16} />}
+              className="shadow-lg shadow-indigo-200 dark:shadow-none"
+            >
+              Exportar PDF
+            </Button>
+          </Tooltip>
           <div className="flex items-center gap-2 px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-xs font-bold text-gray-600 dark:text-gray-300">
             <Calendar size={14} />
             <span>{new Date().toLocaleDateString('es-PE', { month: 'long', year: 'numeric' }).toUpperCase()}</span>

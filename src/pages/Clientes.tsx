@@ -2,6 +2,8 @@ import { Plus, Search, User, Phone, Mail } from 'lucide-react';
 import { useState } from 'react';
 import { Modal } from '../components/ui/Modal';
 import { PageHeader } from '../components/ui/PageHeader';
+import { Tooltip } from '../components/ui/Tooltip';
+import { Button } from '../components/ui/Button';
 
 const clients = [
   { id: 1, name: 'María García',     dni: '47823456', phone: '923 456 789', email: 'mgarcia@mail.com',    purchases: 12, total: 340.50 },
@@ -21,13 +23,13 @@ export function Clientes() {
         title="Clientes"
         subtitle={`${clients.length} clientes registrados`}
         action={
-          <button
+          <Button
             id="add-client-btn"
             onClick={() => setShowModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-xl transition-colors shadow-sm shadow-indigo-200 dark:shadow-none"
+            icon={<Plus size={16} />}
           >
-            <Plus size={16} /> Agregar cliente
-          </button>
+            Agregar cliente
+          </Button>
         }
       />
 
@@ -82,9 +84,15 @@ export function Clientes() {
                 <p className="text-xs text-gray-400 dark:text-gray-500">Total gastado</p>
                 <p className="text-sm font-bold text-indigo-600 dark:text-indigo-400">S/ {c.total.toFixed(2)}</p>
               </div>
-              <button className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline px-2 py-1 rounded-lg hover:bg-indigo-50 dark:hover:bg-gray-700 transition-colors">
-                Ver historial
-              </button>
+              <Tooltip text="Ver historial del cliente" position="top-right">
+                <Button 
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline px-2 py-1"
+                >
+                  Ver historial
+                </Button>
+              </Tooltip>
             </div>
           </div>
         ))}
@@ -111,12 +119,12 @@ export function Clientes() {
             </div>
           </div>
           <div className="flex justify-end gap-3 mt-6">
-            <button onClick={() => setShowModal(false)} className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+            <Button variant="secondary" onClick={() => setShowModal(false)}>
               Cancelar
-            </button>
-            <button onClick={() => setShowModal(false)} className="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl transition-colors">
+            </Button>
+            <Button onClick={() => setShowModal(false)}>
               Guardar Cliente
-            </button>
+            </Button>
           </div>
         </Modal>
       )}

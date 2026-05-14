@@ -3,6 +3,8 @@ import { invoke } from '@tauri-apps/api/core';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Store, Database, Bell, Save, Shield, Server, RefreshCw, Eye, EyeOff, Keyboard, Plus, Trash2, ArrowRight } from 'lucide-react';
 import { Badge } from '../components/ui/Badge';
+import { Tooltip } from '../components/ui/Tooltip';
+import { Button } from '../components/ui/Button';
 import { notificationService } from '../lib/notifications';
 import { databaseService } from '../services/databaseService';
 import { preferenciasService, type AppPreferences } from '../services/preferenciasService';
@@ -51,14 +53,15 @@ function Field({ label, value, onChange, type = 'text', placeholder }: { label: 
           className={`w-full px-4 py-2.5 text-sm font-medium border border-gray-100 dark:border-gray-700 rounded-2xl bg-gray-50/50 dark:bg-gray-900/50 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all ${isPassword ? 'pr-11' : ''}`}
         />
         {isPassword && (
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="sm"
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors"
+            className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-indigo-500 dark:hover:text-indigo-400"
             title={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-          >
-            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-          </button>
+            icon={showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+          />
         )}
       </div>
     </div>
@@ -385,36 +388,40 @@ export function Configuracion() {
                         {connectionStatus === 'error' && <div className="w-2 h-2 rounded-full bg-red-500" />}
                       </div>
                     </div>
-                    <button 
-                      type="button"
-                      onClick={handleTestConnection}
-                      disabled={testConnectionMutation.isPending || isCentral}
-                      className={`px-4 rounded-2xl transition-all disabled:opacity-50 border ${
-                        connectionStatus === 'success' 
-                          ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-800'
-                          : connectionStatus === 'error'
-                          ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-100 dark:border-red-800'
-                          : 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 border-indigo-100 dark:border-indigo-800'
-                      }`}
-                      title="Probar Conexión"
-                    >
-                      <RefreshCw size={18} className={testConnectionMutation.isPending ? 'animate-spin' : ''} />
-                    </button>
+                    <Tooltip text="Probar Conexión" position="top">
+                      <Button 
+                        type="button"
+                        variant="ghost"
+                        onClick={handleTestConnection}
+                        isLoading={testConnectionMutation.isPending}
+                        disabled={isCentral}
+                        className={`px-4 py-2.5 rounded-2xl h-full ${
+                          connectionStatus === 'success' 
+                            ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-800'
+                            : connectionStatus === 'error'
+                            ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-100 dark:border-red-800'
+                            : 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 border-indigo-100 dark:border-indigo-800'
+                        }`}
+                        icon={<RefreshCw size={18} className={testConnectionMutation.isPending ? 'animate-spin' : ''} />}
+                      />
+                    </Tooltip>
                   </div>
                 </div>
               </div>
 
               {!isCentral && (
                 <div className="sm:col-span-2">
-                  <button 
+                  <Button 
                     type="button"
+                    variant="ghost"
                     onClick={handleSync}
-                    disabled={syncMutation.isPending || !localSucursal.api_url_central}
-                    className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 text-sm font-bold rounded-2xl hover:bg-indigo-100 transition-all disabled:opacity-50 border border-indigo-100 dark:border-indigo-800"
+                    isLoading={syncMutation.isPending}
+                    disabled={!localSucursal.api_url_central}
+                    className="w-full flex items-center justify-center gap-2 px-6 py-3 text-indigo-600 dark:text-indigo-400 text-sm font-bold rounded-2xl hover:bg-indigo-100 border border-indigo-100 dark:border-indigo-800"
+                    icon={<RefreshCw size={18} className={syncMutation.isPending ? 'animate-spin' : ''} />}
                   >
-                    <RefreshCw size={18} className={syncMutation.isPending ? 'animate-spin' : ''} />
-                    {syncMutation.isPending ? 'Sincronizando...' : 'Sincronizar con Sede Central'}
-                  </button>
+                    Sincronizar con Sede Central
+                  </Button>
                   {localSucursal.ultima_sincronizacion && (
                     <p className="text-[9px] font-bold text-indigo-400 uppercase tracking-tighter mt-1 text-right">
                       Última: {new Date(localSucursal.ultima_sincronizacion).toLocaleString()}
@@ -423,14 +430,14 @@ export function Configuracion() {
                 </div>
               )}
             </div>
-            <button 
+            <Button 
               type="submit"
-              disabled={saveSucursalMutation.isPending}
-              className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-2xl transition-all shadow-lg shadow-indigo-200 dark:shadow-none disabled:opacity-50"
+              isLoading={saveSucursalMutation.isPending}
+              className="w-full sm:w-auto px-6 py-2.5 font-bold rounded-2xl"
+              icon={<Save size={18} />}
             >
-              <Save size={18} />
-              {saveSucursalMutation.isPending ? 'Guardando...' : 'Guardar Identidad de Sede'}
-            </button>
+              Guardar Identidad de Sede
+            </Button>
           </form>
         </Section>
         
@@ -450,14 +457,14 @@ export function Configuracion() {
               <Field label="Teléfono de Contacto" value={localNegocio.telefono} onChange={val => setLocalNegocio({...localNegocio, telefono: val})} placeholder="Ej: 052 123 456" />
               <Field label="Correo Electrónico" value={localNegocio.email} onChange={val => setLocalNegocio({...localNegocio, email: val})} placeholder="contacto@empresa.com" />
             </div>
-            <button 
+            <Button 
               type="submit"
-              disabled={saveNegocioMutation.isPending}
-              className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-2xl transition-all shadow-lg shadow-indigo-200 dark:shadow-none disabled:opacity-50"
+              isLoading={saveNegocioMutation.isPending}
+              className="w-full sm:w-auto px-6 py-2.5 font-bold rounded-2xl"
+              icon={<Save size={18} />}
             >
-              <Save size={18} />
-              {saveNegocioMutation.isPending ? 'Guardando...' : 'Guardar Datos del Negocio'}
-            </button>
+              Guardar Datos del Negocio
+            </Button>
           </form>
         </Section>
 
@@ -482,13 +489,14 @@ export function Configuracion() {
                 <Field label="Confirmar Nueva" value={securityData.confirmPassword} onChange={val => setSecurityData({...securityData, confirmPassword: val})} type="password" placeholder="Repite clave" />
               </div>
             </div>
-            <button 
+            <Button 
               type="submit"
-              disabled={updatePasswordMutation.isPending}
-              className="w-full sm:w-auto px-6 py-2.5 bg-gray-800 dark:bg-gray-700 hover:bg-gray-900 text-white text-sm font-bold rounded-2xl transition-all disabled:opacity-50"
+              variant="secondary"
+              isLoading={updatePasswordMutation.isPending}
+              className="w-full sm:w-auto px-6 py-2.5 font-bold rounded-2xl bg-gray-800 dark:bg-gray-700 hover:bg-gray-900 text-white"
             >
-              {updatePasswordMutation.isPending ? 'Actualizando...' : 'Actualizar Credenciales'}
-            </button>
+              Actualizar Credenciales
+            </Button>
           </form>
         </Section>
 
@@ -514,18 +522,26 @@ export function Configuracion() {
               </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-3">
-              <button 
-                onClick={handleOptimize}
-                className="flex-1 px-4 py-2.5 border border-gray-200 dark:border-gray-700 text-xs font-bold text-gray-600 dark:text-gray-300 rounded-2xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-all"
-              >
-                Optimizar Tablas
-              </button>
-              <button 
-                onClick={handleBackup}
-                className="flex-1 px-4 py-2.5 bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 text-xs font-bold rounded-2xl hover:bg-emerald-100 transition-all"
-              >
-                Respaldar Datos
-              </button>
+              <Tooltip text="Optimizar registros de la base de datos" position="top" className="w-1/2">
+                <Button 
+                  variant="ghost"
+                  onClick={handleOptimize}
+                  isLoading={optimizeMutation.isPending}
+                  className="flex-1 px-4 py-2.5 border border-gray-200 dark:border-gray-700 text-xs font-bold text-gray-600 dark:text-gray-300 rounded-2xl"
+                >
+                  Optimizar Tablas
+                </Button>
+              </Tooltip>
+              <Tooltip text="Descargar la base de datos" position="top" className="w-1/2">
+                <Button 
+                  variant="secondary"
+                  onClick={handleBackup}
+                  isLoading={backupMutation.isPending}
+                  className="flex-1 px-4 py-2.5 bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 text-xs font-bold rounded-2xl"
+                >
+                  Respaldar Datos
+                </Button>
+              </Tooltip>
             </div>
           </div>
         </Section>
@@ -659,13 +675,12 @@ export function Configuracion() {
                   >
                     {isRecordingCombo ? 'Presiona una combinación...' : (newShortcutCombo || 'Haz clic aquí para grabar')}
                   </button>
-                  <button 
+                  <Button 
                     onClick={handleAddShortcut}
                     disabled={!newShortcutCombo}
-                    className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl transition-all disabled:opacity-50 disabled:hover:bg-indigo-600"
-                  >
-                    <Plus size={18} />
-                  </button>
+                    className="px-4 py-2.5 rounded-2xl"
+                    icon={<Plus size={18} />}
+                  />
                 </div>
               </div>
             </div>
@@ -685,12 +700,13 @@ export function Configuracion() {
                           {viewLabel}
                         </span>
                       </div>
-                      <button 
+                      <Button 
+                        variant="ghost"
+                        size="sm"
+                        icon={<Trash2 size={16} />}
                         onClick={() => handleRemoveShortcut(combo)}
-                        className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                        className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+                      />
                     </div>
                   );
                 })

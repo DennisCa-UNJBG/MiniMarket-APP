@@ -7,6 +7,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { PageHeader } from '../components/ui/PageHeader';
 import { DataTable, type TableColumn } from '../components/ui/DataTable';
 import { Badge } from '../components/ui/Badge';
+import { Tooltip } from '../components/ui/Tooltip';
+import { Button } from '../components/ui/Button';
 import { notificationService } from '../lib/notifications';
 
 export function Caja() {
@@ -165,18 +167,21 @@ export function Caja() {
                       value={montoInicial}
                       onChange={(e) => setMontoInicial(e.target.value)}
                       placeholder="0.00"
-                      className="w-full pl-10 pr-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-100 dark:border-gray-600 rounded-2xl text-lg font-bold text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                    />
+                      className="w-full pl-10 pr-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-100 dark:border-gray-600 rounded-2xl text-lg font-bold text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all"/>
                   </div>
                 </div>
-                <button
-                  type="submit"
-                  disabled={abrirCajaMutation.isPending}
-                  className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-sm uppercase tracking-widest rounded-2xl transition-all shadow-lg shadow-indigo-100 dark:shadow-none flex items-center justify-center gap-2"
-                >
-                  <Unlock size={18} />
-                  Abrir Caja
-                </button>
+                <Tooltip text="Iniciar el monto de caja por Turno" position="top-right" className="w-full">
+                  <Button
+                    type="submit"
+                    fullWidth
+                    isLoading={abrirCajaMutation.isPending}
+                    icon={<Unlock size={18} />}
+                    className="py-4 text-sm uppercase tracking-widest rounded-2xl"
+                  >
+                    Abrir Caja
+                  </Button>
+                </Tooltip>
+                
               </form>
             ) : (
               <form onSubmit={handleCerrar} className="space-y-6">
@@ -218,14 +223,16 @@ export function Caja() {
                   </div>
                 </div>
 
-                <button
+                <Button
                   type="submit"
-                  disabled={cerrarCajaMutation.isPending}
-                  className="w-full py-4 bg-rose-600 hover:bg-rose-700 text-white font-black text-sm uppercase tracking-widest rounded-2xl transition-all shadow-lg shadow-rose-100 dark:shadow-none flex items-center justify-center gap-2"
+                  variant="danger"
+                  fullWidth
+                  isLoading={cerrarCajaMutation.isPending}
+                  icon={<Lock size={18} />}
+                  className="py-4 text-sm uppercase tracking-widest rounded-2xl bg-rose-600 hover:bg-rose-700 shadow-rose-100"
                 >
-                  <Lock size={18} />
                   Finalizar Turno / Cerrar Caja
-                </button>
+                </Button>
               </form>
             )}
           </div>

@@ -4,6 +4,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { DataTable, type TableColumn } from '../components/ui/DataTable';
 import { Badge } from '../components/ui/Badge';
 import { PageHeader } from '../components/ui/PageHeader';
+import { Tooltip } from '../components/ui/Tooltip';
+import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
 import { inventarioService, type CompraDetalle } from '../services/inventarioService';
 import { productoService, type Product } from '../services/productoService';
@@ -244,27 +246,34 @@ export function Compras() {
       align: 'right',
       render: (row) => (
         <div className="flex items-center gap-3 justify-end">
-          <button 
-            onClick={() => handleViewDetail(row)}
-            className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline"
-          >
-            Ver detalle
-          </button>
+          <Tooltip text="Ver detalle de la compra" position="top-right">
+            <Button 
+              variant="ghost"
+              size="sm"
+              onClick={() => handleViewDetail(row)}
+              className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline p-0 h-auto"
+            >
+              Ver detalle
+            </Button>
+          </Tooltip>
           {esRegistroEditable(row.fecha) ? (
-            <button 
-              onClick={() => handleEdit(row)}
-              className="p-1.5 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/20 text-amber-500 transition-colors"
-              title="Editar compra"
-            >
-              <Edit2 size={14} />
-            </button>
+            <Tooltip text="Editar compra" position="top-right">
+              <Button 
+                variant="ghost"
+                size="sm"
+                icon={<Edit2 size={14} />}
+                onClick={() => handleEdit(row)}
+                className="p-1.5 text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20"
+              />
+            </Tooltip>
           ) : (
-            <div 
-              className="p-1.5 text-gray-400 cursor-not-allowed opacity-50"
-              title="Edición deshabilitada (pasaron 12h)"
-            >
-              <Edit2 size={14} />
-            </div>
+            <Tooltip text="Edición deshabilitada (pasaron 12h)" position="top-right">
+              <div 
+                className="p-1.5 text-gray-400 cursor-not-allowed opacity-50"
+              >
+                <Edit2 size={14} />
+              </div>
+            </Tooltip>
           )}
         </div>
       )
@@ -279,15 +288,15 @@ export function Compras() {
         title="Gestión de Compras"
         subtitle="Registro masivo de mercadería e inversión"
         action={
-          <button
+          <Button
             onClick={() => {
               resetForm();
               setShowModal(true);
             }}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-xl transition-colors shadow-sm shadow-indigo-200 dark:shadow-none"
+            icon={<Plus size={16} />}
           >
-            <Plus size={16} /> Registrar Nueva Compra
-          </button>
+            Registrar Nueva Compra
+          </Button>
         }
       />
 
@@ -451,13 +460,12 @@ export function Compras() {
                   <input type="number" step="0.01" className={inputCls} placeholder="0.00" value={cost} onChange={(e) => setCost(e.target.value)} />
                 </div>
                 <div className="col-span-2">
-                  <button 
+                  <Button 
                     onClick={addToCart}
-                    title={editingCartIndex !== null ? "Actualizar item" : "Agregar item"}
-                    className={`w-full h-[38px] ${editingCartIndex !== null ? 'bg-amber-500 shadow-amber-200' : 'bg-gray-800 dark:bg-gray-100'} text-white dark:text-gray-900 rounded-lg flex items-center justify-center hover:opacity-90 transition-all shadow-sm`}
-                  >
-                    {editingCartIndex !== null ? <Check size={20} /> : <Plus size={20} />}
-                  </button>
+                    variant={editingCartIndex !== null ? 'warning' : 'primary'}
+                    className={`w-full h-[38px] ${editingCartIndex !== null ? 'shadow-amber-200' : 'bg-gray-800 dark:bg-gray-100'} p-0`}
+                    icon={editingCartIndex !== null ? <Check size={20} /> : <Plus size={20} />}
+                  />
                 </div>
               </div>
             </div>
@@ -487,20 +495,24 @@ export function Compras() {
                         <td className="px-4 py-3 text-right">S/ {item.costo_unitario.toFixed(2)}</td>
                         <td className="px-4 py-3 text-right font-bold text-gray-900 dark:text-white">S/ {(item.cantidad * item.costo_unitario).toFixed(2)}</td>
                         <td className="px-4 py-3 text-right flex items-center justify-end gap-1">
-                          <button 
-                            onClick={() => editCartItem(idx)}
-                            className="p-1.5 text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors"
-                            title="Editar item"
-                          >
-                            <Edit2 size={14} />
-                          </button>
-                          <button 
-                            onClick={() => removeFromCart(idx)} 
-                            className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                            title="Eliminar item"
-                          >
-                            <Trash2 size={14} />
-                          </button>
+                          <Tooltip text="Editar item" position="top-right">
+                            <Button 
+                              variant="ghost"
+                              size="sm"
+                              icon={<Edit2 size={14} />}
+                              onClick={() => editCartItem(idx)}
+                              className="p-1.5 text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20"
+                            />
+                          </Tooltip>
+                          <Tooltip text="Eliminar item" position="top-right">
+                            <Button 
+                              variant="ghost"
+                              size="sm"
+                              icon={<Trash2 size={14} />}
+                              onClick={() => removeFromCart(idx)} 
+                              className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+                            />
+                          </Tooltip>
                         </td>
                       </tr>
                     ))
@@ -516,19 +528,22 @@ export function Compras() {
                 <p className="text-3xl font-black">S/ {totalFinal.toFixed(2)}</p>
               </div>
               <div className="flex items-center gap-3">
-                <button 
+                <Button 
+                  variant="ghost"
                   onClick={() => setShowModal(false)}
-                  className="px-6 py-3 bg-indigo-700/50 hover:bg-indigo-700 text-white font-bold rounded-xl transition-colors"
+                  className="px-6 py-3 text-white hover:bg-indigo-700 font-bold"
                 >
                   Cancelar
-                </button>
-                <button 
+                </Button>
+                <Button 
                   onClick={handleConfirmarCompra}
-                  disabled={savePurchaseMutation.isPending}
-                  className="flex items-center gap-2 px-6 py-3 bg-white text-indigo-600 font-bold rounded-xl hover:bg-indigo-50 transition-colors disabled:opacity-50"
+                  isLoading={savePurchaseMutation.isPending}
+                  className="px-6 py-3 bg-white text-indigo-600 font-bold hover:bg-indigo-50"
+                  icon={<ArrowUpRight size={20} />}
+                  iconPosition="right"
                 >
-                  {savePurchaseMutation.isPending ? 'Procesando...' : 'Completar Registro'} <ArrowUpRight size={20} />
-                </button>
+                  Completar Registro
+                </Button>
               </div>
             </div>
           </div>
@@ -583,12 +598,13 @@ export function Compras() {
             </div>
 
             <div className="flex justify-end pt-2">
-              <button 
+              <Button 
+                variant="secondary"
                 onClick={() => setShowDetailModal(false)}
-                className="px-6 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                className="px-6 font-bold"
               >
                 Cerrar
-              </button>
+              </Button>
             </div>
           </div>
         </Modal>

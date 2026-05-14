@@ -14,6 +14,7 @@ import { PageHeader } from '../components/ui/PageHeader';
 import { DataTable, type TableColumn } from '../components/ui/DataTable';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
+import { Tooltip } from '../components/ui/Tooltip';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
 import { notificationService } from '../lib/notifications';
@@ -200,16 +201,17 @@ export function Kardex() {
         icon={<History className="text-indigo-600" />}
         action={
           <div className="flex gap-2">
-            <Button 
-              variant="secondary" 
-              size="sm" 
-              icon={<Download size={16} />} 
-              onClick={exportToExcel} 
-              disabled={movements.length === 0}
-              title="Se exportaran los datos visualizados en la tabla"
-            >
-              Exportar Excel
-            </Button>
+            <Tooltip text="Se exportaran los datos visualizados en la tabla" position="top">
+              <Button 
+                variant="secondary" 
+                size="sm" 
+                icon={<Download size={16} />} 
+                onClick={exportToExcel} 
+                disabled={movements.length === 0}
+              >
+                Exportar Excel
+              </Button>
+            </Tooltip>
             <Button variant="secondary" size="sm" onClick={loadAllMovements}>
               Ver Historial Completo
             </Button>

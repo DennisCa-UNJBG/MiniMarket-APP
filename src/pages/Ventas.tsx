@@ -10,6 +10,9 @@ import { ventaService } from '../services/ventaService';
 import { Voucher } from '../components/shared/Voucher';
 import { useAuth } from '../contexts/AuthContext';
 import { notificationService } from '../lib/notifications';
+import { EmptyState } from '../components/ui/EmptyState';
+import { Tooltip } from '../components/ui/Tooltip';
+import { Button } from '../components/ui/Button';
 import { useQueryClient } from '@tanstack/react-query';
 import { esRegistroEditable } from '../lib/dateUtils';
 
@@ -77,27 +80,35 @@ const getColumns = (onViewDetail: (sale: any) => void, onEdit: (sale: any) => vo
     render: (row) => (
       <div className="flex items-center justify-end gap-2">
         {esRegistroEditable(row.fecha) ? (
-          <button 
-            onClick={() => onEdit(row)}
-            className="p-2 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors border border-amber-100 dark:border-amber-900/30"
-            title="Editar Venta"
-          >
-            <Edit size={14} />
-          </button>
+          <Tooltip text="Editar Venta" position="top-right">
+            <Button 
+              onClick={() => onEdit(row)}
+              variant="warning"
+              size="sm"
+              icon={<Edit size={14} />}
+              className="p-2 min-w-[36px] h-[36px] flex items-center justify-center bg-amber-50 hover:bg-amber-100 text-amber-600 border border-amber-100 dark:bg-amber-900/20 dark:hover:bg-amber-900/40 dark:border-amber-900/30"
+            />
+          </Tooltip>
         ) : (
-          <div 
-            className="p-2 text-gray-400 cursor-not-allowed opacity-50"
-            title="Edición deshabilitada (pasaron 12h)"
-          >
-            <Edit size={14} />
-          </div>
+          <Tooltip text="Edición deshabilitada (pasaron 12h)" position="top-right">
+            <div 
+              className="p-2 text-gray-400 cursor-not-allowed opacity-50"
+            >
+              <Edit size={14} />
+            </div>
+          </Tooltip>
         )}
-        <button 
-          onClick={() => onViewDetail(row)}
-          className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-tighter text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 px-2 py-1.5 rounded-lg border border-indigo-100 dark:border-indigo-800 transition-all"
-        >
-          <Receipt size={13} /> Ver Boleta
-        </button>
+        <Tooltip text="Ver Boleta" position="top-right">
+          <Button 
+            onClick={() => onViewDetail(row)}
+            variant="ghost"
+            size="sm"
+            icon={<Receipt size={13} />}
+            className="text-[10px] font-bold uppercase tracking-tighter text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800"
+          >
+            Ver Boleta
+          </Button>
+        </Tooltip>
       </div>
     ),
   },
@@ -205,13 +216,13 @@ export function Ventas() {
         title="Ventas"
         subtitle="Historial de ventas realizadas"
         action={
-          <button
+          <Button
             id="new-sale-btn"
             onClick={() => navigate('/nueva-venta')}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-xl transition-colors shadow-sm shadow-indigo-200 dark:shadow-none"
+            icon={<Plus size={16} />}
           >
-            <Plus size={16} /> Nueva venta
-          </button>
+            Nueva venta
+          </Button>
         }
       />
 
@@ -250,7 +261,22 @@ export function Ventas() {
         columns={getColumns(handleViewDetail, handleEdit)}
         data={filtered}
         keyExtractor={(row) => row.id}
-        emptyMessage="No se encontraron ventas registradas."
+        emptyState={
+          <EmptyState
+            icon={ShoppingCart}
+            title="Sin ventas registradas"
+            description={search ? `No se encontró ninguna venta con el número "${search}".` : "No hay ventas registradas todavía. Crea una nueva venta para empezar."}
+            action={
+              !search ? (
+                <Button
+                  onClick={() => navigate('/nueva-venta')}
+                >
+                  Crear mi primera venta
+                </Button>
+              ) : undefined
+            }
+          />
+        }
       />
 
       {/* Modal de Edición de Venta */}
@@ -285,26 +311,33 @@ export function Ventas() {
                       <td className="px-4 py-3 text-sm font-medium text-gray-800 dark:text-gray-200">{item.producto_nombre}</td>
                       <td className="px-4 py-3 text-center">
                         <div className="flex items-center justify-center gap-2">
-                          <button 
+                          <Button 
+                            variant="secondary"
+                            size="sm"
+                            className="w-6 h-6 p-0 rounded-lg"
                             onClick={() => handleUpdateItemQuantity(item.producto_id, item.cantidad - 1)}
-                            className="w-6 h-6 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-lg text-gray-600 hover:bg-gray-200"
-                          >-</button>
+                          >-</Button>
                           <span className="text-sm font-bold w-8 text-center">{item.cantidad}</span>
-                          <button 
+                          <Button 
+                            variant="secondary"
+                            size="sm"
+                            className="w-6 h-6 p-0 rounded-lg"
                             onClick={() => handleUpdateItemQuantity(item.producto_id, item.cantidad + 1)}
-                            className="w-6 h-6 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-lg text-gray-600 hover:bg-gray-200"
-                          >+</button>
+                          >+</Button>
                         </div>
                       </td>
                       <td className="px-4 py-3 text-sm text-right">S/ {item.precio_unitario.toFixed(2)}</td>
                       <td className="px-4 py-3 text-sm font-bold text-right">S/ {item.subtotal.toFixed(2)}</td>
                       <td className="px-4 py-3 text-center">
-                        <button 
-                          onClick={() => handleRemoveItem(item.producto_id)}
-                          className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-colors"
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                        <Tooltip text="Eliminar ítem" position="top-right">
+                          <Button 
+                            variant="ghost"
+                            size="sm"
+                            className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20"
+                            onClick={() => handleRemoveItem(item.producto_id)}
+                            icon={<Trash2 size={14} />}
+                          />
+                        </Tooltip>
                       </td>
                     </tr>
                   ))}
@@ -322,19 +355,20 @@ export function Ventas() {
             </div>
 
             <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-700">
-              <button
+              <Button
+                variant="ghost"
                 onClick={() => setEditingSale(null)}
-                className="px-6 py-2 text-sm font-bold text-gray-500 hover:bg-gray-50 rounded-xl transition-all"
+                className="text-gray-500 font-bold"
               >
                 Cancelar
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={handleSaveEdit}
-                disabled={updateVentaMutation.isPending}
-                className="px-8 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-indigo-100 dark:shadow-none disabled:opacity-50"
+                isLoading={updateVentaMutation.isPending}
+                className="px-8 font-bold"
               >
-                {updateVentaMutation.isPending ? 'Guardando...' : 'Guardar Cambios'}
-              </button>
+                Guardar Cambios
+              </Button>
             </div>
           </div>
         </Modal>
@@ -411,18 +445,20 @@ export function Ventas() {
             </div>
 
             <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-700">
-              <button
+              <Button
+                variant="secondary"
                 onClick={() => setSelectedSale(null)}
-                className="px-6 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-sm font-bold rounded-xl transition-all"
+                className="font-bold"
               >
                 Cerrar
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={handlePrint}
-                className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl transition-all flex items-center gap-2 shadow-lg shadow-indigo-200 dark:shadow-none"
+                icon={<Printer size={18} />}
+                className="font-bold shadow-lg shadow-indigo-200 dark:shadow-none"
               >
-                <Printer size={18} /> Imprimir Boleta
-              </button>
+                Imprimir Boleta
+              </Button>
             </div>
           </div>
         </Modal>

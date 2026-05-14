@@ -5,6 +5,9 @@ import { userService } from '../services/userService';
 import { sucursalService } from '../services/sucursalService';
 import { notificationService } from '../lib/notifications';
 import { Badge } from '../components/ui/Badge';
+import { Tooltip } from '../components/ui/Tooltip';
+import { Button } from '../components/ui/Button';
+import { DataTable, type TableColumn } from '../components/ui/DataTable';
 
 export function Usuarios() {
   const queryClient = useQueryClient();
@@ -99,6 +102,75 @@ export function Usuarios() {
     u.username.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const columns: TableColumn<any>[] = [
+    {
+      key: 'username',
+      header: 'Usuario',
+      render: (u) => (
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold uppercase">
+            {u.username.charAt(0)}
+          </div>
+          <div>
+            <p className="text-sm font-bold text-gray-800 dark:text-white">{u.nombre_completo}</p>
+            <p className="text-[10px] text-gray-400">@{u.username}</p>
+          </div>
+        </div>
+      )
+    },
+    {
+      key: 'rol_nombre',
+      header: 'Rol',
+      render: (u) => (
+        <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+          <Shield size={14} className="text-gray-400" />
+          {u.rol_nombre}
+        </div>
+      )
+    },
+    {
+      key: 'sucursal_nombre',
+      header: 'Sede Asignada',
+      render: (u) => (
+        <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+          <Building2 size={14} className="text-gray-400" />
+          {u.sucursal_nombre || 'Todas (Sede Central)'}
+        </div>
+      )
+    },
+    {
+      key: 'estado',
+      header: 'Estado',
+      align: 'center',
+      render: (u) => (
+        <button onClick={() => handleToggleEstado(u.id, u.estado)} className="hover:scale-105 transition-transform">
+          <Badge 
+            label={u.estado === 'activo' ? 'ACTIVO' : 'INACTIVO'} 
+            variant={u.estado === 'activo' ? 'emerald' : 'gray'} 
+          />
+        </button>
+      )
+    },
+    {
+      key: 'acciones',
+      header: 'Acciones',
+      align: 'right',
+      render: (u) => (
+        <div className="flex items-center justify-end gap-2">
+          <Tooltip text="Editar Usuario" position="top-right">
+            <Button 
+              onClick={() => handleOpenEdit(u)}
+              variant="ghost"
+              size="sm"
+              icon={<Pencil size={16} />}
+              className="p-2 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-xl bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-800"
+            />
+          </Tooltip>
+        </div>
+      )
+    }
+  ];
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -106,13 +178,13 @@ export function Usuarios() {
           <h2 className="text-2xl font-black text-gray-800 dark:text-white tracking-tight">Gestión de Usuarios</h2>
           <p className="text-sm text-gray-500 dark:text-gray-400">Administra el personal y sus permisos de acceso.</p>
         </div>
-        <button 
+        <Button 
           onClick={handleOpenCreate}
-          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-2xl transition-all shadow-lg shadow-indigo-200 dark:shadow-none"
+          icon={<Plus size={18} />}
+          className="px-4 py-2.5 font-bold rounded-2xl"
         >
-          <Plus size={18} />
           Nuevo Usuario
-        </button>
+        </Button>
       </div>
 
       {/* Buscador */}
@@ -127,80 +199,12 @@ export function Usuarios() {
         />
       </div>
 
-      {/* Tabla de Usuarios */}
-      <div className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-gray-50/50 dark:bg-gray-900/50">
-                <th className="px-6 py-4 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Usuario</th>
-                <th className="px-6 py-4 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Rol</th>
-                <th className="px-6 py-4 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Sede Asignada</th>
-                <th className="px-6 py-4 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest text-center">Estado</th>
-                <th className="px-6 py-4 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest text-right">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50 dark:divide-gray-700/50">
-              {loading ? (
-                <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-gray-400 italic">Cargando usuarios...</td>
-                </tr>
-              ) : filteredUsers.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-gray-400 italic">No hay usuarios registrados.</td>
-                </tr>
-              ) : (
-                filteredUsers.map((u) => (
-                  <tr key={u.id} className="group hover:bg-gray-50/50 dark:hover:bg-gray-900/20 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-2xl bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold">
-                          {u.username.charAt(0).toUpperCase()}
-                        </div>
-                        <div>
-                          <p className="text-sm font-bold text-gray-800 dark:text-white">{u.nombre_completo}</p>
-                          <p className="text-[10px] text-gray-400">@{u.username}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                        <Shield size={14} className="text-gray-400" />
-                        {u.rol_nombre}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                        <Building2 size={14} className="text-gray-400" />
-                        {u.sucursal_nombre || 'Todas (Sede Central)'}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <button onClick={() => handleToggleEstado(u.id, u.estado)}>
-                        <Badge 
-                          label={u.estado === 'activo' ? 'ACTIVO' : 'INACTIVO'} 
-                          variant={u.estado === 'activo' ? 'emerald' : 'gray'} 
-                        />
-                      </button>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center justify-end gap-2">
-                        <button 
-                          onClick={() => handleOpenEdit(u)}
-                          className="p-2 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-xl transition-all bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-800"
-                          title="Editar Usuario"
-                        >
-                          <Pencil size={16} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <DataTable 
+        columns={columns}
+        data={filteredUsers}
+        keyExtractor={(u) => u.id}
+        emptyMessage={loading ? "Cargando usuarios..." : "No hay usuarios registrados."}
+      />
 
       {/* Modal de Usuario */}
       {showModal && (
@@ -210,9 +214,13 @@ export function Usuarios() {
               <h3 className="text-lg font-black text-gray-800 dark:text-white">
                 {editingId ? 'Editar Usuario' : 'Registrar Nuevo Usuario'}
               </h3>
-              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors">
-                <Plus className="rotate-45" size={24} />
-              </button>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setShowModal(false)} 
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-white p-1"
+                icon={<Plus className="rotate-45" size={24} />}
+              />
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -241,13 +249,14 @@ export function Usuarios() {
                       onChange={(e) => setFormData({...formData, password: e.target.value})}
                       className="w-full px-4 py-2.5 pr-11 text-sm font-medium border border-gray-100 dark:border-gray-700 rounded-2xl bg-gray-50/50 dark:bg-gray-900/50 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
                     />
-                    <button
+                    <Button
                       type="button"
+                      variant="ghost"
+                      size="sm"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-indigo-600 transition-colors"
-                    >
-                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                    </button>
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-indigo-600 p-1"
+                      icon={showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    />
                   </div>
                 </div>
               </div>
@@ -292,12 +301,14 @@ export function Usuarios() {
                 </div>
               </div>
 
-              <button 
+              <Button 
                 type="submit"
-                className="w-full py-3 mt-4 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-2xl transition-all shadow-lg shadow-indigo-200 dark:shadow-none"
+                fullWidth
+                isLoading={saveMutation.isPending}
+                className="py-3 mt-4 font-bold rounded-2xl"
               >
                 {editingId ? 'Guardar Cambios' : 'Crear Usuario'}
-              </button>
+              </Button>
             </form>
           </div>
         </div>
