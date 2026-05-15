@@ -99,6 +99,8 @@ export function Kardex() {
   const [showProductList, setShowProductList] = useState(false);
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [filterType, setFilterType] = useState<'today' | 'all' | 'filtered'>('today');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   // Queries
   const { data: products = [] } = useQuery({
@@ -106,16 +108,16 @@ export function Kardex() {
     queryFn: () => productoService.getAll(true)
   });
 
-  const { data: movements = [], isLoading: loading } = useQuery({
-    queryKey: ['movements', filterType, selectedProduct?.id, dateRange.start, dateRange.end],
+  const { data: movementsRes = { data: [], total: 0 }, isLoading: loading } = useQuery({
+    queryKey: ['movements', filterType, selectedProduct?.id, dateRange.start, dateRange.end, page, pageSize],
     queryFn: () => {
-      if (filterType === 'today') return inventarioService.getMovimientosDia();
-      if (filterType === 'all') return inventarioService.getMovimientosFiltrados({});
+      if (filterType === 'today') return inventarioService.getMovimientosDia(page, pageSize);
+      if (filterType === 'all') return inventarioService.getMovimientosFiltrados({}, page, pageSize);
       return inventarioService.getMovimientosFiltrados({
         productoId: selectedProduct?.id,
         fechaInicio: dateRange.start,
         fechaFin: dateRange.end
-      });
+      }, page, pageSize);
     }
   });
 
@@ -136,7 +138,7 @@ export function Kardex() {
   };
 
   const exportToExcel = () => {
-    if (movements.length === 0) return;
+    if (movementsRes.data.length === 0) return;
     
     const headers = ['Fecha', 'Producto', 'Tipo', 'Referencia', 'Cantidad', 'Saldo Resultante', 'Usuario'];
     
@@ -148,7 +150,7 @@ export function Kardex() {
     table += `</tr>`;
     
     // Filas de datos
-    movements.forEach(m => {
+    movementsRes.data.forEach((m: any) => {
       table += `<tr>`;
       table += `<td style="padding: 5px;">${new Date(m.fecha + " UTC").toLocaleString()}</td>`;
       table += `<td style="padding: 5px;">${m.producto_nombre}</td>`;
@@ -190,8 +192,13 @@ export function Kardex() {
     (p.codigo_barras && p.codigo_barras.toLowerCase().includes(search.toLowerCase()))
   );
 
-  const entradas = movements.filter(m => m.tipo_movimiento === 'INGRESO').reduce((acc, m) => acc + m.cantidad, 0);
-  const salidas = movements.filter(m => m.tipo_movimiento === 'SALIDA').reduce((acc, m) => acc + m.cantidad, 0);
+  const filtered = movementsRes.data.filter((m: any) => 
+    m.producto_nombre.toLowerCase().includes(search.toLowerCase()) ||
+    (m.referencia || '').toLowerCase().includes(search.toLowerCase())
+  );
+
+  const totalIngresos = movementsRes.data.filter((m: any) => m.tipo_movimiento === 'INGRESO').reduce((acc: number, m: any) => acc + m.cantidad, 0);
+  const totalSalidas  = movementsRes.data.filter((m: any) => m.tipo_movimiento === 'SALIDA').reduce((acc: number, m: any) => acc + m.cantidad, 0);
 
   return (
     <div className="space-y-6">
@@ -207,7 +214,7 @@ export function Kardex() {
                 size="sm" 
                 icon={<Download size={16} />} 
                 onClick={exportToExcel} 
-                disabled={movements.length === 0}
+                disabled={movementsRes.data.length === 0}
               >
                 Exportar Excel
               </Button>
@@ -311,15 +318,15 @@ export function Kardex() {
                <div className="space-y-3">
                  <div className="flex justify-between items-center">
                    <span className="text-sm opacity-90 text-indigo-100">Total Entradas</span>
-                   <span className="font-bold">+{entradas} un.</span>
+                   <span className="font-bold">+{totalIngresos} un.</span>
                  </div>
                  <div className="flex justify-between items-center text-red-100">
                    <span className="text-sm opacity-90">Total Salidas</span>
-                   <span className="font-bold">-{salidas} un.</span>
+                   <span className="font-bold">-{totalSalidas} un.</span>
                  </div>
                  <div className="pt-2 border-t border-white/20 flex justify-between items-center">
                    <span className="text-sm font-bold">Balance</span>
-                   <span className="text-lg font-black">{entradas - salidas} un.</span>
+                   <span className="text-lg font-black">{totalIngresos - totalSalidas} un.</span>
                  </div>
                </div>
             </Card>
@@ -331,8 +338,13 @@ export function Kardex() {
           <Card className="overflow-hidden">
             <DataTable 
               columns={columns} 
-              data={movements} 
+              data={filtered} 
               keyExtractor={(row) => row.id}
+              serverSide={true}
+              totalItems={movementsRes.total}
+              currentPage={page}
+              onPageChange={setPage}
+              onPageSizeChange={setPageSize}
               emptyMessage={
                 loading 
                   ? "Consultando movimientos..." 

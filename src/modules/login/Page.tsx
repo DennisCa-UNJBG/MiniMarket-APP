@@ -75,7 +75,7 @@ export function Login({ onLogin }: LoginProps) {
             <div className="bg-white/20 p-2.5 rounded-xl backdrop-blur-md border border-white/20">
               <Package2 size={28} className="text-white" />
             </div>
-            <span className="text-2xl font-bold tracking-tight">MiniMarket Pro</span>
+            <span className="text-2xl font-bold tracking-tight">MiniMarket-App</span>
           </div>
 
           <div className="relative z-10">

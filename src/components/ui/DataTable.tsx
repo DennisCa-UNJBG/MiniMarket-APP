@@ -22,6 +22,16 @@ interface DataTableProps<T extends object> {
   defaultPageSize?: number;
   /** Opciones del selector de filas por página */
   pageSizeOptions?: number[];
+  /** Indica si la paginación se maneja desde el servidor */
+  serverSide?: boolean;
+  /** Total de registros en la base de datos (requerido si serverSide es true) */
+  totalItems?: number;
+  /** Página actual controlada externamente */
+  currentPage?: number;
+  /** Callback cuando cambia la página */
+  onPageChange?: (page: number) => void;
+  /** Callback cuando cambia el tamaño de página */
+  onPageSizeChange?: (size: number) => void;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -40,21 +50,34 @@ export function DataTable<T extends object>({
   emptyState,
   defaultPageSize = 10,
   pageSizeOptions = [5, 10, 25, 50],
+  serverSide = false,
+  totalItems: totalItemsExternal,
+  currentPage: currentPageExternal,
+  onPageChange,
+  onPageSizeChange,
 }: DataTableProps<T>) {
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(defaultPageSize);
+  const [internalPage, setInternalPage] = useState(1);
+  const [internalPageSize, setInternalPageSize] = useState(defaultPageSize);
 
-  // Recalcular cuando cambia el tamaño de página o los datos filtrados
-  const totalItems = data.length;
+  // Determinar valores actuales (locales o externos)
+  const currentPage = serverSide ? (currentPageExternal ?? 1) : internalPage;
+  const pageSize = internalPageSize; // El tamaño de página lo solemos manejar localmente o sincronizar
+  const totalItems = serverSide ? (totalItemsExternal ?? 0) : data.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
 
   // Clamp currentPage si los datos filtrados reducen el total de páginas
   const safePage = Math.min(currentPage, totalPages);
-  if (safePage !== currentPage) setCurrentPage(safePage);
+  
+  // Sincronización si los datos cambian y la página actual queda fuera de rango
+  if (!serverSide && safePage !== currentPage) setInternalPage(safePage);
 
-  const startIndex = (safePage - 1) * pageSize;
-  const endIndex   = Math.min(startIndex + pageSize, totalItems);
-  const pageData   = data.slice(startIndex, endIndex);
+  const startIndex = serverSide ? 0 : (safePage - 1) * pageSize;
+  const endIndex   = serverSide ? data.length : Math.min(startIndex + pageSize, totalItems);
+  const pageData   = serverSide ? data : data.slice(startIndex, endIndex);
+
+  // Los labels de "Info" sí deben calcularse en base a la página real para server-side
+  const displayStartIndex = serverSide ? (currentPage - 1) * pageSize : startIndex;
+  const displayEndIndex   = serverSide ? displayStartIndex + data.length : endIndex;
 
   // Números de página a mostrar (máximo 5 botones)
   const getPageNumbers = (): number[] => {
@@ -70,9 +93,22 @@ export function DataTable<T extends object>({
     return range;
   };
 
+  const handlePageChange = (page: number) => {
+    if (serverSide) {
+      onPageChange?.(page);
+    } else {
+      setInternalPage(page);
+    }
+  };
+
   const handlePageSizeChange = (size: number) => {
-    setPageSize(size);
-    setCurrentPage(1);
+    setInternalPageSize(size);
+    if (serverSide) {
+      onPageSizeChange?.(size);
+      onPageChange?.(1); // Reset a la primera página
+    } else {
+      setInternalPage(1);
+    }
   };
 
   return (
@@ -136,7 +172,7 @@ export function DataTable<T extends object>({
           {/* Info + selector de filas */}
           <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
             <span>
-              {startIndex + 1}–{endIndex} de{' '}
+              {totalItems > 0 ? displayStartIndex + 1 : 0}–{displayEndIndex} de{' '}
               <span className="font-semibold text-gray-700 dark:text-gray-200">{totalItems}</span>{' '}
               registros
             </span>
@@ -159,7 +195,7 @@ export function DataTable<T extends object>({
           <div className="flex items-center gap-1">
             {/* Primera página */}
             <button
-              onClick={() => setCurrentPage(1)}
+              onClick={() => handlePageChange(1)}
               disabled={safePage === 1}
               className="p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               aria-label="Primera página"
@@ -169,7 +205,7 @@ export function DataTable<T extends object>({
 
             {/* Anterior */}
             <button
-              onClick={() => setCurrentPage((p) => p - 1)}
+              onClick={() => handlePageChange(safePage - 1)}
               disabled={safePage === 1}
               className="p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               aria-label="Página anterior"
@@ -181,7 +217,7 @@ export function DataTable<T extends object>({
             {getPageNumbers().map((n) => (
               <button
                 key={n}
-                onClick={() => setCurrentPage(n)}
+                onClick={() => handlePageChange(n)}
                 className={[
                   'min-w-[30px] h-[30px] px-1 text-xs font-medium rounded-lg transition-colors',
                   n === safePage
@@ -195,7 +231,7 @@ export function DataTable<T extends object>({
 
             {/* Siguiente */}
             <button
-              onClick={() => setCurrentPage((p) => p + 1)}
+              onClick={() => handlePageChange(safePage + 1)}
               disabled={safePage === totalPages}
               className="p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               aria-label="Página siguiente"
@@ -205,7 +241,7 @@ export function DataTable<T extends object>({
 
             {/* Última página */}
             <button
-              onClick={() => setCurrentPage(totalPages)}
+              onClick={() => handlePageChange(totalPages)}
               disabled={safePage === totalPages}
               className="p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               aria-label="Última página"

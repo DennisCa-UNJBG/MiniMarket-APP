@@ -45,10 +45,11 @@ export function Compras() {
   const [showModal, setShowModal] = useState(false);
   const [search, setSearch] = useState('');
   
-  // --- Estado para el Detalle de Compra ---
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedPurchase, setSelectedPurchase] = useState<PurchaseRecord | null>(null);
   const [editingCartIndex, setEditingCartIndex] = useState<number | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   
   // --- Estado para el Lote de Compra ---
   const [referencia, setReferencia] = useState('');
@@ -65,9 +66,9 @@ export function Compras() {
   const qtyInputRef = useRef<HTMLInputElement>(null);
 
   // Queries
-  const { data: purchases = [] } = useQuery({
-    queryKey: ['purchases'],
-    queryFn: () => inventarioService.getCompras(50)
+  const { data: purchasesRes = { data: [], total: 0 } } = useQuery({
+    queryKey: ['purchases', page, pageSize],
+    queryFn: () => inventarioService.getCompras(page, pageSize)
   });
 
   const { data: products = [] } = useQuery({
@@ -205,6 +206,14 @@ export function Compras() {
     setShowDetailModal(true);
   };
 
+  const totalInvertido = purchasesRes.data.reduce((acc: number, p: any) => acc + (p.estado === 'anulado' ? 0 : p.total), 0);
+  
+  const filtered = purchasesRes.data.filter((p: any) => 
+    (p.documento_referencia || '').toLowerCase().includes(search.toLowerCase()) ||
+    p.id.toString().includes(search.toLowerCase()) ||
+    p.usuario_nombre.toLowerCase().includes(search.toLowerCase())
+  );
+
   const columns: TableColumn<PurchaseRecord>[] = [
     {
       key: 'id',
@@ -308,7 +317,7 @@ export function Compras() {
           </div>
           <div>
             <p className="text-xs text-gray-500 dark:text-gray-400">Total Compras</p>
-            <p className="text-lg font-bold text-gray-800 dark:text-white">{purchases.length}</p>
+            <p className="text-lg font-bold text-gray-800 dark:text-white">{purchasesRes.total}</p>
           </div>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-100 dark:border-gray-700 shadow-sm flex items-center gap-4">
@@ -318,7 +327,7 @@ export function Compras() {
           <div>
             <p className="text-xs text-gray-500 dark:text-gray-400">Inversión Total</p>
             <p className="text-lg font-bold text-gray-800 dark:text-white">
-              S/ {purchases.reduce((acc, p) => acc + p.total, 0).toFixed(2)}
+              S/ {totalInvertido.toFixed(2)}
             </p>
           </div>
         </div>
@@ -329,7 +338,7 @@ export function Compras() {
           <div>
             <p className="text-xs text-gray-500 dark:text-gray-400">Compras del Mes</p>
             <p className="text-lg font-bold text-gray-800 dark:text-white">
-              {purchases.filter(p => new Date(p.fecha).getMonth() === new Date().getMonth()).length}
+              {purchasesRes.data.filter((p: any) => new Date(p.fecha).getMonth() === new Date().getMonth()).length}
             </p>
           </div>
         </div>
@@ -350,11 +359,11 @@ export function Compras() {
 
       <DataTable
         columns={columns}
-        data={purchases.filter(p => 
-          (p.documento_referencia || '').toLowerCase().includes(search.toLowerCase()) || 
-          p.usuario_nombre.toLowerCase().includes(search.toLowerCase()) ||
-          p.estado?.toLowerCase().includes(search.toLowerCase())
-        )}
+        data={filtered}
+        serverSide={true}
+        totalItems={purchasesRes.total}
+        currentPage={page}
+        onPageChange={(p) => setPage(p)}
         keyExtractor={(row) => row.id}
         emptyMessage="No se encontraron registros de compras."
       />

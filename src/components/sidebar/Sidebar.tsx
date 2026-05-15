@@ -64,7 +64,7 @@ export function Sidebar() {
         {!isCollapsed && (
           <div className="text-left min-w-0">
             <p className="text-sm font-bold text-gray-800 dark:text-white leading-tight truncate">
-              Minimarket
+              Minimarket-APP
             </p>
             <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5 truncate flex items-center gap-1.5">
               Sistema de Inventario

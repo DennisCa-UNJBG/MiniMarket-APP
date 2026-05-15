@@ -113,32 +113,49 @@ export const inventarioService = {
   },
 
   /**
-   * Obtiene los movimientos del kardex para un producto específico
+   * Obtiene los movimientos del kardex para un producto específico (Paginado)
    */
-  async getMovimientosPorProducto(productoId: number): Promise<any[]> {
+  async getMovimientosPorProducto(productoId: number, page = 1, pageSize = 10): Promise<{ data: any[], total: number }> {
     const db = await getDb();
     const config = await sucursalService.getConfig();
     const sucursalId = config?.sucursal_id || 'LOCAL';
+    const offset = (page - 1) * pageSize;
 
-    return db.select(`
+    const totalRes = await db.select<any[]>(
+      'SELECT COUNT(*) as count FROM kardex WHERE producto_id = ? AND (sucursal_id = ? OR sucursal_id IS NULL)',
+      [productoId, sucursalId]
+    );
+    const total = totalRes[0]?.count || 0;
+
+    const data = await db.select<any[]>(`
       SELECT k.*, p.nombre as producto_nombre, u.nombre_completo as usuario_nombre
       FROM kardex k
       JOIN productos p ON k.producto_id = p.id
       JOIN usuarios u ON k.usuario_id = u.id
       WHERE k.producto_id = ? AND (k.sucursal_id = ? OR k.sucursal_id IS NULL)
       ORDER BY k.fecha DESC
-    `, [productoId, sucursalId]);
+      LIMIT ? OFFSET ?
+    `, [productoId, sucursalId, pageSize, offset]);
+
+    return { data, total };
   },
 
   /**
-   * Obtiene todos los movimientos realizados en el día actual
+   * Obtiene los movimientos realizados en el día actual (Paginado)
    */
-  async getMovimientosDia(): Promise<any[]> {
+  async getMovimientosDia(page = 1, pageSize = 10): Promise<{ data: any[], total: number }> {
     const db = await getDb();
     const config = await sucursalService.getConfig();
     const sucursalId = config?.sucursal_id || 'LOCAL';
+    const offset = (page - 1) * pageSize;
 
-    return db.select(`
+    const totalRes = await db.select<any[]>(
+      "SELECT COUNT(*) as count FROM kardex WHERE date(fecha, 'localtime') = date('now', 'localtime') AND (sucursal_id = ? OR sucursal_id IS NULL)",
+      [sucursalId]
+    );
+    const total = totalRes[0]?.count || 0;
+
+    const data = await db.select<any[]>(`
       SELECT k.*, p.nombre as producto_nombre, u.nombre_completo as usuario_nombre
       FROM kardex k
       JOIN productos p ON k.producto_id = p.id
@@ -146,59 +163,82 @@ export const inventarioService = {
       WHERE date(k.fecha, 'localtime') = date('now', 'localtime')
       AND (k.sucursal_id = ? OR k.sucursal_id IS NULL)
       ORDER BY k.fecha DESC
-    `, [sucursalId]);
+      LIMIT ? OFFSET ?
+    `, [sucursalId, pageSize, offset]);
+
+    return { data, total };
   },
 
   /**
-   * Obtiene movimientos filtrados por producto y/o rango de fechas
+   * Obtiene movimientos filtrados por producto y/o rango de fechas (Paginado)
    */
-  async getMovimientosFiltrados(filters: { productoId?: number, fechaInicio?: string, fechaFin?: string }): Promise<any[]> {
+  async getMovimientosFiltrados(filters: { productoId?: number, fechaInicio?: string, fechaFin?: string }, page = 1, pageSize = 10): Promise<{ data: any[], total: number }> {
     const db = await getDb();
-    let query = `
-      SELECT k.*, p.nombre as producto_nombre, u.nombre_completo as usuario_nombre
-      FROM kardex k
-      JOIN productos p ON k.producto_id = p.id
-      JOIN usuarios u ON k.usuario_id = u.id
-      WHERE 1=1
-    `;
+    const offset = (page - 1) * pageSize;
+
+    let whereClause = " WHERE 1=1 ";
     const params: any[] = [];
 
     if (filters.productoId) {
-      query += " AND k.producto_id = ? ";
+      whereClause += " AND k.producto_id = ? ";
       params.push(filters.productoId);
     }
 
     if (filters.fechaInicio) {
-      query += " AND date(k.fecha, 'localtime') >= date(?) ";
+      whereClause += " AND date(k.fecha, 'localtime') >= date(?) ";
       params.push(filters.fechaInicio);
     }
 
     if (filters.fechaFin) {
-      query += " AND date(k.fecha, 'localtime') <= date(?) ";
+      whereClause += " AND date(k.fecha, 'localtime') <= date(?) ";
       params.push(filters.fechaFin);
     }
 
-    query += " ORDER BY k.fecha DESC ";
-    
-    return db.select(query, params);
+    // 1. Total
+    const countQuery = `SELECT COUNT(*) as count FROM kardex k ${whereClause}`;
+    const totalRes = await db.select<any[]>(countQuery, params);
+    const total = totalRes[0]?.count || 0;
+
+    // 2. Data
+    const dataQuery = `
+      SELECT k.*, p.nombre as producto_nombre, u.nombre_completo as usuario_nombre
+      FROM kardex k
+      JOIN productos p ON k.producto_id = p.id
+      JOIN usuarios u ON k.usuario_id = u.id
+      ${whereClause}
+      ORDER BY k.fecha DESC
+      LIMIT ? OFFSET ?
+    `;
+    const data = await db.select<any[]>(dataQuery, [...params, pageSize, offset]);
+
+    return { data, total };
   },
 
   /**
-   * Obtiene el historial de cabeceras de compras
+   * Obtiene el historial de cabeceras de compras (Paginado)
    */
-  async getCompras(limit = 50): Promise<any[]> {
+  async getCompras(page = 1, pageSize = 10): Promise<{ data: any[], total: number }> {
     const db = await getDb();
     const config = await sucursalService.getConfig();
     const sucursalId = config?.sucursal_id || 'LOCAL';
+    const offset = (page - 1) * pageSize;
 
-    return db.select(`
+    const totalRes = await db.select<any[]>(
+      'SELECT COUNT(*) as count FROM compras_ingresos WHERE sucursal_id = ? OR sucursal_id IS NULL',
+      [sucursalId]
+    );
+    const total = totalRes[0]?.count || 0;
+
+    const data = await db.select<any[]>(`
       SELECT c.*, u.nombre_completo as usuario_nombre
       FROM compras_ingresos c
       JOIN usuarios u ON c.usuario_id = u.id
       WHERE c.sucursal_id = ? OR c.sucursal_id IS NULL
       ORDER BY c.fecha DESC
-      LIMIT ?
-    `, [sucursalId, limit]);
+      LIMIT ? OFFSET ?
+    `, [sucursalId, pageSize, offset]);
+
+    return { data, total };
   },
 
   /**

@@ -44,7 +44,7 @@ export function NuevaVenta() {
   const [amountPaid, setAmountPaid] = useState('');
 
   // Lógica de Impuestos (IGV)
-  const [hasIGV, setHasIGV] = useState(true);
+  const [hasIGV, setHasIGV] = useState(false);
   const [igvPercent, setIgvPercent] = useState(18);
 
   // Queries

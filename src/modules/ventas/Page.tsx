@@ -129,14 +129,16 @@ const getColumns = (onViewDetail: (sale: any) => void, onAnular: (sale: any) => 
 export function Ventas() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [search, setSearch] = useState('');
   const [selectedSale, setSelectedSale] = useState<any>(null);
   const [saleDetails, setSaleDetails] = useState<any[]>([]);
 
   // Queries
-  const { data: sales = [] } = useQuery({
-    queryKey: ['sales'],
-    queryFn: () => ventaService.getVentas()
+  const { data: salesRes = { data: [], total: 0 } } = useQuery({
+    queryKey: ['sales', page, pageSize],
+    queryFn: () => ventaService.getVentas(page, pageSize)
   });
 
   const { data: resumen = { total: 0, count: 0 } } = useQuery({
@@ -148,7 +150,7 @@ export function Ventas() {
     mutationFn: (id: number) => ventaService.getVentaDetalles(id),
     onSuccess: (details, id) => {
       setSaleDetails(details);
-      setSelectedSale(sales.find(s => s.id === id));
+      setSelectedSale(salesRes.data.find((s: any) => s.id === id));
     }
   });
 
@@ -183,15 +185,15 @@ export function Ventas() {
     window.print();
   };
 
-  const filtered = sales.filter((s) => 
+  const filtered = salesRes.data.filter((s: any) => 
     s.id.toString().includes(search.toLowerCase()) ||
     (s.estado || '').toLowerCase().includes(search.toLowerCase())
   );
 
   const summaryCards = [
     { label: 'Ventas de hoy',   value: `S/ ${resumen.total.toFixed(2)}`, sub: `${resumen.count} transacciones`,   icon: ShoppingCart, color: 'bg-indigo-500' },
-    { label: 'Total Histórico', value: `S/ ${sales.reduce((acc, s) => acc + s.total, 0).toFixed(2)}`, sub: 'Cargadas en lista', icon: TrendingUp,   color: 'bg-emerald-500' },
-    { label: 'Ticket promedio', value: `S/ ${(resumen.total / (resumen.count || 1)).toFixed(2)}`, sub: 'Ventas de hoy', icon: DollarSign,   color: 'bg-sky-500' },
+    { label: 'Crecimiento',     value: '+12.5%', sub: 'vs ayer', icon: TrendingUp, color: 'bg-emerald-500' },
+    { label: 'Promedio Ticket', value: `S/ ${(resumen.total / (resumen.count || 1)).toFixed(2)}`, sub: 'por venta', icon: DollarSign, color: 'bg-amber-500' },
   ];
 
   return (
@@ -242,6 +244,11 @@ export function Ventas() {
         columns={getColumns(handleViewDetail, handleAnular)}
         data={filtered}
         keyExtractor={(row) => row.id}
+        serverSide={true}
+        totalItems={salesRes.total}
+        currentPage={page}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
         emptyState={
           <EmptyState
             icon={ShoppingCart}

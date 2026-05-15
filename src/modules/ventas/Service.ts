@@ -87,14 +87,23 @@ export const ventaService = {
   },
 
   /**
-   * Obtiene el historial de ventas con cantidad de items
+   * Obtiene el historial de ventas con paginación
    */
-  async getVentas(limit = 50): Promise<any[]> {
+  async getVentas(page = 1, pageSize = 10): Promise<{ data: any[], total: number }> {
     const db = await getDb();
     const config = await sucursalService.getConfig();
     const sucursalId = config?.sucursal_id || 'LOCAL';
+    const offset = (page - 1) * pageSize;
 
-    return db.select(`
+    // 1. Obtener el total de registros para esta sucursal
+    const totalRes = await db.select<any[]>(
+      'SELECT COUNT(*) as count FROM ventas WHERE sucursal_id = ? OR sucursal_id IS NULL',
+      [sucursalId]
+    );
+    const total = totalRes[0]?.count || 0;
+
+    // 2. Obtener los datos paginados
+    const data = await db.select<any[]>(`
       SELECT 
         v.*, 
         u.nombre_completo as usuario_nombre,
@@ -103,8 +112,10 @@ export const ventaService = {
       JOIN usuarios u ON v.usuario_id = u.id
       WHERE v.sucursal_id = ? OR v.sucursal_id IS NULL
       ORDER BY v.fecha DESC
-      LIMIT ?
-    `, [sucursalId, limit]);
+      LIMIT ? OFFSET ?
+    `, [sucursalId, pageSize, offset]);
+
+    return { data, total };
   },
 
   /**
