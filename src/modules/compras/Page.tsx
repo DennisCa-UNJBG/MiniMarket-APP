@@ -114,12 +114,20 @@ export function Compras() {
       return;
     }
 
+    const quantity = parseFloat(qty);
+    const unitCost = parseFloat(cost);
+
+    if (quantity <= 0 || unitCost < 0) {
+      notificationService.warning('Valores inválidos', 'La cantidad debe ser mayor a 0 y el costo no puede ser negativo.');
+      return;
+    }
+
     const newItem: CartItem = {
       producto_id: selectedProd.id,
       nombre: selectedProd.nombre,
       codigo: selectedProd.codigo_barras,
-      cantidad: parseFloat(qty),
-      costo_unitario: parseFloat(cost)
+      cantidad: quantity,
+      costo_unitario: unitCost
     };
 
     if (editingCartIndex !== null) {
@@ -467,19 +475,21 @@ export function Compras() {
                 </div>
                 <div className="col-span-2">
                   <label className="text-[10px] font-medium text-gray-400 mb-1 block">CANTIDAD</label>
-                  <input ref={qtyInputRef} type="number" className={inputCls} placeholder="0" value={qty} onChange={(e) => setQty(e.target.value)} />
+                  <input ref={qtyInputRef} type="number" min="1" className={inputCls} placeholder="0" value={qty} onChange={(e) => setQty(e.target.value)} />
                 </div>
                 <div className="col-span-2">
                   <label className="text-[10px] font-medium text-gray-400 mb-1 block">COSTO U.</label>
-                  <input type="number" step="0.01" className={inputCls} placeholder="0.00" value={cost} onChange={(e) => setCost(e.target.value)} />
+                  <input type="number" min="0" step="0.01" className={inputCls} placeholder="0.00" value={cost} onChange={(e) => setCost(e.target.value)} />
                 </div>
                 <div className="col-span-2">
+                  <Tooltip text="Agregar al detalle de la compra" position="top-right">
                   <Button 
                     onClick={addToCart}
                     variant={editingCartIndex !== null ? 'warning' : 'primary'}
-                    className={`w-full h-[38px] ${editingCartIndex !== null ? 'shadow-amber-200' : 'bg-gray-800 dark:bg-gray-100'} p-0`}
+                    className={`w-full h-[38px] ${editingCartIndex !== null ? 'shadow-amber-200' : 'shadow-indigo-200 dark:shadow-none'} p-0`}
                     icon={editingCartIndex !== null ? <Check size={20} /> : <Plus size={20} />}
                   />
+                  </Tooltip>
                 </div>
               </div>
             </div>
