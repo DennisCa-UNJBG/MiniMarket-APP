@@ -70,15 +70,16 @@ export const ventaService = {
 
       // 4. Registrar en Kardex
       await db.execute(
-        `INSERT INTO kardex (producto_id, usuario_id, tipo_movimiento, cantidad, saldo_posterior, costo_unitario, referencia) 
-         VALUES (?, ?, 'SALIDA', ?, ?, ?, ?)`,
+        `INSERT INTO kardex (producto_id, usuario_id, tipo_movimiento, cantidad, saldo_posterior, costo_unitario, referencia, sucursal_id) 
+         VALUES (?, ?, 'SALIDA', ?, ?, ?, ?, ?)`,
         [
           item.producto_id, 
           venta.usuario_id, 
           item.cantidad, 
           nuevoStock, 
           item.precio_unitario, 
-          `VENTA #${ventaId} (${venta.metodo_pago})`
+          `VENTA #${ventaId} (${venta.metodo_pago})`,
+          sucursalId
         ]
       );
     }
