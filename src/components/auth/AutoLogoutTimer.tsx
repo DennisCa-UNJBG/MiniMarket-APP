@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { preferenciasService } from '../../services/preferenciasService';
+import { preferenciasService } from '../../modules/configuracion/preferenciasService';
 import { Timer } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 

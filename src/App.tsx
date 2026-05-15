@@ -5,12 +5,12 @@ import { SidebarProvider } from './contexts/SidebarContext';
 import { allNavItems } from './config/navigation';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { MainLayout } from './layouts/MainLayout';
-import { Login } from './pages/Login';
+import { Login } from './modules/login/Page';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { notificationService } from './lib/notifications';
 import { ConnectionError } from './lib/errors';
 import { useGlobalShortcuts } from './hooks/useGlobalShortcuts';
-import { GlobalBrightnessOverlay } from './components/GlobalBrightnessOverlay';
+import { GlobalBrightnessOverlay } from './hooks/useGlobalBrightnessOverlay';
 
 function GlobalShortcutsHandler() {
   useGlobalShortcuts();

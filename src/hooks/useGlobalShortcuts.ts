@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { preferenciasService } from '../services/preferenciasService';
+import { preferenciasService } from '../modules/configuracion/preferenciasService';
 
 export function useGlobalShortcuts() {
   const navigate = useNavigate();

@@ -288,6 +288,18 @@ pub fn run() {
             description: "add_igv_porcentaje_to_ventas",
             sql: "ALTER TABLE ventas ADD COLUMN igv_porcentaje REAL DEFAULT 0;",
             kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 14,
+            description: "add_estado_to_compras",
+            sql: "ALTER TABLE compras_ingresos ADD COLUMN estado TEXT DEFAULT 'completado';",
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 15,
+            description: "add_estado_to_ventas",
+            sql: "ALTER TABLE ventas ADD COLUMN estado TEXT DEFAULT 'completado';",
+            kind: MigrationKind::Up,
         }
     ];
 

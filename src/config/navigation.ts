@@ -20,22 +20,22 @@ import {
 import React from 'react';
 
 // Importación de las páginas
-import { Dashboard }     from '../pages/Dashboard';
-import { Inventario }    from '../pages/Inventario';
-import { Kardex }        from '../pages/Kardex';
-import { Ventas }        from '../pages/Ventas';
-import { Compras }       from '../pages/Compras';
-import { Clientes }      from '../pages/Clientes';
-import { Reportes }      from '../pages/Reportes';
-import { Configuracion } from '../pages/Configuracion';
-import { Productos }     from '../pages/Productos';
-import { NuevaVenta }    from '../pages/NuevaVenta';
-import { Sucursales }    from '../pages/Sucursales';
-import { Usuarios }      from '../pages/Usuarios';
-import { Sincronizacion } from '../pages/Sincronizacion';
-import { Ayuda } from '../pages/Ayuda';
-import { Caja } from '../pages/Caja';
-import { Auditoria } from '../pages/Auditoria';
+import { Dashboard }     from '../modules/dashboard/Page';
+import { Inventario }    from '../modules/inventario/Page';
+import { Kardex }        from '../modules/kardex/Page';
+import { Ventas }        from '../modules/ventas/Page';
+import { Compras }       from '../modules/compras/Page';
+import { Clientes }      from '../modules/clientes/Page';
+import { Reportes }      from '../modules/reportes/Page';
+import { Configuracion } from '../modules/configuracion/Page';
+import { Productos }     from '../modules/productos/Page';
+import { NuevaVenta }    from '../modules/ventas/NuevaVenta';
+import { Sucursales }    from '../modules/sucursales/Page';
+import { Usuarios }      from '../modules/usuarios/Page';
+import { Sincronizacion } from '../modules/sincronizacion/Page';
+import { Ayuda } from '../modules/ayuda/Page';
+import { Caja } from '../modules/caja/Page';
+import { Auditoria } from '../modules/auditoria/Page';
 
 export interface NavItem {
   icon: LucideIcon;

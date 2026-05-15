@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import type { UserData } from '../services/authService';
-import { preferenciasService } from '../services/preferenciasService';
+import type { UserData } from '../modules/login/Service';
+import { preferenciasService } from '../modules/configuracion/preferenciasService';
 import { notificationService } from '../lib/notifications';
 
 interface AuthContextType {

@@ -6,8 +6,8 @@ import { mainNavItems, bottomNavItems } from '../../config/navigation';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button } from './Button';
 import { Tooltip } from './Tooltip';
-import { alertaService } from '../../services/alertaService';
-import { preferenciasService } from '../../services/preferenciasService';
+import { alertaService } from '../../modules/dashboard/alertaService';
+import { preferenciasService } from '../../modules/configuracion/preferenciasService';
 import { AutoLogoutTimer } from '../auth/AutoLogoutTimer';
 
 /** Obtiene el título de la página según la ruta activa */
