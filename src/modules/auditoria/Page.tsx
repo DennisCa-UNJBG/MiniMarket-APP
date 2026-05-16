@@ -37,9 +37,13 @@ export function Auditoria() {
 
   const getActionVariant = (accion: string): any => {
     if (accion.includes('LOGIN')) return 'emerald';
-    if (accion.includes('PRECIO')) return 'amber';
+    if (accion.includes('LOGOUT')) return 'rose';
+    if (accion.includes('PRECIO') || accion.includes('PRODUCTO')) return 'amber';
     if (accion.includes('VENTA') || accion.includes('COMPRA')) return 'indigo';
     if (accion.includes('CAJA')) return 'sky';
+    if (accion.includes('USUARIO')) return 'violet';
+    if (accion.includes('CONFIG')) return 'orange';
+    if (accion.includes('EXPORT')) return 'pink';
     return 'gray';
   };
 

@@ -11,6 +11,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { userService } from './Service';
 import { sucursalService } from '../sucursales/Service';
+import { useAuth } from '../../contexts/AuthContext';
 import { notificationService } from '../../lib/notifications';
 import { Badge } from '../../components/ui/Badge';
 import { Tooltip } from '../../components/ui/Tooltip';
@@ -18,6 +19,7 @@ import { Button } from '../../components/ui/Button';
 import { DataTable, type TableColumn } from '../../components/ui/DataTable';
 
 export function Usuarios() {
+  const { user: currentUser } = useAuth();
   const queryClient = useQueryClient();
   const [showModal, setShowModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -52,9 +54,9 @@ export function Usuarios() {
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
       if (editingId) {
-        return userService.update(editingId, data);
+        return userService.update(editingId, data, currentUser?.id || 1);
       } else {
-        return userService.create(data);
+        return userService.create(data, currentUser?.id || 1);
       }
     },
     onSuccess: () => {
@@ -69,7 +71,7 @@ export function Usuarios() {
 
   const toggleStatusMutation = useMutation({
     mutationFn: ({ id, current }: { id: number, current: string }) => 
-      userService.toggleEstado(id, current),
+      userService.toggleEstado(id, current, currentUser?.id || 1),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       notificationService.success('Estado Actualizado', 'El acceso del usuario ha cambiado.');

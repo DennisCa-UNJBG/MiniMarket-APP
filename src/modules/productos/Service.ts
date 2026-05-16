@@ -43,7 +43,7 @@ export const productoService = {
     return result;
   },
 
-  async create(product: Omit<Product, 'id' | 'estado'>): Promise<void> {
+  async create(product: Omit<Product, 'id' | 'estado'>, usuarioId: number): Promise<void> {
     const db = await getDb();
     const result = await db.execute(
       `INSERT INTO productos (codigo_barras, nombre, categoria_id, unidad_id, stock_minimo, stock_actual) 
@@ -58,22 +58,47 @@ export const productoService = {
       ]
     );
 
+    const productId = result.lastInsertId as number;
+
+    // Registrar Log de Creación
+    await logService.register({
+      usuario_id: usuarioId,
+      accion: 'CREAR_PRODUCTO',
+      tabla: 'productos',
+      registro_id: productId,
+      detalles: `Se creó el producto: ${product.nombre} (${product.codigo_barras})`
+    });
+
     // Si se proporcionaron precios, registrarlos en el historial
     if (product.precio_compra !== undefined && product.precio_venta !== undefined) {
       await db.execute(
         `INSERT INTO precios_historial (producto_id, precio_compra, precio_venta, activo) 
          VALUES (?, ?, ?, 1)`,
-        [result.lastInsertId, product.precio_compra, product.precio_venta]
+        [productId, product.precio_compra, product.precio_venta]
       );
     }
   },
 
-  async updateStatus(id: number, estado: 'activo' | 'inactivo'): Promise<void> {
+  async updateStatus(id: number, estado: 'activo' | 'inactivo', usuarioId: number): Promise<void> {
     const db = await getDb();
+    
+    // Obtener nombre para el detalle
+    const pData = await db.select<any[]>('SELECT nombre FROM productos WHERE id = ?', [id]);
+    const nombre = pData[0]?.nombre || 'Desconocido';
+
     await db.execute(
       'UPDATE productos SET estado = ? WHERE id = ?',
       [estado, id]
     );
+
+    // Registrar Log
+    await logService.register({
+      usuario_id: usuarioId,
+      accion: 'ESTADO_PRODUCTO',
+      tabla: 'productos',
+      registro_id: id,
+      detalles: `Producto "${nombre}" marcado como ${estado.toUpperCase()}`
+    });
   },
 
   async update(id: number, product: Omit<Product, 'id' | 'estado' | 'stock_actual'>, usuarioId: number): Promise<void> {
@@ -117,6 +142,15 @@ export const productoService = {
          VALUES (?, ?, ?, 1)`,
         [id, product.precio_compra ?? oldCompra, product.precio_venta]
       );
+    } else {
+      // Si no hay cambio de precio, registrar un log de edición general
+      await logService.register({
+        usuario_id: usuarioId,
+        accion: 'EDITAR_PRODUCTO',
+        tabla: 'productos',
+        registro_id: id,
+        detalles: `Datos actualizados para el producto: ${product.nombre}`
+      });
     }
   },
 

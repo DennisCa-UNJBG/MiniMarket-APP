@@ -1,4 +1,5 @@
 import { getDb } from '../../lib/db';
+import { logService } from '../../lib/logService';
 
 export interface SucursalConfig {
   id?: number;
@@ -23,7 +24,7 @@ export const sucursalService = {
   /**
    * Guarda o actualiza la configuración
    */
-  async saveConfig(config: SucursalConfig) {
+  async saveConfig(config: SucursalConfig, usuarioId: number) {
     const db = await getDb();
     const existing = await this.getConfig();
 
@@ -38,6 +39,16 @@ export const sucursalService = {
         [config.sucursal_id, config.nombre_sucursal, config.api_url_central]
       );
     }
+
+    // Registrar Log
+    await logService.register({
+      usuario_id: usuarioId,
+      accion: 'CONFIG_SISTEMA',
+      tabla: 'configuracion',
+      registro_id: existing?.id || 1,
+      detalles: `Configuración del sistema actualizada: ${config.nombre_sucursal}`
+    });
+
     return true;
   },
 
@@ -71,24 +82,44 @@ export const sucursalService = {
   /**
    * Registra una nueva sucursal (Solo desde Sede Principal)
    */
-  async create(sucursal: { codigo: string; nombre: string; direccion?: string }) {
+  async create(sucursal: { codigo: string; nombre: string; direccion?: string }, usuarioId: number) {
     const db = await getDb();
-    await db.execute(
+    const result = await db.execute(
       'INSERT INTO sucursales (codigo, nombre, direccion) VALUES (?, ?, ?)',
       [sucursal.codigo, sucursal.nombre, sucursal.direccion || '']
     );
+
+    const sucursalId = result.lastInsertId as number;
+
+    await logService.register({
+      usuario_id: usuarioId,
+      accion: 'CREAR_SUCURSAL',
+      tabla: 'sucursales',
+      registro_id: sucursalId,
+      detalles: `Nueva sucursal registrada: ${sucursal.nombre} (${sucursal.codigo})`
+    });
+
     return true;
   },
 
   /**
    * Actualiza una sucursal existente
    */
-  async update(id: number, sucursal: { codigo: string; nombre: string; direccion?: string }) {
+  async update(id: number, sucursal: { codigo: string; nombre: string; direccion?: string }, usuarioId: number) {
     const db = await getDb();
     await db.execute(
       'UPDATE sucursales SET codigo = ?, nombre = ?, direccion = ? WHERE id = ?',
       [sucursal.codigo, sucursal.nombre, sucursal.direccion || '', id]
     );
+
+    await logService.register({
+      usuario_id: usuarioId,
+      accion: 'EDITAR_SUCURSAL',
+      tabla: 'sucursales',
+      registro_id: id,
+      detalles: `Datos actualizados para la sucursal: ${sucursal.nombre}`
+    });
+
     return true;
   },
 

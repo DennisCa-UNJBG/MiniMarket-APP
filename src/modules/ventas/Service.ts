@@ -84,6 +84,15 @@ export const ventaService = {
       );
     }
 
+    // 5. Log de Auditoría
+    await logService.register({
+      usuario_id: venta.usuario_id,
+      accion: 'REGISTRO_VENTA',
+      tabla: 'ventas',
+      registro_id: ventaId,
+      detalles: `Venta #${ventaId} registrada por un total de S/ ${venta.total.toFixed(2)} (${venta.metodo_pago})`
+    });
+
     return { ventaId, alertas };
   },
 

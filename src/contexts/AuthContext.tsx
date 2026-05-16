@@ -2,12 +2,13 @@ import { createContext, useContext, useState, ReactNode, useEffect } from 'react
 import type { UserData } from '../modules/login/Service';
 import { preferenciasService } from '../modules/configuracion/preferenciasService';
 import { notificationService } from '../lib/notifications';
+import { logService } from '../lib/logService';
 
 interface AuthContextType {
   user: UserData | null;
   isAuthenticated: boolean;
   login: (userData: UserData) => void;
-  logout: () => void;
+  logout: () => Promise<void>;
   isLoading: boolean;
 }
 
@@ -88,7 +89,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('user', JSON.stringify(userData));
   };
 
-  const logout = () => {
+  const logout = async () => {
+    if (user) {
+      try {
+        await logService.register({
+          usuario_id: user.id,
+          accion: 'LOGOUT',
+          tabla: 'usuarios',
+          registro_id: user.id,
+          detalles: `El usuario ${user.username} ha cerrado sesión.`
+        });
+      } catch (e) {
+        console.error("Error al registrar log de logout:", e);
+      }
+    }
     setUser(null);
     localStorage.removeItem('user');
   };

@@ -1,5 +1,6 @@
 import { getDb } from '../../lib/db';
 import { sucursalService } from '../sucursales/Service';
+import { logService } from '../../lib/logService';
 
 export interface InventarioIngreso {
   id?: number;
@@ -90,6 +91,15 @@ export const inventarioService = {
         [item.producto_id, item.costo_unitario, precioVenta]
       );
     }
+
+    // 3. Log de Auditoría
+    await logService.register({
+      usuario_id: compra.usuario_id,
+      accion: 'REGISTRO_COMPRA',
+      tabla: 'compras_ingresos',
+      registro_id: compraId,
+      detalles: `Ingreso de mercadería #${compraId} registrado (Doc: ${compra.documento_referencia || 'S/R'})`
+    });
 
     return { compraId, alertas };
   },

@@ -14,10 +14,13 @@ import { Button } from '../../components/ui/Button';
 import { notificationService } from '../../lib/notifications';
 import { ReporteDocumento } from './components/ReporteDocumento';
 import { VentasBarChart, RankingProductos } from './components/ReportComponents';
+import { logService } from '../../lib/logService';
+import { useAuth } from '../../contexts/AuthContext';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
 export function Reportes() {
+  const { user } = useAuth();
   // Queries
   const { data: topProducts = [] } = useQuery({
     queryKey: ['report-top-products'],
@@ -57,6 +60,17 @@ export function Reportes() {
       pdf.save(`Reporte_Rendimiento_${new Date().toISOString().split('T')[0]}.pdf`);
       
       notificationService.success('Completado', 'Reporte descargado correctamente');
+
+      // Registrar Log de Auditoría
+      if (user) {
+        await logService.register({
+          usuario_id: user.id,
+          accion: 'EXPORT_PDF',
+          tabla: 'reportes',
+          registro_id: 0,
+          detalles: `Exportación de Reporte de Rendimiento Mensual a PDF`
+        });
+      }
     } catch (error) {
       console.error(error);
       notificationService.error('Error', 'No se pudo generar el reporte PDF');

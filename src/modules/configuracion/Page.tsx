@@ -145,7 +145,7 @@ export function Configuracion() {
 
   // Mutations
   const saveSucursalMutation = useMutation({
-    mutationFn: (data: SucursalConfig) => sucursalService.saveConfig(data),
+    mutationFn: (data: SucursalConfig) => sucursalService.saveConfig(data, user?.id || 1),
     onSuccess: () => {
       notificationService.success('Configuración Guardada', 'La identidad de la sede se actualizó correctamente.');
       queryClient.invalidateQueries({ queryKey: ['sucursal-config'] });

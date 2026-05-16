@@ -84,7 +84,7 @@ function TabProductos({ categories }: { categories: Category[] }) {
       if (editingId) {
         return productoService.update(editingId, payload, user?.id || 1);
       } else {
-        return productoService.create(payload);
+        return productoService.create(payload, user?.id || 1);
       }
     },
     onSuccess: () => {
@@ -110,7 +110,7 @@ function TabProductos({ categories }: { categories: Category[] }) {
   // Mutación para cambiar estado
   const statusMutation = useMutation({
     mutationFn: ({ id, status }: { id: number, status: 'activo' | 'inactivo' }) => 
-      productoService.updateStatus(id, status),
+      productoService.updateStatus(id, status, user?.id || 1),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['categories'] });

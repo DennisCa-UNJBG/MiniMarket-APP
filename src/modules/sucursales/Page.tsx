@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { sucursalService } from './Service';
+import { useAuth } from '../../contexts/AuthContext';
 import { notificationService } from '../../lib/notifications';
 import { Badge } from '../../components/ui/Badge';
 import { Tooltip } from '../../components/ui/Tooltip';
@@ -21,6 +22,7 @@ import { Button } from '../../components/ui/Button';
 import { DataTable, type TableColumn } from '../../components/ui/DataTable';
 
 export function Sucursales() {
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [showModal, setShowModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -43,9 +45,9 @@ export function Sucursales() {
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
       if (editingId) {
-        return sucursalService.update(editingId, data);
+        return sucursalService.update(editingId, data, user?.id || 1);
       } else {
-        return sucursalService.create(data);
+        return sucursalService.create(data, user?.id || 1);
       }
     },
     onSuccess: () => {
