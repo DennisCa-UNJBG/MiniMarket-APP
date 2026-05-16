@@ -306,6 +306,12 @@ pub fn run() {
             description: "add_metodo_pago_to_compras",
             sql: "ALTER TABLE compras_ingresos ADD COLUMN metodo_pago TEXT DEFAULT 'BANCO';",
             kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 17,
+            description: "add_estado_to_roles",
+            sql: "ALTER TABLE roles ADD COLUMN estado TEXT DEFAULT 'activo';",
+            kind: MigrationKind::Up,
         }
     ];
 
