@@ -26,3 +26,9 @@ body {
 .dark body {
   @apply bg-gray-900 text-gray-100;
 }
+
+/* Ocultar el botón nativo de mostrar contraseña en Edge/WebView2 */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none;
+}

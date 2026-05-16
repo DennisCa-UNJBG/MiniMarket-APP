@@ -21,7 +21,7 @@ interface LoginProps {
 }
 
 export function Login({ onLogin }: LoginProps) {
-  const [account, setAccount] = useState('');
+  const [account, setAccount] = useState(() => localStorage.getItem('lastAccount') || '');
   const [password, setPassword] = useState('');
   const [appVersion, setAppVersion] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -30,6 +30,7 @@ export function Login({ onLogin }: LoginProps) {
   const loginMutation = useMutation({
     mutationFn: () => authService.login(account, password),
     onSuccess: (userData) => {
+      localStorage.setItem('lastAccount', account);
       onLogin(userData);
     },
     onError: (error) => {
