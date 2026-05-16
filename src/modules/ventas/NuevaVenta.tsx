@@ -88,6 +88,14 @@ export function NuevaVenta() {
 
   // ── Lógica del Carrito ────────────────────────────────────────────────────────
   const addToCart = (product: Product) => {
+    const existingInCart = cart.find(item => item.product.id === product.id);
+    const quantityInCart = existingInCart ? existingInCart.quantity : 0;
+
+    if (quantityInCart + 1 > (product.stock_actual || 0)) {
+      notificationService.warning('Sin Stock suficiente', `No puedes agregar más. Solo quedan ${product.stock_actual} unidades.`);
+      return;
+    }
+
     setCart(prev => {
       const existing = prev.find(item => item.product.id === product.id);
       if (existing) {
@@ -102,13 +110,21 @@ export function NuevaVenta() {
   };
 
   const updateQuantity = (id: number, delta: number) => {
-    setCart(prev => prev.map(item => {
-      if (item.product.id === id) {
-        const newQuantity = item.quantity + delta;
-        return newQuantity > 0 ? { ...item, quantity: newQuantity } : item;
-      }
-      return item;
-    }));
+    const item = cart.find(i => i.product.id === id);
+    if (!item) return;
+
+    const newQuantity = item.quantity + delta;
+
+    if (delta > 0 && newQuantity > (item.product.stock_actual || 0)) {
+      notificationService.warning('Límite alcanzado', 'No hay más unidades en stock.');
+      return;
+    }
+
+    if (newQuantity > 0) {
+      setCart(prev => prev.map(i => 
+        i.product.id === id ? { ...i, quantity: newQuantity } : i
+      ));
+    }
   };
 
   const removeFromCart = (id: number) => {
@@ -396,7 +412,10 @@ export function NuevaVenta() {
               </Button>
               <Button 
                 variant="secondary" 
-                onClick={() => setPaymentMethod('TARJETA')}
+                onClick={() => {
+                  setPaymentMethod('TARJETA');
+                  setAmountPaid(total.toString());
+                }}
                 className={`flex-col h-auto py-4 border-2 transition-all ${paymentMethod === 'TARJETA' ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400' : 'border-transparent opacity-60'}`}
                 icon={<CreditCard size={24} />}
               >
@@ -407,8 +426,9 @@ export function NuevaVenta() {
             {/* Input de Monto - Siempre visible */}
             <div className="space-y-4">
               <Input
-                label={paymentMethod === 'EFECTIVO' ? "Monto recibido (S/)" : "Monto recibido en App/Tarjeta (S/)"}
+                label={paymentMethod === 'EFECTIVO' ? "Monto recibido (S/)" : "Monto exacto (Tarjeta/Yape)"}
                 type="number"
+                disabled={paymentMethod === 'TARJETA'}
                 autoFocus
                 value={amountPaid}
                 onChange={(e) => setAmountPaid(e.target.value)}

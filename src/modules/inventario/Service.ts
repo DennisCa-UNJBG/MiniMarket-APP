@@ -20,6 +20,7 @@ export interface CompraDetalle {
 export interface CompraCabecera {
   usuario_id: number;
   documento_referencia: string;
+  metodo_pago: 'EFECTIVO' | 'BANCO';
   items: CompraDetalle[];
 }
 
@@ -38,9 +39,9 @@ export const inventarioService = {
 
     // 1. Insertar Cabecera de Compra
     const resCabecera = await db.execute(
-      `INSERT INTO compras_ingresos (usuario_id, documento_referencia, total, sucursal_id) 
-       VALUES (?, ?, ?, ?)`,
-      [compra.usuario_id, compra.documento_referencia, totalCompra, sucursalId]
+      `INSERT INTO compras_ingresos (usuario_id, documento_referencia, total, sucursal_id, metodo_pago) 
+       VALUES (?, ?, ?, ?, ?)`,
+      [compra.usuario_id, compra.documento_referencia, totalCompra, sucursalId, compra.metodo_pago || 'BANCO']
     );
     
     const compraId = resCabecera.lastInsertId as number;

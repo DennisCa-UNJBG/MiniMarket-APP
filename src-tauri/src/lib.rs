@@ -300,6 +300,12 @@ pub fn run() {
             description: "add_estado_to_ventas",
             sql: "ALTER TABLE ventas ADD COLUMN estado TEXT DEFAULT 'completado';",
             kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 16,
+            description: "add_metodo_pago_to_compras",
+            sql: "ALTER TABLE compras_ingresos ADD COLUMN metodo_pago TEXT DEFAULT 'BANCO';",
+            kind: MigrationKind::Up,
         }
     ];
 

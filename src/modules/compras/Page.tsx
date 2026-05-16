@@ -49,13 +49,14 @@ export function Compras() {
   const [selectedPurchase, setSelectedPurchase] = useState<PurchaseRecord | null>(null);
   const [editingCartIndex, setEditingCartIndex] = useState<number | null>(null);
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize] = useState(10);
   
   // --- Estado para el Lote de Compra ---
   const [referencia, setReferencia] = useState('');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [hasIGV, setHasIGV] = useState(false);
   const [igvPercent, setIgvPercent] = useState(18);
+  const [metodoPago, setMetodoPago] = useState<'EFECTIVO' | 'BANCO'>('BANCO');
   
   // Selector de producto individual
   const [prodSearch, setProdSearch] = useState('');
@@ -88,6 +89,7 @@ export function Compras() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['purchases'] });
       queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['sales-summary'] });
       queryClient.invalidateQueries({ queryKey: ['low-stock'] });
       queryClient.invalidateQueries({ queryKey: ['movements'] });
       notificationService.success('Compra completada', 'Se ha actualizado el stock y el historial correctamente.');
@@ -101,6 +103,7 @@ export function Compras() {
     setCart([]);
     setReferencia('');
     setHasIGV(false);
+    setMetodoPago('BANCO');
     setEditingCartIndex(null);
     setSelectedProd(null);
     setProdSearch('');
@@ -178,6 +181,7 @@ export function Compras() {
     const purchaseData = {
       usuario_id: user?.id || 1,
       documento_referencia: referencia.trim(),
+      metodo_pago: metodoPago,
       items: cart.map(({ producto_id, cantidad, costo_unitario }) => ({
         producto_id,
         cantidad,
@@ -380,7 +384,7 @@ export function Compras() {
         <Modal title="Registrar Compra por Lote" onClose={() => setShowModal(false)} maxWidth="2xl">
           <div className="flex flex-col gap-6">
             {/* Cabecera del Documento */}
-            <div className="grid grid-cols-3 gap-4 p-4 bg-gray-50 dark:bg-gray-700/30 rounded-xl border border-gray-100 dark:border-gray-700">
+            <div className="grid grid-cols-4 gap-4 p-4 bg-gray-50 dark:bg-gray-700/30 rounded-xl border border-gray-100 dark:border-gray-700">
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex justify-between">
                   <span>N° Documento <span className="text-red-500">*</span></span>
@@ -393,7 +397,7 @@ export function Compras() {
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Fecha de Emisión</label>
+                <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Fecha</label>
                 <input type="date" className={inputCls} defaultValue={new Date().toISOString().split('T')[0]} />
               </div>
               <div className="flex flex-col gap-1.5">
@@ -403,9 +407,6 @@ export function Compras() {
                     <input type="checkbox" className="sr-only peer" checked={hasIGV} onChange={(e) => setHasIGV(e.target.checked)} />
                     <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
                   </label>
-                  <span className={`text-[10px] font-bold uppercase tracking-tight ${hasIGV ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400'}`}>
-                    {hasIGV ? 'Activado' : 'Desactivado'}
-                  </span>
                   <div className="relative flex-1">
                     <input 
                       type="number" 
@@ -417,6 +418,17 @@ export function Compras() {
                     <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-400 font-bold">%</span>
                   </div>
                 </div>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Pago desde...</label>
+                <select 
+                  className={inputCls} 
+                  value={metodoPago} 
+                  onChange={(e) => setMetodoPago(e.target.value as any)}
+                >
+                  <option value="BANCO">Banco</option>
+                  <option value="EFECTIVO">Caja (Efectivo)</option>
+                </select>
               </div>
             </div>
 

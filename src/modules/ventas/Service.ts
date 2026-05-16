@@ -133,22 +133,44 @@ export const ventaService = {
   },
 
   /**
-   * Obtiene un resumen de las ventas de hoy
+   * Obtiene un resumen detallado de las ventas y gastos filtrado por fecha
    */
-  async getResumenHoy(): Promise<{ total: number, count: number }> {
+  async getResumenHoy(desde?: string): Promise<{ total: number, total_efectivo: number, total_digital: number, total_gastos_efectivo: number, count: number }> {
     const db = await getDb();
     const config = await sucursalService.getConfig();
     const sucursalId = config?.sucursal_id || 'LOCAL';
 
-    const result = await db.select<any[]>(`
+    // Si no hay fecha 'desde', usamos el inicio del día actual
+    const fechaFiltro = desde ? desde : "date('now', 'start of day')";
+    const isTimestamp = desde ? true : false;
+
+    // 1. Obtener ventas
+    const ventas = await db.select<any[]>(`
       SELECT 
         COALESCE(SUM(total), 0) as total,
+        COALESCE(SUM(CASE WHEN metodo_pago = 'EFECTIVO' THEN total ELSE 0 END), 0) as total_efectivo,
+        COALESCE(SUM(CASE WHEN metodo_pago = 'TARJETA' THEN total ELSE 0 END), 0) as total_digital,
         COUNT(*) as count
       FROM ventas
-      WHERE date(fecha, 'localtime') = date('now', 'localtime')
+      WHERE ${isTimestamp ? "fecha >= ?" : "date(fecha, 'localtime') >= " + fechaFiltro}
+      AND estado != 'anulado'
       AND (sucursal_id = ? OR sucursal_id IS NULL)
-    `, [sucursalId]);
-    return result[0];
+    `, isTimestamp ? [desde, sucursalId] : [sucursalId]);
+
+    // 2. Obtener gastos por compras en efectivo
+    const gastos = await db.select<any[]>(`
+      SELECT COALESCE(SUM(total), 0) as total_gastos
+      FROM compras_ingresos
+      WHERE ${isTimestamp ? "fecha >= ?" : "date(fecha, 'localtime') >= " + fechaFiltro}
+      AND metodo_pago = 'EFECTIVO'
+      AND estado != 'anulado'
+      AND (sucursal_id = ? OR sucursal_id IS NULL)
+    `, isTimestamp ? [desde, sucursalId] : [sucursalId]);
+
+    return {
+      ...ventas[0],
+      total_gastos_efectivo: gastos[0]?.total_gastos || 0
+    };
   },
 
   /**

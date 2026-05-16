@@ -37,8 +37,8 @@ export function Caja() {
   });
 
   const { data: resumenVentas } = useQuery({
-    queryKey: ['sales-summary'],
-    queryFn: () => ventaService.getResumenHoy()
+    queryKey: ['sales-summary', cajaAbierta?.fecha_apertura],
+    queryFn: () => ventaService.getResumenHoy(cajaAbierta?.fecha_apertura)
   });
 
   // Mutations
@@ -200,17 +200,28 @@ export function Caja() {
                   </div>
                   <div className="space-y-3">
                     <div className="flex justify-between items-center">
-                      <span className="text-xs text-gray-500 dark:text-gray-400">Monto Inicial:</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">Monto Inicial (Fondo):</span>
                       <span className="text-xs font-bold text-gray-700 dark:text-gray-200">S/ {cajaAbierta.monto_inicial.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-xs text-gray-500 dark:text-gray-400">Ventas Hoy:</span>
-                      <span className="text-xs font-bold text-emerald-600">S/ {resumenVentas?.total.toFixed(2) || '0.00'}</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">Ventas en Efectivo (+):</span>
+                      <span className="text-xs font-bold text-emerald-600">S/ {resumenVentas?.total_efectivo.toFixed(2) || '0.00'}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-gray-500 dark:text-gray-400">Compras en Efectivo (-):</span>
+                      <span className="text-xs font-bold text-red-500">S/ {resumenVentas?.total_gastos_efectivo.toFixed(2) || '0.00'}</span>
+                    </div>
+                    <div className="flex justify-between items-center opacity-60">
+                      <span className="text-xs text-gray-400">Pagos Digitales (Ref):</span>
+                      <span className="text-xs font-medium text-gray-500 italic">S/ {resumenVentas?.total_digital.toFixed(2) || '0.00'}</span>
                     </div>
                     <div className="pt-2 border-t border-indigo-100 dark:border-indigo-800 flex justify-between items-center">
-                      <span className="text-sm font-bold text-gray-700 dark:text-gray-200">Total Esperado:</span>
-                      <span className="text-sm font-black text-indigo-600 dark:text-indigo-400">
-                        S/ {(cajaAbierta.monto_inicial + (resumenVentas?.total || 0)).toFixed(2)}
+                      <div className="flex flex-col">
+                        <span className="text-sm font-bold text-gray-700 dark:text-gray-200">Total Esperado en Físico:</span>
+                        <span className="text-[10px] text-indigo-400 font-medium">Solo efectivo + fondo - compras</span>
+                      </div>
+                      <span className="text-lg font-black text-indigo-600 dark:text-indigo-400">
+                        S/ {(cajaAbierta.monto_inicial + (resumenVentas?.total_efectivo || 0) - (resumenVentas?.total_gastos_efectivo || 0)).toFixed(2)}
                       </span>
                     </div>
                   </div>
