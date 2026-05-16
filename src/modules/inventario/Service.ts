@@ -58,6 +58,7 @@ export const inventarioService = {
 
       // B. Obtener stock actual para el Kardex
       const pData = await db.select<any[]>('SELECT stock_actual, stock_minimo, nombre FROM productos WHERE id = ?', [item.producto_id]);
+      if (pData.length === 0) throw new Error(`Producto ${item.producto_id} no encontrado`);
       const { stock_actual, stock_minimo, nombre } = pData[0];
       const nuevoStock = stock_actual + item.cantidad;
 
@@ -299,10 +300,12 @@ export const inventarioService = {
     const session = await db.select<any[]>('SELECT usuario_id FROM compras_ingresos WHERE id = ?', [compraId]);
     const usuarioId = session[0]?.usuario_id || 1;
 
-    await db.execute(
-      `INSERT INTO logs (usuario_id, accion, tabla, registro_id, detalles) 
-       VALUES (?, ?, ?, ?, ?)`,
-      [usuarioId, 'ANULACION_COMPRA', 'compras_ingresos', compraId, `Anulación de compra #${compraId}`]
-    );
+    await logService.register({
+      usuario_id: usuarioId,
+      accion: 'ANULACION_COMPRA',
+      tabla: 'compras_ingresos',
+      registro_id: compraId,
+      detalles: `Anulación de compra #${compraId}. Stock revertido.`
+    });
   }
 };

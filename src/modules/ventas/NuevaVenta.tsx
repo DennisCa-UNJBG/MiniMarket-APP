@@ -61,9 +61,9 @@ export function NuevaVenta() {
   // Mutations
   const registrarVentaMutation = useMutation({
     mutationFn: (ventaData: any) => ventaService.registrarVenta(ventaData),
-    onSuccess: async (_, variables) => {
+    onSuccess: async (data) => {
       setShowCheckout(false);
-      await notificationService.successWithConfirm('¡Venta completada!', `Vuelto: S/ ${variables.vuelto.toFixed(2)}`);
+      await notificationService.successWithConfirm('¡Venta completada!', `Vuelto: S/ ${data.vuelto.toFixed(2)}`);
       
       setCart([]);
       setAmountPaid('');

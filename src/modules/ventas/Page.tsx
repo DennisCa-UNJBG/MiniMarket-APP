@@ -136,6 +136,8 @@ export function Ventas() {
   const [saleDetails, setSaleDetails] = useState<any[]>([]);
 
   // Queries
+  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+
   const { data: salesRes = { data: [], total: 0 } } = useQuery({
     queryKey: ['sales', page, pageSize],
     queryFn: () => ventaService.getVentas(page, pageSize)
@@ -144,6 +146,11 @@ export function Ventas() {
   const { data: resumen = { total: 0, count: 0 } } = useQuery({
     queryKey: ['sales-summary'],
     queryFn: () => ventaService.getResumenHoy()
+  });
+
+  const { data: resumenAyer = { total: 0, count: 0 } } = useQuery({
+    queryKey: ['sales-summary-yesterday', yesterday],
+    queryFn: () => ventaService.getResumenRango(yesterday, yesterday)
   });
 
   const fetchDetailsMutation = useMutation({
@@ -190,10 +197,17 @@ export function Ventas() {
     (s.estado || '').toLowerCase().includes(search.toLowerCase())
   );
 
+  // Cálculo de crecimiento real vs ayer
+  const crecimientoValor = resumenAyer.total === 0
+    ? (resumen.total > 0 ? 100 : 0)   // si ayer fue 0 y hoy hay ventas => +100%
+    : ((resumen.total - resumenAyer.total) / resumenAyer.total) * 100;
+  const crecimientoLabel = `${crecimientoValor >= 0 ? '+' : ''}${crecimientoValor.toFixed(1)}%`;
+  const crecimientoPositivo = crecimientoValor >= 0;
+
   const summaryCards = [
-    { label: 'Ventas de hoy',   value: `S/ ${resumen.total.toFixed(2)}`, sub: `${resumen.count} transacciones`,   icon: ShoppingCart, color: 'bg-indigo-500' },
-    { label: 'Crecimiento',     value: '+12.5%', sub: 'vs ayer', icon: TrendingUp, color: 'bg-emerald-500' },
-    { label: 'Promedio Ticket', value: `S/ ${(resumen.total / (resumen.count || 1)).toFixed(2)}`, sub: 'por venta', icon: DollarSign, color: 'bg-amber-500' },
+    { label: 'Ventas de hoy',   value: `S/ ${resumen.total.toFixed(2)}`, sub: `${resumen.count} transacciones`,   icon: ShoppingCart, color: 'bg-indigo-500', up: true },
+    { label: 'Crecimiento vs Ayer', value: crecimientoLabel, sub: `Ayer: S/ ${resumenAyer.total.toFixed(2)}`, icon: TrendingUp, color: crecimientoPositivo ? 'bg-emerald-500' : 'bg-rose-500', up: crecimientoPositivo },
+    { label: 'Promedio Ticket', value: `S/ ${(resumen.total / (resumen.count || 1)).toFixed(2)}`, sub: 'por venta', icon: DollarSign, color: 'bg-amber-500', up: true },
   ];
 
   return (

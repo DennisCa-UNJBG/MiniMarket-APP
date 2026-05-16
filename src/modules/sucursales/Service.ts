@@ -126,9 +126,26 @@ export const sucursalService = {
   /**
    * Cambia el estado de una sucursal (activo/inactivo)
    */
-  async toggleEstado(id: number, nuevoEstado: 'activo' | 'inactivo') {
+  async toggleEstado(id: number, nuevoEstado: 'activo' | 'inactivo', usuarioId?: number) {
     const db = await getDb();
+
+    // Obtener nombre de la sucursal para el detalle
+    const sData = await db.select<any[]>('SELECT nombre FROM sucursales WHERE id = ?', [id]);
+    const nombre = sData[0]?.nombre || 'ID:' + id;
+
     await db.execute('UPDATE sucursales SET estado = ? WHERE id = ?', [nuevoEstado, id]);
+
+    // Registrar Log si se proporcionó el usuarioId
+    if (usuarioId) {
+      await logService.register({
+        usuario_id: usuarioId,
+        accion: 'ESTADO_SUCURSAL',
+        tabla: 'sucursales',
+        registro_id: id,
+        detalles: `Sucursal "${nombre}" marcada como ${nuevoEstado.toUpperCase()}`
+      });
+    }
+
     return true;
   }
 };

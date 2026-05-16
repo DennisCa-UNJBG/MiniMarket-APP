@@ -92,7 +92,7 @@ export function Inventario() {
 
   const filtered = products.filter((p) => {
     const matchesSearch = p.nombre.toLowerCase().includes(search.toLowerCase()) ||
-                        p.codigo_barras.toLowerCase().includes(search.toLowerCase());
+                        (p.codigo_barras && p.codigo_barras.toLowerCase().includes(search.toLowerCase()));
     
     const status = getStatus(p.stock_actual, p.stock_minimo);
     const matchesStatus = statusFilter === 'all' || status === statusFilter;

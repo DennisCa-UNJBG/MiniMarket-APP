@@ -207,7 +207,7 @@ function TabProductos({ categories }: { categories: Category[] }) {
   const filteredProducts = activeProducts.filter(
     (p) =>
       p.nombre.toLowerCase().includes(search.toLowerCase()) ||
-      p.codigo_barras.toLowerCase().includes(search.toLowerCase())
+      (p.codigo_barras && p.codigo_barras.toLowerCase().includes(search.toLowerCase()))
   );
 
   return (

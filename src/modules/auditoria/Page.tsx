@@ -95,7 +95,7 @@ export function Auditoria() {
       header: 'Descripción del Movimiento',
       render: (row) => (
         <p className="text-xs text-gray-600 dark:text-gray-400 max-w-md italic">
-          "{row.detalles}"
+          {row.detalles || <span className="text-gray-300 italic">Sin descripción</span>}
         </p>
       )
     }

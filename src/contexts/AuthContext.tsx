@@ -65,7 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const timeoutMs = currentPrefs.inactivityTimeout * 60 * 1000;
       
       if (Date.now() - lastActivity >= timeoutMs) {
-        logout();
+        logout().catch(console.error);
         notificationService.info('Seguridad', 'Tu sesión se ha cerrado por inactividad.');
       }
     };

@@ -28,7 +28,7 @@ export const ventaService = {
    * 3. Actualiza el stock de los productos
    * 4. Registra los movimientos en el Kardex
    */
-  async registrarVenta(venta: VentaData): Promise<{ ventaId: number, alertas: string[] }> {
+  async registrarVenta(venta: VentaData): Promise<{ ventaId: number, alertas: string[], vuelto: number }> {
     const db = await getDb();
     const alertas: string[] = [];
     
@@ -93,7 +93,7 @@ export const ventaService = {
       detalles: `Venta #${ventaId} registrada por un total de S/ ${venta.total.toFixed(2)} (${venta.metodo_pago})`
     });
 
-    return { ventaId, alertas };
+    return { ventaId, alertas, vuelto: venta.vuelto };
   },
 
   /**
@@ -180,6 +180,29 @@ export const ventaService = {
       ...ventas[0],
       total_gastos_efectivo: gastos[0]?.total_gastos || 0
     };
+  },
+
+  /**
+   * Obtiene el resumen de ventas entre dos fechas (rango exacto por día)
+   * Permite comparar hoy vs ayer para calcular crecimiento real
+   */
+  async getResumenRango(fechaInicio: string, fechaFin: string): Promise<{ total: number, count: number }> {
+    const db = await getDb();
+    const config = await sucursalService.getConfig();
+    const sucursalId = config?.sucursal_id || 'LOCAL';
+
+    const result = await db.select<any[]>(`
+      SELECT 
+        COALESCE(SUM(total), 0) as total,
+        COUNT(*) as count
+      FROM ventas
+      WHERE date(fecha, 'localtime') >= date(?)
+        AND date(fecha, 'localtime') <= date(?)
+        AND estado != 'anulado'
+        AND (sucursal_id = ? OR sucursal_id IS NULL)
+    `, [fechaInicio, fechaFin, sucursalId]);
+
+    return { total: result[0]?.total || 0, count: result[0]?.count || 0 };
   },
 
   /**

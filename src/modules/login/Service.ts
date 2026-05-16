@@ -8,6 +8,7 @@ export interface UserData {
   username: string;
   nombre_completo: string;
   rol_id: number;
+  rol_nombre: string;
   permisos: string[];
 }
 
@@ -30,7 +31,7 @@ export const authService = {
       const db = await getDb();
       // Buscamos al usuario solo por nombre de usuario para obtener su hash
       result = await db.select(
-        "SELECT u.*, r.permisos FROM usuarios u JOIN roles r ON u.rol_id = r.id WHERE u.username = ? AND u.estado = 'activo'",
+        "SELECT u.*, r.permisos, r.nombre as rol_nombre FROM usuarios u JOIN roles r ON u.rol_id = r.id WHERE u.username = ? AND u.estado = 'activo'",
         [username]
       );
     } catch (e) {
@@ -60,6 +61,7 @@ export const authService = {
         username: user.username,
         nombre_completo: user.nombre_completo,
         rol_id: user.rol_id,
+        rol_nombre: user.rol_nombre || 'Usuario',
         permisos: parsedPermisos
       };
 

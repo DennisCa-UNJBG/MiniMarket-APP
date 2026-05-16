@@ -67,7 +67,7 @@ export function Reportes() {
           usuario_id: user.id,
           accion: 'EXPORT_PDF',
           tabla: 'reportes',
-          registro_id: 0,
+          registro_id: user.id,
           detalles: `Exportación de Reporte de Rendimiento Mensual a PDF`
         });
       }

@@ -62,7 +62,7 @@ export function Sucursales() {
 
   const toggleStatusMutation = useMutation({
     mutationFn: ({ id, status }: { id: number, status: 'activo' | 'inactivo' }) => 
-      sucursalService.toggleEstado(id, status),
+      sucursalService.toggleEstado(id, status, user?.id || 1),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['sedes'] });
       notificationService.success(

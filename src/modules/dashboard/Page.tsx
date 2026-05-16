@@ -14,6 +14,7 @@ import { Badge } from '../../components/ui/Badge';
 import { useNavigate } from 'react-router-dom';
 import { Tooltip } from '../../components/ui/Tooltip';
 import { Button } from '../../components/ui/Button';
+import { useAuth } from '../../contexts/AuthContext';
 import { 
   AreaChart, 
   Area, 
@@ -33,6 +34,10 @@ const statsConfig = [
 
 export function Dashboard() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const firstName = user?.nombre_completo?.split(' ')[0] || 'Administrador';
+  const roleLabel = user?.rol_nombre || 'Usuario';
 
   // Queries
   const { data: stats, isLoading: isLoadingStats } = useQuery({
@@ -94,10 +99,10 @@ export function Dashboard() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-black text-gray-800 dark:text-white tracking-tight">
-            ¡Buen día, Administrador! 👋
+            ¡Buen día, {firstName}! 👋
           </h2>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            Aquí tienes el pulso de tu negocio en tiempo real.
+            {roleLabel} • Aquí tienes el pulso de tu negocio en tiempo real.
           </p>
         </div>
         <Badge label="En Línea" variant="emerald" />
