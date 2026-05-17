@@ -44,7 +44,7 @@ export const VentasBarChart: React.FC<ChartProps> = ({ data, isPrint }) => (
             fontSize: isPrint ? '12px' : '14px', 
             fontWeight: 'bold' 
           }} 
-          formatter={(v: any) => Number(v) > 0 ? `S/ ${Number(v).toFixed(0)}` : ''} 
+          formatter={(v: any) => Number(v) > 0 ? `S/ ${Number(v).toFixed(2)}` : ''} 
         />
         {data.map((entry, index) => (
           <Cell 

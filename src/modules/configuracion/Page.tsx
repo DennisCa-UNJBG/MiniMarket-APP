@@ -42,7 +42,7 @@ export function Configuracion() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <SedesSection initialData={sucursalData!} key={sucursalData?.ultima_sincronizacion || 'sedes'} />
+        <SedesSection initialData={sucursalData ?? null} key={sucursalData?.ultima_sincronizacion || 'sedes'} />
         <BusinessSection initialData={negocioData!} key={negocioData?.razon_social || 'negocio'} />
         <SecuritySection />
         <KeyboardShortcutsSection />

@@ -14,11 +14,13 @@ const formatDateTimeLocal = (dateStr: string) => {
   return new Date(dateStr).toLocaleString();
 };
 
-export function SedesSection({ initialData }: { initialData: SucursalConfig }) {
+const DEFAULT_SUCURSAL: SucursalConfig = { sucursal_id: '', nombre_sucursal: '', api_url_central: '' };
+
+export function SedesSection({ initialData }: { initialData: SucursalConfig | null }) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  const [localSucursal, setLocalSucursal] = useState<SucursalConfig>(() => initialData);
+  const [localSucursal, setLocalSucursal] = useState<SucursalConfig>(() => initialData ?? DEFAULT_SUCURSAL);
 
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
