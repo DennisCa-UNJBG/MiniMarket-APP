@@ -65,6 +65,12 @@ export const userService = {
    * Cambia el estado de un usuario
    */
   async toggleEstado(id: number, currentEstado: string, adminId: number) {
+    if (id === 1) {
+      throw new Error('No se puede desactivar la cuenta de administrador principal.');
+    }
+    if (id === adminId) {
+      throw new Error('No puedes desactivar tu propia cuenta.');
+    }
     const db = await getDb();
     const nuevoEstado = currentEstado === 'activo' ? 'inactivo' : 'activo';
     

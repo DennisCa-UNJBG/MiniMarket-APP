@@ -95,6 +95,9 @@ function TabUsuarios() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       notificationService.success('Estado Actualizado', 'El acceso del usuario ha cambiado.');
+    },
+    onError: (error: any) => {
+      notificationService.error('Error', error.message || 'No se pudo cambiar el estado del usuario.');
     }
   });
 
@@ -124,6 +127,14 @@ function TabUsuarios() {
   };
 
   const handleToggleEstado = (id: number, current: string) => {
+    if (id === 1) {
+      notificationService.error('Operación no permitida', 'No se puede desactivar la cuenta de administrador principal.');
+      return;
+    }
+    if (id === currentUser?.id) {
+      notificationService.error('Operación no permitida', 'No puedes desactivar tu propia cuenta.');
+      return;
+    }
     toggleStatusMutation.mutate({ id, current });
   };
 
@@ -173,12 +184,19 @@ function TabUsuarios() {
       header: 'Estado',
       align: 'center',
       render: (u) => (
-        <button onClick={() => handleToggleEstado(u.id, u.estado)} className="hover:scale-105 transition-transform">
+        u.id === 1 || u.id === currentUser?.id ? (
           <Badge 
             label={u.estado === 'activo' ? 'ACTIVO' : 'INACTIVO'} 
             variant={u.estado === 'activo' ? 'emerald' : 'gray'} 
           />
-        </button>
+        ) : (
+          <button onClick={() => handleToggleEstado(u.id, u.estado)} className="hover:scale-105 transition-transform">
+            <Badge 
+              label={u.estado === 'activo' ? 'ACTIVO' : 'INACTIVO'} 
+              variant={u.estado === 'activo' ? 'emerald' : 'gray'} 
+            />
+          </button>
+        )
       )
     },
     {
@@ -196,6 +214,21 @@ function TabUsuarios() {
               className="p-2 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-xl bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-800"
             />
           </Tooltip>
+          {u.id !== 1 && u.id !== currentUser?.id && (
+            <Tooltip text={u.estado === 'activo' ? "Desactivar Usuario" : "Activar Usuario"} position="top-right">
+              <Button 
+                onClick={() => handleToggleEstado(u.id, u.estado)}
+                variant="ghost"
+                size="sm"
+                icon={u.estado === 'activo' ? <PowerOff size={16} /> : <RefreshCcw size={16} />}
+                className={`p-2 rounded-xl border ${
+                  u.estado === 'activo'
+                    ? "text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 bg-red-50/50 dark:bg-red-900/10 border-red-100 dark:border-red-800"
+                    : "text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 bg-green-50/50 dark:bg-green-900/10 border-green-100 dark:border-green-800"
+                }`}
+              />
+            </Tooltip>
+          )}
         </div>
       )
     }
