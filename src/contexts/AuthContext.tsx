@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import { createContext, use, useState, ReactNode, useEffect } from 'react';
 import type { UserData } from '../modules/login/Service';
 import { preferenciasService } from '../modules/configuracion/preferenciasService';
 import { notificationService } from '../lib/notifications';
@@ -121,7 +121,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 }
 
 export function useAuth() {
-  const context = useContext(AuthContext);
+  const context = use(AuthContext);
   if (context === undefined) {
     throw new Error('useAuth debe ser usado dentro de un AuthProvider');
   }

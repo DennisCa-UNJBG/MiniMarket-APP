@@ -50,21 +50,21 @@ export const cajaService = {
   async cerrarCaja(cajaId: number, usuarioId: number, montoFinal: number): Promise<void> {
     const db = await getDb();
     
-    await db.execute(
-      `UPDATE cajas 
-       SET monto_final = ?, fecha_cierre = CURRENT_TIMESTAMP, estado = 'cerrada' 
-       WHERE id = ?`,
-      [montoFinal, cajaId]
-    );
-
-    // Registrar Log
-    await logService.register({
-      usuario_id: usuarioId,
-      accion: 'CIERRE_CAJA',
-      tabla: 'cajas',
-      registro_id: cajaId,
-      detalles: `Caja cerrada con monto final de S/ ${montoFinal.toFixed(2)}`
-    });
+    await Promise.all([
+      db.execute(
+        `UPDATE cajas 
+         SET monto_final = ?, fecha_cierre = CURRENT_TIMESTAMP, estado = 'cerrada' 
+         WHERE id = ?`,
+        [montoFinal, cajaId]
+      ),
+      logService.register({
+        usuario_id: usuarioId,
+        accion: 'CIERRE_CAJA',
+        tabla: 'cajas',
+        registro_id: cajaId,
+        detalles: `Caja cerrada con monto final de S/ ${montoFinal.toFixed(2)}`
+      })
+    ]);
   },
 
   /**

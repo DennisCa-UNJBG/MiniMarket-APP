@@ -5,7 +5,7 @@ import {
   User,
   ArrowRight
 } from 'lucide-react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { getVersion } from '@tauri-apps/api/app';
 import { authService, type UserData } from './Service';
 import { notificationService } from '../../lib/notifications';
@@ -21,6 +21,7 @@ interface LoginProps {
 }
 
 export function Login({ onLogin }: LoginProps) {
+  const queryClient = useQueryClient();
   const [account, setAccount] = useState(() => localStorage.getItem('lastAccount') || '');
   const [password, setPassword] = useState('');
   const [appVersion, setAppVersion] = useState('');
@@ -30,6 +31,7 @@ export function Login({ onLogin }: LoginProps) {
   const loginMutation = useMutation({
     mutationFn: () => authService.login(account, password),
     onSuccess: (userData) => {
+      queryClient.clear();
       localStorage.setItem('lastAccount', account);
       onLogin(userData);
     },

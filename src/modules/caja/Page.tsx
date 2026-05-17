@@ -116,7 +116,7 @@ export function Caja() {
           <span className="text-xs font-bold text-zinc-700 dark:text-zinc-200">{formatDate(row.fecha_cierre)}</span>
           <span className="text-[10px] text-zinc-400">{formatTime(row.fecha_cierre)}</span>
         </div>
-      ) : <span className="text-[10px] italic text-zinc-300">En curso...</span>
+      ) : <span className="text-[10px] italic text-zinc-300">En curso…</span>
     },
     {
       key: 'monto_inicial',

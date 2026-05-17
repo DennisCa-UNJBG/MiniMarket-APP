@@ -209,6 +209,7 @@ export function Ventas() {
   const fetchDetailsMutation = useMutation({
     mutationFn: (id: number) => ventaService.getVentaDetalles(id),
     onSuccess: (details, id) => {
+      queryClient.setQueryData(['sale-details', id], details);
       setSaleDetails(details);
       setSelectedSale(salesRes.data.find((s: any) => s.id === id));
     }

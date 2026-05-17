@@ -8,12 +8,34 @@ interface CardProps {
 }
 
 export function Card({ children, className = '', onClick, hoverable = false }: CardProps) {
+  if (onClick) {
+    return (
+      <div
+        onClick={onClick}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onClick();
+          }
+        }}
+        className={`
+          bg-white dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 rounded-2xl shadow-sm overflow-hidden
+          ${hoverable ? 'hover:shadow-md hover:border-blue-300 dark:hover:border-blue-500/50 transition-all cursor-pointer' : ''}
+          ${className}
+        `}
+      >
+        {children}
+      </div>
+    );
+  }
+
   return (
     <div
-      onClick={onClick}
       className={`
         bg-white dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 rounded-2xl shadow-sm overflow-hidden
-        ${hoverable ? 'hover:shadow-md hover:border-blue-300 dark:hover:border-blue-500/50 transition-all cursor-pointer' : ''}
+        ${hoverable ? 'hover:shadow-md hover:border-blue-300 dark:hover:border-blue-500/50 transition-all' : ''}
         ${className}
       `}
     >

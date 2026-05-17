@@ -109,18 +109,19 @@ export const sucursalService = {
    */
   async update(id: number, sucursal: { codigo: string; nombre: string; direccion?: string }, usuarioId: number) {
     const db = await getDb();
-    await db.execute(
-      'UPDATE sucursales SET codigo = ?, nombre = ?, direccion = ? WHERE id = ?',
-      [sucursal.codigo, sucursal.nombre, sucursal.direccion || '', id]
-    );
-
-    await logService.register({
-      usuario_id: usuarioId,
-      accion: 'EDITAR_SUCURSAL',
-      tabla: 'sucursales',
-      registro_id: id,
-      detalles: `Datos actualizados para la sucursal: ${sucursal.nombre}`
-    });
+    await Promise.all([
+      db.execute(
+        'UPDATE sucursales SET codigo = ?, nombre = ?, direccion = ? WHERE id = ?',
+        [sucursal.codigo, sucursal.nombre, sucursal.direccion || '', id]
+      ),
+      logService.register({
+        usuario_id: usuarioId,
+        accion: 'EDITAR_SUCURSAL',
+        tabla: 'sucursales',
+        registro_id: id,
+        detalles: `Datos actualizados para la sucursal: ${sucursal.nombre}`
+      })
+    ]);
 
     return true;
   },
@@ -135,19 +136,23 @@ export const sucursalService = {
     const sData = await db.select<any[]>('SELECT nombre FROM sucursales WHERE id = ?', [id]);
     const nombre = sData[0]?.nombre || 'ID:' + id;
 
-    await db.execute('UPDATE sucursales SET estado = ? WHERE id = ?', [nuevoEstado, id]);
+    const promises: Promise<any>[] = [
+      db.execute('UPDATE sucursales SET estado = ? WHERE id = ?', [nuevoEstado, id])
+    ];
 
-    // Registrar Log si se proporcionó el usuarioId
     if (usuarioId) {
-      await logService.register({
-        usuario_id: usuarioId,
-        accion: 'ESTADO_SUCURSAL',
-        tabla: 'sucursales',
-        registro_id: id,
-        detalles: `Sucursal "${nombre}" marcada como ${nuevoEstado.toUpperCase()}`
-      });
+      promises.push(
+        logService.register({
+          usuario_id: usuarioId,
+          accion: 'ESTADO_SUCURSAL',
+          tabla: 'sucursales',
+          registro_id: id,
+          detalles: `Sucursal "${nombre}" marcada como ${nuevoEstado.toUpperCase()}`
+        })
+      );
     }
 
+    await Promise.all(promises);
     return true;
   }
 };

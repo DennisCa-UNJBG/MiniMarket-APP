@@ -1,28 +1,13 @@
 import { useReducer } from 'react';
-import {
-  Search,
-  Plus,
-  Minus,
-  Trash2,
-  ShoppingBag,
-  Receipt,
-  ArrowLeft,
-  CreditCard,
-  Banknote
-} from 'lucide-react';
+import { ArrowLeft, Receipt } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { notificationService } from '../../lib/notifications';
 import { Button } from '../../components/ui/Button';
-import { Card } from '../../components/ui/Card';
-import { Input } from '../../components/ui/Input';
-import { Modal } from '../../components/ui/Modal';
-import { Badge } from '../../components/ui/Badge';
-import { Tooltip } from '../../components/ui/Tooltip';
-import { productoService, type Product } from '../productos/Service';
-import { categoriaService } from '../productos/categoriaService';
-import { ventaService } from './Service';
+import { ProductCatalog } from './components/ProductCatalog';
+import { VentaCart } from './components/VentaCart';
+import { CheckoutModal } from './components/CheckoutModal';
 import { useAuth } from '../../contexts/AuthContext';
+import { type Product } from '../productos/Service';
+import { notificationService } from '../../lib/notifications';
 
 interface CartItem {
   product: Product;
@@ -34,8 +19,6 @@ interface NuevaVentaState {
   activeCategory: number | 'Todos';
   cart: CartItem[];
   showCheckout: boolean;
-  paymentMethod: 'EFECTIVO' | 'TARJETA';
-  amountPaid: string;
   hasIGV: boolean;
   igvPercent: number;
 }
@@ -45,10 +28,9 @@ type NuevaVentaAction =
   | { type: 'SET_ACTIVE_CATEGORY'; payload: number | 'Todos' }
   | { type: 'SET_CART'; payload: CartItem[] | ((prev: CartItem[]) => CartItem[]) }
   | { type: 'SET_SHOW_CHECKOUT'; payload: boolean }
-  | { type: 'SET_PAYMENT_METHOD'; payload: 'EFECTIVO' | 'TARJETA' }
-  | { type: 'SET_AMOUNT_PAID'; payload: string }
   | { type: 'SET_HAS_IGV'; payload: boolean }
-  | { type: 'SET_IGV_PERCENT'; payload: number };
+  | { type: 'SET_IGV_PERCENT'; payload: number }
+  | { type: 'RESET_CART' };
 
 function nuevaVentaReducer(state: NuevaVentaState, action: NuevaVentaAction): NuevaVentaState {
   switch (action.type) {
@@ -63,14 +45,16 @@ function nuevaVentaReducer(state: NuevaVentaState, action: NuevaVentaAction): Nu
       };
     case 'SET_SHOW_CHECKOUT':
       return { ...state, showCheckout: action.payload };
-    case 'SET_PAYMENT_METHOD':
-      return { ...state, paymentMethod: action.payload };
-    case 'SET_AMOUNT_PAID':
-      return { ...state, amountPaid: action.payload };
     case 'SET_HAS_IGV':
       return { ...state, hasIGV: action.payload };
     case 'SET_IGV_PERCENT':
       return { ...state, igvPercent: action.payload };
+    case 'RESET_CART':
+      return {
+        ...state,
+        cart: [],
+        showCheckout: false
+      };
     default:
       return state;
   }
@@ -78,7 +62,6 @@ function nuevaVentaReducer(state: NuevaVentaState, action: NuevaVentaAction): Nu
 
 export function NuevaVenta() {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const { user } = useAuth();
   
   const [state, dispatch] = useReducer(nuevaVentaReducer, {
@@ -86,8 +69,6 @@ export function NuevaVenta() {
     activeCategory: 'Todos',
     cart: [],
     showCheckout: false,
-    paymentMethod: 'EFECTIVO',
-    amountPaid: '',
     hasIGV: false,
     igvPercent: 18
   });
@@ -97,8 +78,6 @@ export function NuevaVenta() {
     activeCategory,
     cart,
     showCheckout,
-    paymentMethod,
-    amountPaid,
     hasIGV,
     igvPercent
   } = state;
@@ -107,49 +86,9 @@ export function NuevaVenta() {
   const setActiveCategory = (payload: number | 'Todos') => dispatch({ type: 'SET_ACTIVE_CATEGORY', payload });
   const setCart = (payload: CartItem[] | ((prev: CartItem[]) => CartItem[])) => dispatch({ type: 'SET_CART', payload });
   const setShowCheckout = (payload: boolean) => dispatch({ type: 'SET_SHOW_CHECKOUT', payload });
-  const setPaymentMethod = (payload: 'EFECTIVO' | 'TARJETA') => dispatch({ type: 'SET_PAYMENT_METHOD', payload });
-  const setAmountPaid = (payload: string) => dispatch({ type: 'SET_AMOUNT_PAID', payload });
   const setHasIGV = (payload: boolean) => dispatch({ type: 'SET_HAS_IGV', payload });
   const setIgvPercent = (payload: number) => dispatch({ type: 'SET_IGV_PERCENT', payload });
-
-  // Queries
-  const { data: products = [] } = useQuery({
-    queryKey: ['products', true],
-    queryFn: () => productoService.getAll(true)
-  });
-
-  const { data: categories = [] } = useQuery({
-    queryKey: ['categories'],
-    queryFn: () => categoriaService.getAll()
-  });
-
-  // Mutations
-  const registrarVentaMutation = useMutation({
-    mutationFn: (ventaData: any) => ventaService.registrarVenta(ventaData),
-    onSuccess: async (data) => {
-      setShowCheckout(false);
-      await notificationService.successWithConfirm('¡Venta completada!', `Vuelto: S/ ${data.vuelto.toFixed(2)}`);
-      
-      setCart([]);
-      setAmountPaid('');
-      queryClient.invalidateQueries({ queryKey: ['products'] });
-      queryClient.invalidateQueries({ queryKey: ['sales'] });
-      queryClient.invalidateQueries({ queryKey: ['sales-summary'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
-      queryClient.invalidateQueries({ queryKey: ['recent-activity'] });
-      queryClient.invalidateQueries({ queryKey: ['sales-chart'] });
-      queryClient.invalidateQueries({ queryKey: ['low-stock'] });
-      queryClient.invalidateQueries({ queryKey: ['movements'] });
-    }
-  });
-
-  // ── Lógica del Catálogo ───────────────────────────────────────────────────────
-  const filteredCatalog = products.filter(p => {
-    const matchesSearch = p.nombre.toLowerCase().includes(search.toLowerCase()) || 
-                         (p.codigo_barras && p.codigo_barras.toLowerCase().includes(search.toLowerCase()));
-    const matchesCategory = activeCategory === 'Todos' || p.categoria_id === activeCategory;
-    return matchesSearch && matchesCategory;
-  });
+  const resetCart = () => dispatch({ type: 'RESET_CART' });
 
   // ── Lógica del Carrito ────────────────────────────────────────────────────────
   const addToCart = (product: Product) => {
@@ -199,9 +138,6 @@ export function NuevaVenta() {
   const subtotalBase = cart.reduce((sum, item) => sum + ((item.product.precio_venta || 0) * item.quantity), 0);
   const igvAmount = hasIGV ? (subtotalBase * (igvPercent / 100)) : 0;
   const total = subtotalBase + igvAmount;
-  
-  const paidNumber = parseFloat(amountPaid) || 0;
-  const change = Math.max(0, paidNumber - total);
 
   return (
     <div className="h-[calc(100vh-56px)] flex flex-col -m-6 overflow-hidden bg-transparent">
@@ -238,316 +174,41 @@ export function NuevaVenta() {
 
       {/* ── Área Principal (Dos columnas) ──────────────────────────────────── */}
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden bg-transparent">
+        <ProductCatalog 
+          search={search}
+          setSearch={setSearch}
+          activeCategory={activeCategory}
+          setActiveCategory={setActiveCategory}
+          addToCart={addToCart}
+        />
         
-        {/* Lado Izquierdo: Catálogo */}
-        <div className="flex-1 flex flex-col h-full lg:border-r border-zinc-200 dark:border-zinc-700">
-          
-          {/* Búsqueda y Categorías */}
-          <div className="p-4 bg-white dark:bg-zinc-800 border-b border-zinc-100 dark:border-zinc-700 shrink-0 space-y-3">
-            <Input
-              placeholder="Buscar por código o nombre del producto..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              icon={<Search size={18} />}
-            />
-            
-            {/* Scroll horizontal de categorías */}
-            <div className="flex overflow-x-auto pb-1 gap-2 no-scrollbar">
-                <Button
-                  variant={activeCategory === 'Todos' ? 'primary' : 'secondary'}
-                  size="sm"
-                  onClick={() => setActiveCategory('Todos')}
-                  className={`px-4 py-1.5 rounded-full whitespace-nowrap border-none ${
-                    activeCategory === 'Todos' 
-                      ? 'bg-zinc-800 text-white dark:bg-zinc-100 dark:text-zinc-900' 
-                      : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-600'
-                  }`}
-                >
-                  Todos
-                </Button>
-              {categories.map(cat => (
-                <Button
-                  key={cat.id}
-                  variant={activeCategory === cat.id ? 'primary' : 'secondary'}
-                  size="sm"
-                  onClick={() => setActiveCategory(cat.id)}
-                  className={`px-4 py-1.5 rounded-full whitespace-nowrap border-none ${
-                    activeCategory === cat.id 
-                      ? 'bg-zinc-800 text-white dark:bg-zinc-100 dark:text-zinc-900' 
-                      : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-600'
-                  }`}
-                >
-                  {cat.nombre}
-                </Button>
-              ))}
-            </div>
-          </div>
-
-          {/* Grid de Productos */}
-          <div className="flex-1 overflow-y-auto p-4">
-            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4">
-              {filteredCatalog.map(product => (
-                <Card
-                  key={product.id}
-                  onClick={() => (product.stock_actual || 0) > 0 ? addToCart(product) : notificationService.warning('Sin Stock', 'Este producto no tiene existencias.')}
-                  hoverable
-                  className={`p-4 text-left flex flex-col h-full group ${(product.stock_actual || 0) <= 0 ? 'opacity-60 grayscale-[0.5]' : ''}`}
-                >
-                  <div className="w-full h-24 bg-zinc-50 dark:bg-zinc-700/50 rounded-xl mb-3 flex items-center justify-center text-zinc-300 dark:text-zinc-600 group-hover:scale-105 transition-transform relative overflow-hidden">
-                    <ShoppingBag size={32} />
-                    {(product.stock_actual || 0) <= 0 && (
-                      <div className="absolute inset-0 bg-red-500/10 flex items-center justify-center">
-                        <span className="bg-red-600 text-white text-[10px] font-black px-2 py-1 rounded-lg uppercase tracking-tighter shadow-lg">Agotado</span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <Badge label={product.categoria_nombre || 'General'} variant="blue" className="mb-1" />
-                    <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-100 leading-tight mb-2 line-clamp-2">{product.nombre}</p>
-                  </div>
-                  <div className="flex items-end justify-between mt-auto pt-2">
-                    <p className="text-lg font-bold text-zinc-900 dark:text-white">S/ {(product.precio_venta || 0).toFixed(2)}</p>
-                    <p className={`text-[10px] font-medium ${product.stock_actual <= (product.stock_minimo || 0) ? 'text-amber-500' : 'text-zinc-400 dark:text-zinc-500'}`}>
-                      {product.stock_actual} {product.unidad_medida}
-                    </p>
-                  </div>
-                </Card>
-              ))}
-            </div>
-            {filteredCatalog.length === 0 && (
-              <div className="flex flex-col items-center justify-center h-full text-zinc-400 dark:text-zinc-500">
-                <ShoppingBag size={48} className="mb-3 opacity-20" />
-                <p>No se encontraron productos.</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Lado Derecho: Ticket / Carrito */}
-        <div className="w-full lg:w-[400px] flex flex-col bg-white dark:bg-zinc-800 shrink-0 shadow-[-10px_0_15px_-10px_rgba(0,0,0,0.05)] z-10">
-          
-          <div className="p-4 border-b border-zinc-100 dark:border-zinc-700 bg-zinc-50/50 dark:bg-zinc-800">
-            <h2 className="font-semibold text-zinc-800 dark:text-white flex items-center justify-between">
-              <span>Ticket Actual</span>
-              <Badge 
-                label={`${cart.reduce((sum, item) => sum + item.quantity, 0)} ítems`} 
-                variant="blue" 
-              />
-            </h2>
-          </div>
-
-          <div className="flex-1 overflow-y-auto p-2">
-            {cart.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-center p-6 text-zinc-400 dark:text-zinc-500">
-                <Receipt size={48} className="mb-4 opacity-20" />
-                <p className="text-sm">El carrito está vacío</p>
-                <p className="text-xs mt-1">Selecciona productos del catálogo para agregarlos a la venta.</p>
-              </div>
-            ) : (
-              <ul className="space-y-2">
-                {cart.map(item => (
-                  <li key={item.product.id} className="p-3 bg-white dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 rounded-xl hover:bg-zinc-50 dark:hover:bg-zinc-700/50 transition-colors group">
-                    <div className="flex justify-between items-start mb-2">
-                      <span className="text-sm font-semibold text-zinc-800 dark:text-zinc-100">{item.product.nombre}</span>
-                      <span className="text-sm font-bold text-zinc-900 dark:text-white">S/ {((item.product.precio_venta || 0) * item.quantity).toFixed(2)}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs text-zinc-500 dark:text-zinc-400">S/ {(item.product.precio_venta || 0).toFixed(2)} c/u</p>
-                      
-                      <div className="flex items-center gap-1.5 bg-zinc-100 dark:bg-zinc-900/50 p-1 rounded-lg border border-zinc-200/50 dark:border-zinc-700">
-                        <Tooltip text={item.quantity === 1 ? "Eliminar" : "Disminuir"} position="top-right">
-                          <Button 
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => item.quantity === 1 ? removeFromCart(item.product.id) : updateQuantity(item.product.id, -1)}
-                            className="h-8 p-0 px-0 min-h-0 bg-white dark:bg-zinc-700 shadow-sm border border-zinc-200 dark:border-zinc-600 hover:border-blue-400 dark:hover:border-blue-500"
-                          >
-                            {item.quantity === 1 ? <Trash2 size={16} className="text-red-500" /> : <Minus size={18} strokeWidth={3} className="text-zinc-800 dark:text-white" />}
-                          </Button>
-                        </Tooltip>
-                        <span className="w-10 text-center text-base font-black text-zinc-900 dark:text-white">
-                          {item.quantity}
-                        </span>
-                        <Tooltip text="Aumentar" position="top-right">
-                          <Button 
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => updateQuantity(item.product.id, 1)}
-                            className=" h-8 p-0 px-0 min-h-0 bg-white dark:bg-zinc-700 shadow-sm border-2 border-zinc-200 dark:border-zinc-600 hover:border-blue-500 dark:hover:border-blue-400 active:bg-zinc-100"
-                          >
-                            <Plus size={18} strokeWidth={3} className="text-zinc-800 dark:text-white" />
-                          </Button>
-                        </Tooltip>
-                      </div>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-
-          {/* Resumen Totales */}
-          <div className="p-4 border-t border-zinc-100 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 space-y-4">
-            
-            {/* Control de IGV */}
-            <div className="bg-white dark:bg-zinc-700/50 p-3 rounded-xl border border-zinc-100 dark:border-zinc-600 flex items-center justify-between">
-              <div className="flex flex-col gap-0.5">
-                <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Impuestos IGV</span>
-                <div className="flex items-center gap-2">
-                  <label htmlFor="checkbox-impuestos-igv" className="relative inline-flex items-center cursor-pointer scale-75 origin-left">
-                    <input id="checkbox-impuestos-igv" type="checkbox" className="sr-only peer" checked={hasIGV} onChange={(e) => setHasIGV(e.target.checked)} />
-                    <div className="w-9 h-5 bg-zinc-200 peer-focus:outline-none rounded-full peer dark:bg-zinc-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-zinc-600 peer-checked:bg-blue-600"></div>
-                  </label>
-                  <span className={`text-[10px] font-black uppercase ${hasIGV ? 'text-blue-600 dark:text-blue-400' : 'text-zinc-400'}`}>
-                    {hasIGV ? 'ACTIVO' : 'NO APLICA'}
-                  </span>
-                </div>
-              </div>
-
-              {hasIGV && (
-                <div className="relative w-16">
-                  <input 
-                    type="number" 
-                    className="w-full pl-2 pr-5 py-1 text-xs font-bold bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-600 rounded-lg text-blue-600 dark:text-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
-                    value={igvPercent}
-                    onChange={(e) => setIgvPercent(parseFloat(e.target.value) || 0)}
-                  />
-                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-zinc-400 font-bold">%</span>
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-1.5 px-1">
-              <div className="flex justify-between text-xs text-zinc-500 dark:text-zinc-400">
-                <span>Subtotal Base</span>
-                <span>S/ {subtotalBase.toFixed(2)}</span>
-              </div>
-              {hasIGV && (
-                <div className="flex justify-between text-xs text-blue-500/70 dark:text-blue-400/70 italic">
-                  <span>IGV ({igvPercent}%)</span>
-                  <span>+ S/ {igvAmount.toFixed(2)}</span>
-                </div>
-              )}
-              <div className="border-t border-zinc-200 dark:border-zinc-600 pt-2 flex justify-between items-center">
-                <span className="text-sm font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-tighter">Total a Cobrar</span>
-                <span className="text-2xl font-black text-blue-600 dark:text-blue-400">S/ {total.toFixed(2)}</span>
-              </div>
-            </div>
-            
-            <Button 
-              disabled={cart.length === 0}
-              onClick={() => setShowCheckout(true)}
-              fullWidth
-              size="lg"
-              className="mt-2"
-              icon={<ArrowLeft size={20} className="rotate-180" />}
-              iconPosition="right"
-            >
-              Cobrar
-            </Button>
-          </div>
-
-        </div>
+        <VentaCart 
+          cart={cart}
+          updateQuantity={updateQuantity}
+          removeFromCart={removeFromCart}
+          hasIGV={hasIGV}
+          setHasIGV={setHasIGV}
+          igvPercent={igvPercent}
+          setIgvPercent={setIgvPercent}
+          subtotalBase={subtotalBase}
+          igvAmount={igvAmount}
+          total={total}
+          onCobrar={() => setShowCheckout(true)}
+        />
       </div>
 
-      {/* ── Modal de Cobro (Checkout) ──────────────────────────────────────── */}
       {showCheckout && (
-        <Modal 
-          title="Completar Venta" 
+        <CheckoutModal 
+          isOpen={showCheckout}
           onClose={() => setShowCheckout(false)}
-          maxWidth="md"
-        >
-          <div className="-mx-6 -mt-5 mb-6">
-            <div className="bg-blue-600 p-8 text-center text-white">
-              <p className="text-blue-200 text-sm font-medium mb-1">Monto a cobrar</p>
-              <p className="text-4xl font-black">S/ {total.toFixed(2)}</p>
-            </div>
-          </div>
-            
-          <div className="space-y-6">
-            {/* Métodos de pago */}
-            <div className="grid grid-cols-2 gap-3">
-              <Button 
-                variant="secondary" 
-                onClick={() => setPaymentMethod('EFECTIVO')}
-                className={`flex-col h-auto py-4 border-2 transition-all ${paymentMethod === 'EFECTIVO' ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400' : 'border-transparent opacity-60'}`}
-                icon={<Banknote size={24} />}
-              >
-                <span>Efectivo</span>
-              </Button>
-              <Button 
-                variant="secondary" 
-                onClick={() => {
-                  setPaymentMethod('TARJETA');
-                  setAmountPaid(total.toString());
-                }}
-                className={`flex-col h-auto py-4 border-2 transition-all ${paymentMethod === 'TARJETA' ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400' : 'border-transparent opacity-60'}`}
-                icon={<CreditCard size={24} />}
-              >
-                <span>Tarjeta / Yape</span>
-              </Button>
-            </div>
-
-            {/* Input de Monto - Siempre visible */}
-            <div className="space-y-4">
-              <Input
-                label={paymentMethod === 'EFECTIVO' ? "Monto recibido (S/)" : "Monto exacto (Tarjeta/Yape)"}
-                type="number"
-                disabled={paymentMethod === 'TARJETA'}
-                autoFocus
-                value={amountPaid}
-                onChange={(e) => setAmountPaid(e.target.value)}
-                icon={<span className="text-zinc-400 font-bold">S/</span>}
-                placeholder="0.00"
-                className="text-xl font-bold"
-              />
-
-              {/* Vuelto / Estado del Pago */}
-              <div className={`p-4 rounded-xl flex justify-between items-center transition-colors ${
-                paidNumber >= total 
-                  ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800' 
-                  : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400 border border-zinc-100 dark:border-zinc-800'
-              }`}>
-                <span className="font-semibold">{paidNumber >= total ? 'Vuelto:' : 'Pendiente:'}</span>
-                <span className="text-2xl font-black">S/ {Math.abs(change).toFixed(2)}</span>
-              </div>
-            </div>
-
-            <div className="flex gap-3 pt-2">
-              <Button 
-                variant="secondary" 
-                onClick={() => setShowCheckout(false)}
-                fullWidth
-              >
-                Volver
-              </Button>
-              <Button 
-                disabled={paymentMethod === 'EFECTIVO' && paidNumber < total}
-                onClick={() => {
-                  const ventaData = {
-                    usuario_id: user?.id || 1,
-                    total,
-                    igv: igvAmount,
-                    igv_porcentaje: hasIGV ? igvPercent : 0,
-                    metodo_pago: paymentMethod,
-                    monto_pagado: paidNumber,
-                    vuelto: change,
-                    items: cart.map(i => ({
-                      producto_id: i.product.id,
-                      cantidad: i.quantity,
-                      precio_unitario: i.product.precio_venta || 0
-                    }))
-                  };
-                  registrarVentaMutation.mutate(ventaData);
-                }}
-                fullWidth
-                className="flex-[2]"
-              >
-                Confirmar Pago
-              </Button>
-            </div>
-          </div>
-        </Modal>
+          total={total}
+          igvAmount={igvAmount}
+          hasIGV={hasIGV}
+          igvPercent={igvPercent}
+          cart={cart}
+          user={user}
+          onSuccess={resetCart}
+        />
       )}
     </div>
   );

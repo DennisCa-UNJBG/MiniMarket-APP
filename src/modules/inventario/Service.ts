@@ -49,48 +49,44 @@ export const inventarioService = {
 
     // 2. Procesar cada producto del lote
     await Promise.all(compra.items.map(async (item) => {
-      // A. Insertar Detalle de Compra
-      await db.execute(
-        `INSERT INTO compras_detalle (compra_id, producto_id, cantidad, costo_unitario, subtotal) 
-         VALUES (?, ?, ?, ?, ?)`,
-        [compraId, item.producto_id, item.cantidad, item.costo_unitario, item.cantidad * item.costo_unitario]
-      );
+      // A. Obtener stock actual y precio de venta actual en paralelo
+      const [pData, precioActual] = await Promise.all([
+        db.select<any[]>('SELECT stock_actual, stock_minimo, nombre FROM productos WHERE id = ?', [item.producto_id]),
+        db.select<any[]>('SELECT precio_venta FROM precios_historial WHERE producto_id = ? ORDER BY id DESC LIMIT 1', [item.producto_id])
+      ]);
 
-      // B. Obtener stock actual para el Kardex
-      const pData = await db.select<any[]>('SELECT stock_actual, stock_minimo, nombre FROM productos WHERE id = ?', [item.producto_id]);
       if (pData.length === 0) throw new Error(`Producto ${item.producto_id} no encontrado`);
       const { stock_actual, stock_minimo, nombre } = pData[0];
       const nuevoStock = stock_actual + item.cantidad;
+      const precioVenta = precioActual.length > 0 ? (precioActual[0].precio_venta || 0) : 0;
 
       // Verificar si sigue bajo stock mínimo después de la compra
       if (nuevoStock <= (stock_minimo || 0)) {
         alertas.push(nombre);
       }
 
-      // C. Registrar en Kardex
-      await db.execute(
-        `INSERT INTO kardex (producto_id, usuario_id, tipo_movimiento, cantidad, saldo_posterior, costo_unitario, referencia, sucursal_id) 
-         VALUES (?, ?, 'INGRESO', ?, ?, ?, ?, ?)`,
-        [item.producto_id, compra.usuario_id, item.cantidad, nuevoStock, item.costo_unitario, `COMPRA #${compraId} (${compra.documento_referencia || 'S/R'})`, sucursalId]
-      );
-
-      // D. Actualizar Stock en tabla Productos
-      await db.execute('UPDATE productos SET stock_actual = ? WHERE id = ?', [nuevoStock, item.producto_id]);
-
-      // E. Actualizar Historial de Precios (Desactivar anterior e insertar nuevo con nuevo costo)
-      await db.execute('UPDATE precios_historial SET activo = 0 WHERE producto_id = ?', [item.producto_id]);
-      
-      const precioActual = await db.select<any[]>(
-        'SELECT precio_venta FROM precios_historial WHERE producto_id = ? ORDER BY id DESC LIMIT 1',
-        [item.producto_id]
-      );
-      const precioVenta = precioActual.length > 0 ? (precioActual[0].precio_venta || 0) : 0;
-
-      await db.execute(
-        `INSERT INTO precios_historial (producto_id, precio_compra, precio_venta, activo) 
-         VALUES (?, ?, ?, 1)`,
-        [item.producto_id, item.costo_unitario, precioVenta]
-      );
+      // B. Ejecutar todas las escrituras independientes en la base de datos en paralelo
+      await Promise.all([
+        db.execute(
+          `INSERT INTO compras_detalle (compra_id, producto_id, cantidad, costo_unitario, subtotal) 
+           VALUES (?, ?, ?, ?, ?)`,
+          [compraId, item.producto_id, item.cantidad, item.costo_unitario, item.cantidad * item.costo_unitario]
+        ),
+        db.execute(
+          `INSERT INTO kardex (producto_id, usuario_id, tipo_movimiento, cantidad, saldo_posterior, costo_unitario, referencia, sucursal_id) 
+           VALUES (?, ?, 'INGRESO', ?, ?, ?, ?, ?)`,
+          [item.producto_id, compra.usuario_id, item.cantidad, nuevoStock, item.costo_unitario, `COMPRA #${compraId} (${compra.documento_referencia || 'S/R'})`, sucursalId]
+        ),
+        db.execute('UPDATE productos SET stock_actual = ? WHERE id = ?', [nuevoStock, item.producto_id]),
+        (async () => {
+          await db.execute('UPDATE precios_historial SET activo = 0 WHERE producto_id = ?', [item.producto_id]);
+          await db.execute(
+            `INSERT INTO precios_historial (producto_id, precio_compra, precio_venta, activo) 
+             VALUES (?, ?, ?, 1)`,
+            [item.producto_id, item.costo_unitario, precioVenta]
+          );
+        })()
+      ]);
     }));
 
     // 3. Log de Auditoría
