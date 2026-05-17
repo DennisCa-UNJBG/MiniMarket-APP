@@ -18,8 +18,10 @@ export const cajaService = {
    * Abre la caja para el turno actual
    */
   async abrirCaja(usuarioId: number, montoInicial: number): Promise<number> {
-    const db = await getDb();
-    const config = await sucursalService.getConfig();
+    const [db, config] = await Promise.all([
+      getDb(),
+      sucursalService.getConfig()
+    ]);
     const sucursalId = config?.sucursal_id || 'LOCAL';
 
     const result = await db.execute(
@@ -69,8 +71,10 @@ export const cajaService = {
    * Obtiene la caja abierta actualmente (si existe)
    */
   async getCajaAbierta(): Promise<Caja | null> {
-    const db = await getDb();
-    const config = await sucursalService.getConfig();
+    const [db, config] = await Promise.all([
+      getDb(),
+      sucursalService.getConfig()
+    ]);
     const sucursalId = config?.sucursal_id || 'LOCAL';
 
     const result = await db.select<Caja[]>(

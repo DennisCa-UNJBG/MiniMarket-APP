@@ -46,9 +46,9 @@ export const VentasBarChart: React.FC<ChartProps> = ({ data, isPrint }) => (
           }} 
           formatter={(v: any) => Number(v) > 0 ? `S/ ${Number(v).toFixed(0)}` : ''} 
         />
-        {data.map((_, index) => (
+        {data.map((entry, index) => (
           <Cell 
-            key={`cell-${index}`} 
+            key={entry.month} 
             fill={index === data.length - 1 ? '#6366f1' : (isPrint ? '#cbd5e1' : '#e2e8f0')} 
           />
         ))}
@@ -72,21 +72,21 @@ export const RankingProductos: React.FC<RankingProps> = ({ products, isPrint }) 
         <div key={p.name} className="group">
           <div className="flex justify-between items-center mb-2">
             <div className="flex items-center gap-3">
-              <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-black ${i === 0 ? 'bg-amber-500 text-white' : 'bg-gray-100 text-gray-500 dark:bg-gray-700'}`}>
+              <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-black ${i === 0 ? 'bg-amber-500 text-white' : 'bg-zinc-100 text-zinc-500 dark:bg-zinc-700'}`}>
                 {i + 1}
               </div>
-              <span className={`text-sm font-bold ${isPrint ? 'text-gray-800' : 'text-gray-700 dark:text-gray-200'} transition-colors`}>
+              <span className={`text-sm font-bold ${isPrint ? 'text-zinc-800' : 'text-zinc-700 dark:text-zinc-200'} transition-colors`}>
                 {p.name}
               </span>
             </div>
             <div className="text-right">
-              <span className={`text-sm font-black ${isPrint ? 'text-gray-900' : 'text-gray-800 dark:text-white'} block`}>{p.sales} uds.</span>
-              <span className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">S/ {p.revenue.toFixed(2)}</span>
+              <span className={`text-sm font-black ${isPrint ? 'text-zinc-900' : 'text-zinc-800 dark:text-white'} block`}>{p.sales} uds.</span>
+              <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-tighter">S/ {p.revenue.toFixed(2)}</span>
             </div>
           </div>
-          <div className={`h-2 ${isPrint ? 'bg-gray-100' : 'bg-gray-50 dark:bg-gray-700/50'} rounded-full overflow-hidden`}>
+          <div className={`h-2 ${isPrint ? 'bg-zinc-100' : 'bg-zinc-50 dark:bg-zinc-700/50'} rounded-full overflow-hidden`}>
             <div
-              className={`h-full rounded-full transition-all duration-1000 ${i === 0 ? 'bg-indigo-500' : 'bg-indigo-300'}`}
+              className={`h-full rounded-full transition-all duration-1000 ${i === 0 ? 'bg-blue-500' : 'bg-blue-300'}`}
               style={{ width: `${pct}%` }}
             />
           </div>

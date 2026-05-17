@@ -41,14 +41,14 @@ export function Clientes() {
       />
 
       {/* Búsqueda */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 shadow-sm">
+      <div className="bg-white dark:bg-zinc-800 rounded-2xl border border-zinc-100 dark:border-zinc-700 p-4 shadow-sm">
         <div className="relative max-w-sm">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
           <input
             id="search-clients"
             type="text"
             placeholder="Buscar por nombre o DNI..."
-            className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
+            className="w-full pl-9 pr-4 py-2 text-sm border border-zinc-200 dark:border-zinc-600 rounded-lg bg-zinc-50 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
           />
         </div>
       </div>
@@ -58,44 +58,44 @@ export function Clientes() {
         {clients.map((c) => (
           <div
             key={c.id}
-            className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-5 hover:shadow-md transition-shadow"
+            className="bg-white dark:bg-zinc-800 rounded-2xl border border-zinc-100 dark:border-zinc-700 shadow-sm p-5 hover:shadow-md transition-shadow"
           >
             {/* Avatar + nombre */}
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center flex-shrink-0">
-                <User size={18} className="text-indigo-600 dark:text-indigo-400" />
+              <div className="size-10 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center flex-shrink-0">
+                <User size={18} className="text-blue-600 dark:text-blue-400" />
               </div>
               <div className="min-w-0">
-                <p className="font-semibold text-gray-800 dark:text-white truncate">{c.name}</p>
-                <p className="text-xs text-gray-400 dark:text-gray-500">DNI: {c.dni}</p>
+                <p className="font-semibold text-zinc-800 dark:text-white truncate">{c.name}</p>
+                <p className="text-xs text-zinc-400 dark:text-zinc-500">DNI: {c.dni}</p>
               </div>
             </div>
 
             {/* Contacto */}
             <div className="space-y-1.5 mb-4">
-              <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+              <div className="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
                 <Phone size={12} /> {c.phone}
               </div>
-              <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+              <div className="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
                 <Mail size={12} /> {c.email}
               </div>
             </div>
 
             {/* Stats */}
-            <div className="flex justify-between items-center pt-3 border-t border-gray-100 dark:border-gray-700">
+            <div className="flex justify-between items-center pt-3 border-t border-zinc-100 dark:border-zinc-700">
               <div className="text-center">
-                <p className="text-xs text-gray-400 dark:text-gray-500">Compras</p>
-                <p className="text-sm font-bold text-gray-800 dark:text-white">{c.purchases}</p>
+                <p className="text-xs text-zinc-400 dark:text-zinc-500">Compras</p>
+                <p className="text-sm font-bold text-zinc-800 dark:text-white">{c.purchases}</p>
               </div>
               <div className="text-center">
-                <p className="text-xs text-gray-400 dark:text-gray-500">Total gastado</p>
-                <p className="text-sm font-bold text-indigo-600 dark:text-indigo-400">S/ {c.total.toFixed(2)}</p>
+                <p className="text-xs text-zinc-400 dark:text-zinc-500">Total gastado</p>
+                <p className="text-sm font-bold text-blue-600 dark:text-blue-400">S/ {c.total.toFixed(2)}</p>
               </div>
               <Tooltip text="Ver historial del cliente" position="top-right">
                 <Button 
                   variant="ghost"
                   size="sm"
-                  className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline px-2 py-1"
+                  className="text-xs text-blue-600 dark:text-blue-400 hover:underline px-2 py-1"
                 >
                   Ver historial
                 </Button>
@@ -109,20 +109,20 @@ export function Clientes() {
         <Modal title="Agregar Cliente" onClose={() => setShowModal(false)}>
           <div className="grid grid-cols-2 gap-4">
              <div className="col-span-2 flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Nombre Completo *</label>
-              <input className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition" placeholder="Nombres y apellidos..." />
+              <label htmlFor="cliente-nombre" className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Nombre Completo *</label>
+              <input id="cliente-nombre" className="w-full px-3 py-2 text-sm border border-zinc-200 dark:border-zinc-600 rounded-lg bg-zinc-50 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-400 transition" placeholder="Nombres y apellidos..." />
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-gray-500 dark:text-gray-400">DNI / RUC</label>
-              <input className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition" placeholder="Número de documento..." />
+              <label htmlFor="cliente-dni" className="text-xs font-medium text-zinc-500 dark:text-zinc-400">DNI / RUC</label>
+              <input id="cliente-dni" className="w-full px-3 py-2 text-sm border border-zinc-200 dark:border-zinc-600 rounded-lg bg-zinc-50 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-400 transition" placeholder="Número de documento..." />
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Teléfono</label>
-              <input type="tel" className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition" placeholder="Celular o teléfono fijo..." />
+              <label htmlFor="cliente-telefono" className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Teléfono</label>
+              <input id="cliente-telefono" type="tel" className="w-full px-3 py-2 text-sm border border-zinc-200 dark:border-zinc-600 rounded-lg bg-zinc-50 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-400 transition" placeholder="Celular o teléfono fijo..." />
             </div>
              <div className="col-span-2 flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Correo Electrónico</label>
-              <input type="email" className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition" placeholder="correo@ejemplo.com" />
+              <label htmlFor="cliente-email" className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Correo Electrónico</label>
+              <input id="cliente-email" type="email" className="w-full px-3 py-2 text-sm border border-zinc-200 dark:border-zinc-600 rounded-lg bg-zinc-50 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-400 transition" placeholder="correo@ejemplo.com" />
             </div>
           </div>
           <div className="flex justify-end gap-3 mt-6">

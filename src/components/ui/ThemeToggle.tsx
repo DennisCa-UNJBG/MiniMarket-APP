@@ -10,14 +10,14 @@ export function ThemeToggle() {
       onClick={toggleTheme}
       className={`
         relative inline-flex h-9 w-16 items-center rounded-full transition-colors duration-300 focus:outline-none
-        ${isDark ? 'bg-indigo-600' : 'bg-gray-200'}
+        ${isDark ? 'bg-blue-600' : 'bg-zinc-200'}
       `}
       aria-label="Toggle Theme"
     >
       {/* Track Icons */}
       <div className="absolute inset-0 flex justify-between px-2 items-center pointer-events-none">
-        <Sun size={12} className={`${isDark ? 'text-indigo-400' : 'text-amber-500'} transition-colors duration-300`} />
-        <Moon size={12} className={`${isDark ? 'text-white' : 'text-gray-400'} transition-colors duration-300`} />
+        <Sun size={12} className={`${isDark ? 'text-blue-400' : 'text-amber-500'} transition-colors duration-300`} />
+        <Moon size={12} className={`${isDark ? 'text-white' : 'text-zinc-400'} transition-colors duration-300`} />
       </div>
 
       {/* Sliding Knob */}
@@ -29,7 +29,7 @@ export function ThemeToggle() {
         `}
       >
         {isDark ? (
-          <Moon size={14} className="text-indigo-600" />
+          <Moon size={14} className="text-blue-600" />
         ) : (
           <Sun size={14} className="text-amber-500" />
         )}

@@ -27,36 +27,34 @@ export const dashboardService = {
    * Obtiene las estadísticas principales del dashboard
    */
   async getStats(): Promise<DashboardStats> {
-    const db = await getDb();
-    const config = await sucursalService.getConfig();
+    const [db, config] = await Promise.all([
+      getDb(),
+      sucursalService.getConfig()
+    ]);
     const sucursalId = config?.sucursal_id || 'LOCAL';
     
-    // 1. Total Productos con stock
-    const stockData = await db.select<any[]>('SELECT COUNT(*) as total FROM productos WHERE stock_actual > 0');
-    
-    // 2. Ventas del día (Localtime)
-    const todaySales = await db.select<any[]>(`
-      SELECT COALESCE(SUM(total), 0) as total, COUNT(*) as count 
-      FROM ventas 
-      WHERE date(fecha, 'localtime') = date('now', 'localtime')
-      AND (sucursal_id = ? OR sucursal_id IS NULL)
-    `, [sucursalId]);
-    
-    // 3. Compras del día
-    const todayPurchases = await db.select<any[]>(`
-      SELECT COALESCE(SUM(total), 0) as total 
-      FROM compras_ingresos 
-      WHERE date(fecha, 'localtime') = date('now', 'localtime')
-      AND (sucursal_id = ? OR sucursal_id IS NULL)
-    `, [sucursalId]);
-
-    // 4. Ventas del mes
-    const monthSales = await db.select<any[]>(`
-      SELECT COALESCE(SUM(total), 0) as total 
-      FROM ventas 
-      WHERE strftime('%Y-%m', fecha, 'localtime') = strftime('%Y-%m', 'now', 'localtime')
-      AND (sucursal_id = ? OR sucursal_id IS NULL)
-    `, [sucursalId]);
+    // Obtener estadísticas de dashboard en paralelo
+    const [stockData, todaySales, todayPurchases, monthSales] = await Promise.all([
+      db.select<any[]>('SELECT COUNT(*) as total FROM productos WHERE stock_actual > 0'),
+      db.select<any[]>(`
+        SELECT COALESCE(SUM(total), 0) as total, COUNT(*) as count 
+        FROM ventas 
+        WHERE date(fecha, 'localtime') = date('now', 'localtime')
+        AND (sucursal_id = ? OR sucursal_id IS NULL)
+      `, [sucursalId]),
+      db.select<any[]>(`
+        SELECT COALESCE(SUM(total), 0) as total 
+        FROM compras_ingresos 
+        WHERE date(fecha, 'localtime') = date('now', 'localtime')
+        AND (sucursal_id = ? OR sucursal_id IS NULL)
+      `, [sucursalId]),
+      db.select<any[]>(`
+        SELECT COALESCE(SUM(total), 0) as total 
+        FROM ventas 
+        WHERE strftime('%Y-%m', fecha, 'localtime') = strftime('%Y-%m', 'now', 'localtime')
+        AND (sucursal_id = ? OR sucursal_id IS NULL)
+      `, [sucursalId])
+    ]);
 
     return {
       totalProductos: stockData[0].total,
@@ -71,8 +69,10 @@ export const dashboardService = {
    * Obtiene la actividad reciente (últimos 5 eventos)
    */
   async getRecentActivity(): Promise<RecentActivity[]> {
-    const db = await getDb();
-    const config = await sucursalService.getConfig();
+    const [db, config] = await Promise.all([
+      getDb(),
+      sucursalService.getConfig()
+    ]);
     const sucursalId = config?.sucursal_id || 'LOCAL';
 
     return db.select(`
@@ -93,8 +93,10 @@ export const dashboardService = {
    * Obtiene datos para el gráfico de ventas de los últimos 7 días
    */
   async getSalesChartData(): Promise<ChartData[]> {
-    const db = await getDb();
-    const config = await sucursalService.getConfig();
+    const [db, config] = await Promise.all([
+      getDb(),
+      sucursalService.getConfig()
+    ]);
     const sucursalId = config?.sucursal_id || 'LOCAL';
 
     return db.select(`

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useReducer } from 'react';
 import {
   Plus,
   Search,
@@ -38,21 +38,72 @@ const AVAILABLE_PERMISSIONS = [
 ];
 
 // ── Tab Usuarios ─────────────────────────────────────────────────────────────
+interface TabUsuariosState {
+  showModal: boolean;
+  searchTerm: string;
+  editingId: number | null;
+  showPassword: boolean;
+  formData: {
+    username: string;
+    password?: string;
+    nombre_completo: string;
+    rol_id: number;
+    sucursal_id: string;
+  };
+}
+
+type TabUsuariosAction =
+  | { type: 'SET_SHOW_MODAL'; payload: boolean }
+  | { type: 'SET_SEARCH_TERM'; payload: string }
+  | { type: 'SET_EDITING_ID'; payload: number | null }
+  | { type: 'SET_SHOW_PASSWORD'; payload: boolean }
+  | { type: 'SET_FORM_DATA'; payload: Partial<TabUsuariosState['formData']> | ((prev: TabUsuariosState['formData']) => TabUsuariosState['formData']) };
+
+function tabUsuariosReducer(state: TabUsuariosState, action: TabUsuariosAction): TabUsuariosState {
+  switch (action.type) {
+    case 'SET_SHOW_MODAL':
+      return { ...state, showModal: action.payload };
+    case 'SET_SEARCH_TERM':
+      return { ...state, searchTerm: action.payload };
+    case 'SET_EDITING_ID':
+      return { ...state, editingId: action.payload };
+    case 'SET_SHOW_PASSWORD':
+      return { ...state, showPassword: action.payload };
+    case 'SET_FORM_DATA':
+      return {
+        ...state,
+        formData: typeof action.payload === 'function' ? action.payload(state.formData) : { ...state.formData, ...action.payload }
+      };
+    default:
+      return state;
+  }
+}
+
 function TabUsuarios() {
   const { user: currentUser } = useAuth();
   const queryClient = useQueryClient();
-  const [showModal, setShowModal] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [showPassword, setShowPassword] = useState(false);
-
-  const [formData, setFormData] = useState({
-    username: '',
-    password: '',
-    nombre_completo: '',
-    rol_id: 2, // Vendedor por defecto
-    sucursal_id: ''
+  
+  const [state, dispatch] = useReducer(tabUsuariosReducer, {
+    showModal: false,
+    searchTerm: '',
+    editingId: null,
+    showPassword: false,
+    formData: {
+      username: '',
+      password: '',
+      nombre_completo: '',
+      rol_id: 2,
+      sucursal_id: ''
+    }
   });
+
+  const { showModal, searchTerm, editingId, showPassword, formData } = state;
+
+  const setShowModal = (payload: boolean) => dispatch({ type: 'SET_SHOW_MODAL', payload });
+  const setSearchTerm = (payload: string) => dispatch({ type: 'SET_SEARCH_TERM', payload });
+  const setEditingId = (payload: number | null) => dispatch({ type: 'SET_EDITING_ID', payload });
+  const setShowPassword = (payload: boolean) => dispatch({ type: 'SET_SHOW_PASSWORD', payload });
+  const setFormData = (payload: Partial<TabUsuariosState['formData']> | ((prev: TabUsuariosState['formData']) => TabUsuariosState['formData'])) => dispatch({ type: 'SET_FORM_DATA', payload });
 
   // Queries
   const { data: usuarios = [], isLoading: loading } = useQuery({
@@ -149,12 +200,12 @@ function TabUsuarios() {
       header: 'Usuario',
       render: (u) => (
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold uppercase">
+          <div className="size-10 rounded-2xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold uppercase">
             {u.username.charAt(0)}
           </div>
           <div>
-            <p className="text-sm font-bold text-gray-800 dark:text-white">{u.nombre_completo}</p>
-            <p className="text-[10px] text-gray-400">@{u.username}</p>
+            <p className="text-sm font-bold text-zinc-800 dark:text-white">{u.nombre_completo}</p>
+            <p className="text-[10px] text-zinc-400">@{u.username}</p>
           </div>
         </div>
       )
@@ -163,8 +214,8 @@ function TabUsuarios() {
       key: 'rol_nombre',
       header: 'Rol',
       render: (u) => (
-        <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-          <Shield size={14} className="text-gray-400" />
+        <div className="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
+          <Shield size={14} className="text-zinc-400" />
           {u.rol_nombre}
         </div>
       )
@@ -173,8 +224,8 @@ function TabUsuarios() {
       key: 'sucursal_nombre',
       header: 'Sede Asignada',
       render: (u) => (
-        <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-          <Building2 size={14} className="text-gray-400" />
+        <div className="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
+          <Building2 size={14} className="text-zinc-400" />
           {u.sucursal_nombre || 'Todas (Sede Central)'}
         </div>
       )
@@ -211,7 +262,7 @@ function TabUsuarios() {
               variant="ghost"
               size="sm"
               icon={<Pencil size={16} />}
-              className="p-2 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-xl bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-800"
+              className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-xl bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800"
             />
           </Tooltip>
           {u.id !== 1 && u.id !== currentUser?.id && (
@@ -239,13 +290,13 @@ function TabUsuarios() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         {/* Buscador */}
         <div className="relative max-w-md w-full">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
           <input
             type="text"
             placeholder="Buscar por nombre o usuario..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-11 pr-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all shadow-sm"
+            className="w-full pl-11 pr-4 py-2.5 bg-white dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all shadow-sm"
           />
         </div>
         <Button 
@@ -266,52 +317,54 @@ function TabUsuarios() {
       {/* Modal de Usuario */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-gray-800 w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="p-6 border-b border-gray-50 dark:border-gray-700/50 flex items-center justify-between">
-              <h3 className="text-lg font-black text-gray-800 dark:text-white">
+          <div className="bg-white dark:bg-zinc-800 w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-zinc-50 dark:border-zinc-700/50 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-zinc-800 dark:text-white">
                 {editingId ? 'Editar Usuario' : 'Registrar Nuevo Usuario'}
               </h3>
               <Button 
                 variant="ghost" 
                 size="sm" 
                 onClick={() => setShowModal(false)} 
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-white p-1"
+                className="text-zinc-400 hover:text-zinc-600 dark:hover:text-white p-1"
                 icon={<Plus className="rotate-45" size={24} />}
               />
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">Usuario</label>
+                  <label htmlFor="usuario-username" className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Usuario</label>
                   <input
+                    id="usuario-username"
                     required
                     disabled={!!editingId}
                     type="text"
                     placeholder="ej: jsmith"
                     value={formData.username}
-                    onChange={(e) => setFormData({...formData, username: e.target.value.toLowerCase()})}
-                    className={`w-full px-4 py-2.5 text-sm font-medium border border-gray-100 dark:border-gray-700 rounded-xl bg-gray-50/50 dark:bg-gray-900/50 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all ${editingId ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    onChange={(e) => setFormData(prev => ({...prev, username: e.target.value.toLowerCase()}))}
+                    className={`w-full px-4 py-2.5 text-sm font-medium border border-zinc-100 dark:border-zinc-700 rounded-xl bg-zinc-50/50 dark:bg-zinc-900/50 text-zinc-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all ${editingId ? 'opacity-50 cursor-not-allowed' : ''}`}
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">
+                  <label htmlFor="usuario-password" className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">
                     {editingId ? 'Nueva Password (Opcional)' : 'Contraseña'}
                   </label>
                   <div className="relative">
                     <input
+                      id="usuario-password"
                       required={!editingId}
                       type={showPassword ? 'text' : 'password'}
                       placeholder={editingId ? '••••••••' : 'Password'}
                       value={formData.password}
-                      onChange={(e) => setFormData({...formData, password: e.target.value})}
-                      className="w-full px-4 py-2.5 pr-11 text-sm font-medium border border-gray-100 dark:border-gray-700 rounded-xl bg-gray-50/50 dark:bg-gray-900/50 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                      onChange={(e) => setFormData(prev => ({...prev, password: e.target.value}))}
+                      className="w-full px-4 py-2.5 pr-11 text-sm font-medium border border-zinc-100 dark:border-zinc-700 rounded-xl bg-zinc-50/50 dark:bg-zinc-900/50 text-zinc-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
                     />
                     <Button
                       type="button"
                       variant="ghost"
                       size="sm"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-indigo-600 p-1"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-blue-600 p-1"
                       icon={showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                     />
                   </div>
@@ -319,24 +372,26 @@ function TabUsuarios() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">Nombre Completo</label>
+                <label htmlFor="usuario-fullname" className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Nombre Completo</label>
                 <input
+                  id="usuario-fullname"
                   required
                   type="text"
                   placeholder="Ej: John Smith Doe"
                   value={formData.nombre_completo}
-                  onChange={(e) => setFormData({...formData, nombre_completo: e.target.value})}
-                  className="w-full px-4 py-2.5 text-sm font-medium border border-gray-100 dark:border-gray-700 rounded-xl bg-gray-50/50 dark:bg-gray-900/50 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                  onChange={(e) => setFormData(prev => ({...prev, nombre_completo: e.target.value}))}
+                  className="w-full px-4 py-2.5 text-sm font-medium border border-zinc-100 dark:border-zinc-700 rounded-xl bg-zinc-50/50 dark:bg-zinc-900/50 text-zinc-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">Rol</label>
+                  <label htmlFor="usuario-rol" className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Rol</label>
                   <select 
+                    id="usuario-rol"
                     value={formData.rol_id}
-                    onChange={(e) => setFormData({...formData, rol_id: parseInt(e.target.value)})}
-                    className="w-full px-4 py-2.5 text-sm font-medium border border-gray-100 dark:border-gray-700 rounded-xl bg-gray-50/50 dark:bg-gray-900/50 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                    onChange={(e) => setFormData(prev => ({...prev, rol_id: parseInt(e.target.value)}))}
+                    className="w-full px-4 py-2.5 text-sm font-medium border border-zinc-100 dark:border-zinc-700 rounded-xl bg-zinc-50/50 dark:bg-zinc-900/50 text-zinc-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
                   >
                     {roles.filter(r => r.estado === 'activo').map((r: any) => (
                       <option key={r.id} value={r.id}>{r.nombre}</option>
@@ -344,11 +399,12 @@ function TabUsuarios() {
                   </select>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">Sede de Trabajo</label>
+                  <label htmlFor="usuario-sede" className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Sede de Trabajo</label>
                   <select 
+                    id="usuario-sede"
                     value={formData.sucursal_id}
-                    onChange={(e) => setFormData({...formData, sucursal_id: e.target.value})}
-                    className="w-full px-4 py-2.5 text-sm font-medium border border-gray-100 dark:border-gray-700 rounded-xl bg-gray-50/50 dark:bg-gray-900/50 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                    onChange={(e) => setFormData(prev => ({...prev, sucursal_id: e.target.value}))}
+                    className="w-full px-4 py-2.5 text-sm font-medium border border-zinc-100 dark:border-zinc-700 rounded-xl bg-zinc-50/50 dark:bg-zinc-900/50 text-zinc-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
                   >
                     <option value="">Todas (Central)</option>
                     {sedes.map((s: any) => (
@@ -472,8 +528,8 @@ function TabRoles() {
       header: 'Nombre del Rol',
       render: (r) => (
         <div>
-          <p className="font-bold text-gray-800 dark:text-white">{r.nombre}</p>
-          {r.descripcion && <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{r.descripcion}</p>}
+          <p className="font-bold text-zinc-800 dark:text-white">{r.nombre}</p>
+          {r.descripcion && <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">{r.descripcion}</p>}
         </div>
       )
     },
@@ -483,10 +539,10 @@ function TabRoles() {
       render: (r) => (
         <div className="flex flex-wrap gap-1">
           {r.permisos.includes('*') ? (
-            <Badge label="Acceso Total" variant="indigo" />
+            <Badge label="Acceso Total" variant="blue" />
           ) : (
             r.permisos.map((p: string) => (
-              <span key={p} className="px-1.5 py-0.5 text-[10px] font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded">
+              <span key={p} className="px-1.5 py-0.5 text-[10px] font-medium bg-zinc-100 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 rounded">
                 {p}
               </span>
             ))
@@ -499,7 +555,7 @@ function TabRoles() {
       header: 'Usuarios Activos',
       align: 'center',
       render: (r) => (
-        <Badge label={`${r.usuarios_count || 0} usuarios`} variant={r.usuarios_count > 0 ? 'indigo' : 'gray'} />
+        <Badge label={`${r.usuarios_count || 0} usuarios`} variant={r.usuarios_count > 0 ? 'blue' : 'gray'} />
       )
     },
     {
@@ -514,7 +570,7 @@ function TabRoles() {
               variant="ghost"
               size="sm"
               icon={<Pencil size={14} />}
-              className="p-1.5 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30"
+              className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30"
             />
           </Tooltip>
           <Tooltip text="Desactivar Rol" position="top-right">
@@ -522,7 +578,7 @@ function TabRoles() {
               variant="ghost"
               size="sm"
               icon={<PowerOff size={14} />}
-              className="p-1.5 text-gray-400 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-gray-700"
+              className="p-1.5 text-zinc-400 dark:text-zinc-500 hover:text-orange-500 dark:hover:text-orange-400 hover:bg-zinc-100 dark:hover:bg-zinc-700/50"
               onClick={() => toggleStatusMutation.mutate({ id: r.id, current: 'activo' })}
             />
           </Tooltip>
@@ -552,7 +608,7 @@ function TabRoles() {
 
       {inactiveRoles.length > 0 && (
         <div className="mt-8 opacity-60">
-          <h4 className="text-xs font-bold text-gray-400 uppercase mb-4 tracking-widest">Roles Inactivos</h4>
+          <h4 className="text-xs font-semibold text-zinc-400 uppercase mb-4 tracking-widest">Roles Inactivos</h4>
           <DataTable 
             columns={[
               ...columns.filter(c => c.key !== 'acciones'),
@@ -573,54 +629,56 @@ function TabRoles() {
 
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-gray-800 w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
-            <div className="p-6 border-b border-gray-50 dark:border-gray-700/50 flex items-center justify-between shrink-0">
-              <h3 className="text-lg font-black text-gray-800 dark:text-white">
+          <div className="bg-white dark:bg-zinc-800 w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+            <div className="p-6 border-b border-zinc-50 dark:border-zinc-700/50 flex items-center justify-between shrink-0">
+              <h3 className="text-lg font-semibold text-zinc-800 dark:text-white">
                 {editingId ? 'Editar Rol' : 'Crear Nuevo Rol'}
               </h3>
               <Button 
                 variant="ghost" 
                 size="sm" 
                 onClick={() => setShowModal(false)} 
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-white p-1"
+                className="text-zinc-400 hover:text-zinc-600 dark:hover:text-white p-1"
                 icon={<Plus className="rotate-45" size={24} />}
               />
             </div>
             <form onSubmit={handleSubmit} className="flex flex-col overflow-hidden">
               <div className="p-6 space-y-4 overflow-y-auto">
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">Nombre del Rol *</label>
+                  <label htmlFor="rol-nombre" className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Nombre del Rol *</label>
                   <input
+                    id="rol-nombre"
                     required
                     type="text"
                     placeholder="ej: Cajero Principal"
                     value={formData.nombre}
-                    onChange={(e) => setFormData({...formData, nombre: e.target.value})}
-                    className="w-full px-4 py-2.5 text-sm font-medium border border-gray-100 dark:border-gray-700 rounded-xl bg-gray-50/50 dark:bg-gray-900/50 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                    onChange={(e) => setFormData(prev => ({...prev, nombre: e.target.value}))}
+                    className="w-full px-4 py-2.5 text-sm font-medium border border-zinc-100 dark:border-zinc-700 rounded-xl bg-zinc-50/50 dark:bg-zinc-900/50 text-zinc-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">Descripción</label>
+                  <label htmlFor="rol-descripcion" className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Descripción</label>
                   <input
+                    id="rol-descripcion"
                     type="text"
                     placeholder="Breve descripción del rol"
                     value={formData.descripcion}
-                    onChange={(e) => setFormData({...formData, descripcion: e.target.value})}
-                    className="w-full px-4 py-2.5 text-sm font-medium border border-gray-100 dark:border-gray-700 rounded-xl bg-gray-50/50 dark:bg-gray-900/50 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                    onChange={(e) => setFormData(prev => ({...prev, descripcion: e.target.value}))}
+                    className="w-full px-4 py-2.5 text-sm font-medium border border-zinc-100 dark:border-zinc-700 rounded-xl bg-zinc-50/50 dark:bg-zinc-900/50 text-zinc-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
                   />
                 </div>
 
                 <div className="pt-2">
-                  <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1 mb-2 block">
+                  <span className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1 mb-2 block">
                     Permisos de Acceso
-                  </label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 bg-gray-50 dark:bg-gray-900/30 p-3 rounded-xl border border-gray-100 dark:border-gray-700">
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 bg-zinc-50 dark:bg-zinc-900/30 p-3 rounded-xl border border-zinc-100 dark:border-zinc-700">
                     {AVAILABLE_PERMISSIONS.map(p => {
                       const isSelected = formData.permisos.includes(p.id);
                       return (
                         <label 
                           key={p.id} 
-                          className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-all ${isSelected ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-800' : 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'}`}
+                          className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-all ${isSelected ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800' : 'bg-white dark:bg-zinc-800 border-zinc-100 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600'}`}
                         >
                           <input 
                             type="checkbox" 
@@ -628,10 +686,10 @@ function TabRoles() {
                             checked={isSelected}
                             onChange={() => handleTogglePermiso(p.id)}
                           />
-                          <div className={`w-4 h-4 rounded flex items-center justify-center shrink-0 ${isSelected ? 'bg-indigo-600 text-white' : 'border border-gray-300 dark:border-gray-600'}`}>
+                          <div className={`w-4 h-4 rounded flex items-center justify-center shrink-0 ${isSelected ? 'bg-blue-600 text-white' : 'border border-zinc-300 dark:border-zinc-600'}`}>
                             {isSelected && <CheckSquare size={12} />}
                           </div>
-                          <span className={`text-xs ${isSelected ? 'text-indigo-900 dark:text-indigo-300 font-bold' : 'text-gray-600 dark:text-gray-400'}`}>
+                          <span className={`text-xs ${isSelected ? 'text-blue-900 dark:text-blue-300 font-bold' : 'text-zinc-600 dark:text-zinc-400'}`}>
                             {p.label}
                           </span>
                         </label>
@@ -640,7 +698,7 @@ function TabRoles() {
                   </div>
                 </div>
               </div>
-              <div className="p-6 border-t border-gray-50 dark:border-gray-700/50 bg-gray-50/30 dark:bg-gray-800/30 shrink-0">
+              <div className="p-6 border-t border-zinc-50 dark:border-zinc-700/50 bg-zinc-50/30 dark:bg-zinc-800/30 shrink-0">
                 <Button 
                   type="submit"
                   fullWidth
@@ -671,12 +729,12 @@ export function Usuarios() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-black text-gray-800 dark:text-white tracking-tight">Personal y Accesos</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Administra usuarios, asigna sucursales y configura permisos.</p>
+          <h2 className="text-2xl font-semibold text-zinc-800 dark:text-white tracking-tight">Personal y Accesos</h2>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">Administra usuarios, asigna sucursales y configura permisos.</p>
         </div>
       </div>
 
-      <div className="flex items-center gap-2 p-1 bg-gray-100 dark:bg-gray-800/50 rounded-xl w-fit">
+      <div className="flex items-center gap-2 p-1 bg-zinc-100 dark:bg-zinc-800/50 rounded-xl w-fit">
         {tabs.map(({ key, label, icon: Icon }) => (
           <button
             key={key}
@@ -685,8 +743,8 @@ export function Usuarios() {
             className={[
               'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all',
               activeTab === key
-                ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200',
+                ? 'bg-white dark:bg-zinc-700 text-blue-600 dark:text-blue-400 shadow-sm'
+                : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200',
             ].join(' ')}
           >
             <Icon size={15} />

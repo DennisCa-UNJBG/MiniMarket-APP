@@ -13,6 +13,16 @@ import { PageHeader } from '../../components/ui/PageHeader';
 import { DataTable, type TableColumn } from '../../components/ui/DataTable';
 import { Badge } from '../../components/ui/Badge';
 
+const formatDate = (dateStr: string) => {
+  if (!dateStr) return '';
+  return new Date(dateStr + " UTC").toLocaleDateString();
+};
+
+const formatTime = (dateStr: string) => {
+  if (!dateStr) return '';
+  return new Date(dateStr + " UTC").toLocaleTimeString();
+};
+
 export function Auditoria() {
   const [search, setSearch] = useState('');
   const [filterAccion, setFilterAccion] = useState('TODOS');
@@ -39,7 +49,7 @@ export function Auditoria() {
     if (accion.includes('LOGIN')) return 'emerald';
     if (accion.includes('LOGOUT')) return 'rose';
     if (accion.includes('PRECIO') || accion.includes('PRODUCTO')) return 'amber';
-    if (accion.includes('VENTA') || accion.includes('COMPRA')) return 'indigo';
+    if (accion.includes('VENTA') || accion.includes('COMPRA')) return 'blue';
     if (accion.includes('CAJA')) return 'sky';
     if (accion.includes('USUARIO')) return 'violet';
     if (accion.includes('CONFIG')) return 'orange';
@@ -53,11 +63,11 @@ export function Auditoria() {
       header: 'Fecha / Hora',
       render: (row) => (
         <div className="flex flex-col">
-          <span className="text-xs font-bold text-gray-700 dark:text-gray-200 flex items-center gap-1">
-            <Calendar size={10} /> {new Date(row.fecha + " UTC").toLocaleDateString()}
+          <span className="text-xs font-bold text-zinc-700 dark:text-zinc-200 flex items-center gap-1">
+            <Calendar size={10} /> {formatDate(row.fecha)}
           </span>
-          <span className="text-[10px] text-gray-400 flex items-center gap-1">
-            <Info size={10} /> {new Date(row.fecha + " UTC").toLocaleTimeString()}
+          <span className="text-[10px] text-zinc-400 flex items-center gap-1">
+            <Info size={10} /> {formatTime(row.fecha)}
           </span>
         </div>
       )
@@ -67,10 +77,10 @@ export function Auditoria() {
       header: 'Usuario',
       render: (row) => (
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 bg-indigo-50 dark:bg-indigo-900/30 rounded-full flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+          <div className="size-7 bg-blue-50 dark:bg-blue-900/30 rounded-full flex items-center justify-center text-blue-600 dark:text-blue-400">
             <User size={14} />
           </div>
-          <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{row.usuario_nombre}</span>
+          <span className="text-xs font-medium text-zinc-700 dark:text-zinc-300">{row.usuario_nombre}</span>
         </div>
       )
     },
@@ -85,7 +95,7 @@ export function Auditoria() {
       key: 'tabla',
       header: 'Módulo',
       render: (row) => (
-        <div className="flex items-center gap-1 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+        <div className="flex items-center gap-1 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
           <Database size={10} /> {row.tabla}
         </div>
       )
@@ -94,8 +104,8 @@ export function Auditoria() {
       key: 'detalles',
       header: 'Descripción del Movimiento',
       render: (row) => (
-        <p className="text-xs text-gray-600 dark:text-gray-400 max-w-md italic">
-          {row.detalles || <span className="text-gray-300 italic">Sin descripción</span>}
+        <p className="text-xs text-zinc-600 dark:text-zinc-400 max-w-md italic">
+          {row.detalles || <span className="text-zinc-300 italic">Sin descripción</span>}
         </p>
       )
     }
@@ -109,24 +119,24 @@ export function Auditoria() {
       />
 
       {/* Filtros */}
-      <div className="bg-white dark:bg-gray-800 rounded-3xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row gap-4 items-center">
+      <div className="bg-white dark:bg-zinc-800 rounded-3xl p-4 shadow-sm border border-zinc-100 dark:border-zinc-700 flex flex-col sm:flex-row gap-4 items-center">
         <div className="relative flex-1 w-full">
-          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
           <input
             type="text"
             placeholder="Buscar por usuario, detalle o acción..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 text-sm border border-gray-100 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+            className="w-full pl-10 pr-4 py-2 text-sm border border-zinc-100 dark:border-zinc-600 rounded-xl bg-zinc-50 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-100 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
           />
         </div>
         
         <div className="flex items-center gap-2 w-full sm:w-auto">
-          <Filter size={16} className="text-gray-400" />
+          <Filter size={16} className="text-zinc-400" />
           <select
             value={filterAccion}
             onChange={(e) => setFilterAccion(e.target.value)}
-            className="flex-1 sm:w-48 px-3 py-2 text-sm border border-gray-100 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-100 outline-none focus:ring-2 focus:ring-indigo-500"
+            className="flex-1 sm:w-48 px-3 py-2 text-sm border border-zinc-100 dark:border-zinc-600 rounded-xl bg-zinc-50 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-100 outline-none focus:ring-2 focus:ring-blue-500"
           >
             {accionesUnicas.map(acc => (
               <option key={acc} value={acc}>{acc}</option>
@@ -136,7 +146,7 @@ export function Auditoria() {
       </div>
 
       {/* Tabla de Logs */}
-      <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+      <div className="bg-white dark:bg-zinc-800 rounded-3xl shadow-sm border border-zinc-100 dark:border-zinc-700 overflow-hidden">
         <DataTable
           columns={columns}
           data={filteredLogs}

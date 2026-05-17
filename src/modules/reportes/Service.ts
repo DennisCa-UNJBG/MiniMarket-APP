@@ -25,8 +25,10 @@ export const reporteService = {
    * Obtiene el ranking de los productos más vendidos
    */
   async getTopProducts(limit = 5): Promise<TopProduct[]> {
-    const db = await getDb();
-    const config = await sucursalService.getConfig();
+    const [db, config] = await Promise.all([
+      getDb(),
+      sucursalService.getConfig()
+    ]);
     const sucursalId = config?.sucursal_id || 'LOCAL';
 
     return db.select(`
@@ -45,8 +47,10 @@ export const reporteService = {
    * Obtiene los ingresos mensuales de los últimos 6 meses
    */
   async getMonthlyRevenue(): Promise<MonthlyRevenue[]> {
-    const db = await getDb();
-    const config = await sucursalService.getConfig();
+    const [db, config] = await Promise.all([
+      getDb(),
+      sucursalService.getConfig()
+    ]);
     const sucursalId = config?.sucursal_id || 'LOCAL';
 
     const results = await db.select<any[]>(`
@@ -74,30 +78,33 @@ export const reporteService = {
    * Obtiene indicadores clave (KPIs) comparando con el mes anterior
    */
   async getKPIs(): Promise<ReportKPIs> {
-    const db = await getDb();
-    const config = await sucursalService.getConfig();
+    const [db, config] = await Promise.all([
+      getDb(),
+      sucursalService.getConfig()
+    ]);
     const sucursalId = config?.sucursal_id || 'LOCAL';
     
-    const currentMonth = await db.select<any[]>(`
-      SELECT 
-        COALESCE(SUM(total), 0) as revenue, 
-        COUNT(*) as salesCount,
-        (SELECT COALESCE(SUM(vd.cantidad), 0) 
-         FROM ventas_detalle vd 
-         JOIN ventas v2 ON vd.venta_id = v2.id 
-         WHERE strftime('%Y-%m', v2.fecha, 'localtime') = strftime('%Y-%m', 'now', 'localtime')
-         AND (v2.sucursal_id = ? OR v2.sucursal_id IS NULL)) as productsSold
-      FROM ventas v
-      WHERE strftime('%Y-%m', v.fecha, 'localtime') = strftime('%Y-%m', 'now', 'localtime')
-      AND (v.sucursal_id = ? OR v.sucursal_id IS NULL)
-    `, [sucursalId, sucursalId]);
-
-    const prevMonth = await db.select<any[]>(`
-      SELECT COALESCE(SUM(total), 0) as revenue, COUNT(*) as salesCount
-      FROM ventas
-      WHERE strftime('%Y-%m', fecha, 'localtime') = strftime('%Y-%m', 'now', 'localtime', '-1 month')
-      AND (sucursal_id = ? OR sucursal_id IS NULL)
-    `, [sucursalId]);
+    const [currentMonth, prevMonth] = await Promise.all([
+      db.select<any[]>(`
+        SELECT 
+          COALESCE(SUM(total), 0) as revenue, 
+          COUNT(*) as salesCount,
+          (SELECT COALESCE(SUM(vd.cantidad), 0) 
+           FROM ventas_detalle vd 
+           JOIN ventas v2 ON vd.venta_id = v2.id 
+           WHERE strftime('%Y-%m', v2.fecha, 'localtime') = strftime('%Y-%m', 'now', 'localtime')
+           AND (v2.sucursal_id = ? OR v2.sucursal_id IS NULL)) as productsSold
+        FROM ventas v
+        WHERE strftime('%Y-%m', v.fecha, 'localtime') = strftime('%Y-%m', 'now', 'localtime')
+        AND (v.sucursal_id = ? OR v.sucursal_id IS NULL)
+      `, [sucursalId, sucursalId]),
+      db.select<any[]>(`
+        SELECT COALESCE(SUM(total), 0) as revenue, COUNT(*) as salesCount
+        FROM ventas
+        WHERE strftime('%Y-%m', fecha, 'localtime') = strftime('%Y-%m', 'now', 'localtime', '-1 month')
+        AND (sucursal_id = ? OR sucursal_id IS NULL)
+      `, [sucursalId])
+    ]);
 
     const c = currentMonth[0];
     const p = prevMonth[0];

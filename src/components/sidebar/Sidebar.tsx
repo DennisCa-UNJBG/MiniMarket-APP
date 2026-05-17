@@ -37,8 +37,8 @@ export function Sidebar() {
   return (
     <aside
       className={[
-        'flex flex-col h-screen bg-white dark:bg-gray-800',
-        'border-r border-gray-200 dark:border-gray-700 flex-shrink-0 overflow-hidden',
+        'flex flex-col h-screen bg-white dark:bg-zinc-800',
+        'border-r border-zinc-200 dark:border-zinc-700 flex-shrink-0 overflow-hidden',
         'transition-all duration-300 ease-in-out',
         isCollapsed ? 'w-[68px]' : 'w-64',
       ].join(' ')}
@@ -50,26 +50,26 @@ export function Sidebar() {
         aria-label={isCollapsed ? 'Expandir menú' : 'Colapsar menú'}
         className={[
           'flex items-center gap-3 w-full px-4 py-[18px] flex-shrink-0',
-          'border-b border-gray-200 dark:border-gray-700',
-          'hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors',
+          'border-b border-zinc-200 dark:border-zinc-700',
+          'hover:bg-zinc-50 dark:hover:bg-zinc-700/50 transition-colors',
           isCollapsed ? 'justify-center' : '',
         ].join(' ')}
       >
         {/* Ícono de la empresa */}
-        <div className="flex-shrink-0 w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center shadow-md shadow-indigo-200 dark:shadow-none">
+        <div className="flex-shrink-0 size-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-md shadow-blue-200 dark:shadow-none">
           <Store size={17} className="text-white" />
         </div>
 
         {/* Nombre — oculto cuando colapsado */}
         {!isCollapsed && (
           <div className="text-left min-w-0">
-            <p className="text-sm font-bold text-gray-800 dark:text-white leading-tight truncate">
+            <p className="text-sm font-bold text-zinc-800 dark:text-white leading-tight truncate">
               Minimarket-APP
             </p>
-            <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5 truncate flex items-center gap-1.5">
+            <p className="text-[11px] text-zinc-400 dark:text-zinc-500 mt-0.5 truncate flex items-center gap-1.5">
               Sistema de Inventario
               {appVersion && (
-                <span className="px-1.5 py-0.5 bg-gray-200/60 dark:bg-gray-700/60 rounded text-[9px] font-bold text-gray-500 dark:text-gray-400">
+                <span className="px-1.5 py-0.5 bg-zinc-200/60 dark:bg-zinc-700/60 rounded text-[9px] font-bold text-zinc-500 dark:text-zinc-400">
                   v {appVersion}
                 </span>
               )}
@@ -81,7 +81,7 @@ export function Sidebar() {
       {/* ── Navegación principal ── */}
       <nav className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-4 space-y-0.5">
         {!isCollapsed && (
-          <p className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-600 select-none">
+          <p className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-600 select-none">
             Menú principal
           </p>
         )}
@@ -98,7 +98,7 @@ export function Sidebar() {
       </nav>
 
       {/* ── Sección inferior ── */}
-      <div className="px-3 py-4 border-t border-gray-200 dark:border-gray-700 space-y-0.5 flex-shrink-0">
+      <div className="px-3 py-4 border-t border-zinc-200 dark:border-zinc-700 space-y-0.5 flex-shrink-0">
         {filteredBottomItems.map((item) => (
           <SidebarItem
             key={item.to}
@@ -116,8 +116,8 @@ export function Sidebar() {
           title={isCollapsed ? (theme === 'dark' ? 'Modo claro' : 'Modo oscuro') : undefined}
           className={[
             'flex items-center gap-3 px-3 py-2.5 rounded-xl w-full transition-all duration-200',
-            'text-gray-500 dark:text-gray-400',
-            'hover:bg-indigo-50 dark:hover:bg-gray-700/60 hover:text-indigo-600 dark:hover:text-indigo-400',
+            'text-zinc-500 dark:text-zinc-400',
+            'hover:bg-blue-50 dark:hover:bg-zinc-700/60 hover:text-blue-600 dark:hover:text-blue-400',
             isCollapsed ? 'justify-center' : '',
           ].join(' ')}
         >

@@ -20,7 +20,7 @@ export function Tooltip({ text, children, position = 'top', className = '' }: To
     <div className={`group relative inline-flex items-center justify-center ${className}`}>
       {children}
       <div
-        className={`absolute z-[100] whitespace-nowrap rounded-lg bg-gray-900 dark:bg-white px-2.5 py-1 text-[11px] font-medium text-white dark:text-gray-900 opacity-0 shadow-lg transition-all duration-200 group-hover:opacity-100 pointer-events-none scale-95 group-hover:scale-100 ${positionClasses[position]}`}
+        className={`absolute z-[100] whitespace-nowrap rounded-lg bg-zinc-900 dark:bg-white px-2.5 py-1 text-[11px] font-medium text-white dark:text-zinc-900 opacity-0 shadow-lg transition-all duration-200 group-hover:opacity-100 pointer-events-none scale-95 group-hover:scale-100 ${positionClasses[position]}`}
       >
         {text}
       </div>

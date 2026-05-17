@@ -136,12 +136,12 @@ export function Sucursales() {
       header: 'Sucursal / Código',
       render: (row) => (
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-xl">
+          <div className="p-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-xl">
             <Building2 size={18} />
           </div>
           <div>
-            <p className="text-sm font-bold text-gray-800 dark:text-white">{row.nombre}</p>
-            <div className="flex items-center gap-1 text-[10px] font-mono text-gray-400">
+            <p className="text-sm font-bold text-zinc-800 dark:text-white">{row.nombre}</p>
+            <div className="flex items-center gap-1 text-[10px] font-mono text-zinc-400">
               <Key size={10} />
               {row.codigo}
             </div>
@@ -154,11 +154,11 @@ export function Sucursales() {
       header: 'Ubicación / Sincro',
       render: (row) => (
         <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+          <div className="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
             <MapPin size={12} />
             {row.direccion || 'No especificada'}
           </div>
-          <div className="flex items-center gap-2 text-[10px] text-gray-400">
+          <div suppressHydrationWarning className="flex items-center gap-2 text-[10px] text-zinc-400">
             <Clock size={10} />
             {row.ultima_sincronizacion ? new Date(row.ultima_sincronizacion).toLocaleString() : 'Sin sincronización'}
           </div>
@@ -195,7 +195,7 @@ export function Sucursales() {
               variant="ghost"
               size="sm"
               icon={<Pencil size={16} />}
-              className="p-2 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-xl bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-800"
+              className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-xl bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800"
               onClick={() => onEdit(row)}
             />
           </Tooltip>
@@ -224,10 +224,10 @@ export function Sucursales() {
       header: 'Sucursal / Código',
       render: (row) => (
         <div className="flex items-center gap-3">
-          <Building2 size={18} className="text-gray-400" />
+          <Building2 size={18} className="text-zinc-400" />
           <div>
-            <p className="text-sm font-bold text-gray-500 dark:text-gray-400">{row.nombre}</p>
-            <p className="text-[10px] font-mono text-gray-400">{row.codigo}</p>
+            <p className="text-sm font-bold text-zinc-500 dark:text-zinc-400">{row.nombre}</p>
+            <p className="text-[10px] font-mono text-zinc-400">{row.codigo}</p>
           </div>
         </div>
       )
@@ -243,7 +243,7 @@ export function Sucursales() {
               variant="ghost"
               size="sm"
               icon={<Pencil size={16} />}
-              className="p-2 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl"
+              className="p-2 text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-xl"
               onClick={() => handleOpenEdit(row)}
             />
           </Tooltip>
@@ -270,8 +270,8 @@ export function Sucursales() {
     <div className="space-y-6 animate-in fade-in duration-500 pb-10">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-black text-gray-800 dark:text-white tracking-tight">Gestión de Sucursales</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Registra y administra las sucursales del minimarket.</p>
+          <h2 className="text-2xl font-semibold text-zinc-800 dark:text-white tracking-tight">Gestión de Sucursales</h2>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">Registra y administra las sucursales del minimarket.</p>
         </div>
         <Button 
           onClick={handleOpenCreate}
@@ -284,13 +284,13 @@ export function Sucursales() {
 
       {/* Buscador */}
       <div className="relative max-w-md">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
         <input
           type="text"
           placeholder="Buscar por nombre o código..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full pl-11 pr-4 py-3 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all shadow-sm"
+          className="w-full pl-11 pr-4 py-3 bg-white dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all shadow-sm"
         />
       </div>
 
@@ -303,7 +303,7 @@ export function Sucursales() {
 
       {/* Sedes Inactivas */}
       {inactiveSedes.length > 0 && (
-        <div className="space-y-4 pt-8 border-t border-gray-100 dark:border-gray-800">
+        <div className="space-y-4 pt-8 border-t border-zinc-100 dark:border-zinc-800">
           <div className="flex items-center gap-3 p-4 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/20 rounded-2xl text-amber-700 dark:text-amber-400">
             <AlertCircle size={20} />
             <div>
@@ -312,7 +312,7 @@ export function Sucursales() {
             </div>
           </div>
 
-          <div className="bg-gray-50/50 dark:bg-gray-900/20 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden opacity-60">
+          <div className="bg-zinc-50/50 dark:bg-zinc-900/20 rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm overflow-hidden opacity-60">
             <DataTable 
               columns={inactiveColumns}
               data={inactiveSedes}
@@ -326,54 +326,57 @@ export function Sucursales() {
       {/* Modal de Registro/Edición */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-white dark:bg-gray-800 w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
-            <div className="p-6 border-b border-gray-50 dark:border-gray-700/50 flex items-center justify-between">
-              <h3 className="text-lg font-black text-gray-800 dark:text-white">
+          <div className="bg-white dark:bg-zinc-800 w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+            <div className="p-6 border-b border-zinc-50 dark:border-zinc-700/50 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-zinc-800 dark:text-white">
                 {editingId ? 'Editar Sucursal' : 'Registrar Nueva Sucursal'}
               </h3>
               <Button 
                 variant="ghost" 
                 size="sm" 
                 onClick={() => setShowModal(false)} 
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-white p-1"
+                className="text-zinc-400 hover:text-zinc-600 dark:hover:text-white p-1"
                 icon={<Plus className="rotate-45" size={24} />}
               />
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">Código Único (Llave de Acceso)</label>
+                <label htmlFor="codigo-sucursal" className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Código Único (Llave de Acceso)</label>
                 <input
+                  id="codigo-sucursal"
                   required
                   disabled={!!editingId}
                   type="text"
                   placeholder="Ej: SEDE-SUR-01"
                   value={formData.codigo}
-                  onChange={(e) => setFormData({...formData, codigo: e.target.value.toUpperCase()})}
-                  className={`w-full px-4 py-2.5 text-sm font-medium border border-gray-100 dark:border-gray-700 rounded-2xl bg-gray-50/50 dark:bg-gray-900/50 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all ${editingId ? 'opacity-50 cursor-not-allowed bg-gray-100 dark:bg-gray-800' : ''}`}
+                  onChange={(e) => setFormData(prev => ({...prev, codigo: e.target.value.toUpperCase()}))}
+                  className={`w-full px-4 py-2.5 text-sm font-medium border border-zinc-100 dark:border-zinc-700 rounded-2xl bg-zinc-50/50 dark:bg-zinc-900/50 text-zinc-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all ${editingId ? 'opacity-50 cursor-not-allowed bg-zinc-100 dark:bg-zinc-800' : ''}`}
                 />
                 {editingId && (
                   <p className="text-[9px] text-amber-500 ml-1 font-bold italic">La llave de acceso no se puede modificar.</p>
                 )}
               </div>
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">Nombre de la Sucursal</label>
+                <label htmlFor="nombre-sucursal" className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Nombre de la Sucursal</label>
                 <input
+                  id="nombre-sucursal"
                   required
                   type="text"
                   placeholder="Ej: Sucursal Av. Ejercito"
                   value={formData.nombre}
-                  onChange={(e) => setFormData({...formData, nombre: e.target.value})}
-                  className="w-full px-4 py-2.5 text-sm font-medium border border-gray-100 dark:border-gray-700 rounded-2xl bg-gray-50/50 dark:bg-gray-900/50 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                  onChange={(e) => setFormData(prev => ({...prev, nombre: e.target.value}))}
+                  className="w-full px-4 py-2.5 text-sm font-medium border border-zinc-100 dark:border-zinc-700 rounded-2xl bg-zinc-50/50 dark:bg-zinc-900/50 text-zinc-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">Dirección (Opcional)</label>
+                <label htmlFor="direccion-sucursal" className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Dirección (Opcional)</label>
                 <input
+                  id="direccion-sucursal"
                   type="text"
                   placeholder="Av. Principal 456..."
                   value={formData.direccion}
-                  onChange={(e) => setFormData({...formData, direccion: e.target.value})}
-                  className="w-full px-4 py-2.5 text-sm font-medium border border-gray-100 dark:border-gray-700 rounded-2xl bg-gray-50/50 dark:bg-gray-900/50 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                  onChange={(e) => setFormData(prev => ({...prev, direccion: e.target.value}))}
+                  className="w-full px-4 py-2.5 text-sm font-medium border border-zinc-100 dark:border-zinc-700 rounded-2xl bg-zinc-50/50 dark:bg-zinc-900/50 text-zinc-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
                 />
               </div>
 

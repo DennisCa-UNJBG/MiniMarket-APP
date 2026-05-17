@@ -18,13 +18,13 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     return (
       <div className="space-y-1.5 w-full">
         {label && (
-          <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+          <label className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
             {label}
           </label>
         )}
         <div className="relative">
           {icon && (
-            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400">
               {icon}
             </div>
           )}
@@ -32,13 +32,13 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             ref={ref}
             type={inputType}
             className={`
-              w-full py-3 bg-gray-50 dark:bg-gray-900 border rounded-xl transition-all text-gray-900 dark:text-white placeholder-gray-400
-              focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500
+              w-full py-3 bg-zinc-50 dark:bg-zinc-900 border rounded-xl transition-all text-zinc-900 dark:text-white placeholder-zinc-400
+              focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500
               ${icon ? 'pl-10' : 'pl-4'}
               ${isPassword ? 'pr-11' : 'pr-4'}
               ${error 
                 ? 'border-red-300 dark:border-red-500/50 focus:ring-red-500/20 focus:border-red-500' 
-                : 'border-gray-200 dark:border-gray-700'}
+                : 'border-zinc-200 dark:border-zinc-700'}
               ${className}
             `}
             {...props}
@@ -47,7 +47,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-indigo-600 transition-colors p-1"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-blue-600 transition-colors p-1"
               tabIndex={-1}
             >
               {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -55,7 +55,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           )}
         </div>
         {error && <p className="text-xs font-medium text-red-500 mt-1">{error}</p>}
-        {!error && helperText && <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{helperText}</p>}
+        {!error && helperText && <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">{helperText}</p>}
       </div>
     );
   }

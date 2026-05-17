@@ -56,45 +56,45 @@ export function Ayuda() {
     {
       id: 'bienvenida',
       title: '00. Bienvenida a MiniMarket Pro',
-      icon: <Book size={20} className="text-indigo-500" />,
+      icon: <Book size={20} className="text-blue-500" />,
       content: (
         <div className="space-y-6">
           <p>¡Bienvenido al manual detallado de <strong>MiniMarket Pro</strong>!</p>
           <p>Este conjunto de guías ha sido diseñado para proporcionarte una explicación exhaustiva de cada módulo del sistema. Aquí encontrarás no solo qué hace cada vista, sino cómo utilizarla paso a paso para maximizar la eficiencia de tu negocio.</p>
           
           <div className="space-y-3">
-            <h4 className="font-bold text-gray-800 dark:text-white flex items-center gap-2">
-              <Info size={16} className="text-indigo-500" />
+            <h4 className="font-semibold text-zinc-800 dark:text-white flex items-center gap-2">
+              <Info size={16} className="text-blue-500" />
               🗂️ Estructura del Manual
             </h4>
-            <p className="text-xs text-gray-500 dark:text-gray-400">El manual está dividido en 14 capítulos que cubren desde el Dashboard hasta el sistema de Sincronización y Reportes, organizados para un aprendizaje progresivo.</p>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">El manual está dividido en 14 capítulos que cubren desde el Dashboard hasta el sistema de Sincronización y Reportes, organizados para un aprendizaje progresivo.</p>
           </div>
 
-          <div className="p-5 bg-indigo-50 dark:bg-indigo-900/20 rounded-3xl border border-indigo-100 dark:border-indigo-800 space-y-4">
-            <h4 className="font-bold text-indigo-700 dark:text-indigo-300 flex items-center gap-2 text-sm uppercase tracking-widest">
+          <div className="p-5 bg-blue-50 dark:bg-blue-900/20 rounded-3xl border border-blue-100 dark:border-blue-800 space-y-4">
+            <h4 className="font-semibold text-blue-700 dark:text-blue-300 flex items-center gap-2 text-sm uppercase tracking-widest">
               <Lightbulb size={16} />
               Consejos Generales de Navegación
             </h4>
             <ul className="space-y-3 text-xs">
               <li className="flex items-start gap-2">
-                <CheckCircle2 size={14} className="text-indigo-500 shrink-0 mt-0.5" />
+                <CheckCircle2 size={14} className="text-blue-500 shrink-0 mt-0.5" />
                 <span><strong>Menú Lateral:</strong> Utiliza la barra lateral para moverte rápidamente entre los módulos.</span>
               </li>
               <li className="flex items-start gap-2">
-                <CheckCircle2 size={14} className="text-indigo-500 shrink-0 mt-0.5" />
+                <CheckCircle2 size={14} className="text-blue-500 shrink-0 mt-0.5" />
                 <span><strong>Modo Oscuro/Claro:</strong> El sistema se adapta a tu preferencia visual desde la esquina superior.</span>
               </li>
               <li className="flex items-start gap-2">
-                <CheckCircle2 size={14} className="text-indigo-500 shrink-0 mt-0.5" />
+                <CheckCircle2 size={14} className="text-blue-500 shrink-0 mt-0.5" />
                 <span><strong>Búsqueda Inteligente:</strong> La mayoría de las tablas incluyen un buscador que filtra por múltiples campos simultáneamente.</span>
               </li>
               <li className="flex items-start gap-2">
-                <CheckCircle2 size={14} className="text-indigo-500 shrink-0 mt-0.5" />
+                <CheckCircle2 size={14} className="text-blue-500 shrink-0 mt-0.5" />
                 <span><strong>Atajos de Teclado:</strong> En el Punto de Venta, enfócate en el campo de búsqueda para usar tu escáner de códigos de barras sin interrupciones.</span>
               </li>
             </ul>
           </div>
-          <p className="text-xs italic text-gray-500 dark:text-gray-400 border-t border-gray-100 dark:border-gray-700 pt-4 text-center">MiniMarket Pro - Gestión Inteligente para tu Negocio.</p>
+          <p className="text-xs italic text-zinc-500 dark:text-zinc-400 border-t border-zinc-100 dark:border-zinc-700 pt-4 text-center">MiniMarket Pro - Gestión Inteligente para tu Negocio.</p>
         </div>
       )
     },
@@ -107,41 +107,41 @@ export function Ayuda() {
           <p>El <strong>Dashboard</strong> es la vista predeterminada al ingresar al sistema. Su objetivo es proporcionarte una visión panorámica y en tiempo real del estado de tu negocio.</p>
           
           <div className="space-y-4">
-            <h4 className="font-bold text-gray-800 dark:text-white flex items-center gap-2 text-sm uppercase tracking-widest border-b border-gray-100 dark:border-gray-700 pb-2">
+            <h4 className="font-semibold text-zinc-800 dark:text-white flex items-center gap-2 text-sm uppercase tracking-widest border-b border-zinc-100 dark:border-zinc-700 pb-2">
               <LayoutDashboard size={16} className="text-blue-500" />
               Secciones del Dashboard
             </h4>
             
             <div className="grid grid-cols-1 gap-4">
-              <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-100 dark:border-gray-700">
-                <h5 className="font-bold text-xs text-blue-600 mb-2">1. Tarjetas de Indicadores Clave (KPIs)</h5>
-                <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">Resumen de la operación diaria y mensual: <strong>Productos en Stock</strong> (ítems únicos), <strong>Ventas de hoy</strong> (monto acumulado), <strong>Compras del día</strong> e <strong>Ingresos del mes</strong>.</p>
+              <div className="p-4 bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl border border-zinc-100 dark:border-zinc-700">
+                <h5 className="font-semibold text-xs text-blue-600 mb-2">1. Tarjetas de Indicadores Clave (KPIs)</h5>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">Resumen de la operación diaria y mensual: <strong>Productos en Stock</strong> (ítems únicos), <strong>Ventas de hoy</strong> (monto acumulado), <strong>Compras del día</strong> e <strong>Ingresos del mes</strong>.</p>
               </div>
-              <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-100 dark:border-gray-700">
-                <h5 className="font-bold text-xs text-blue-600 mb-2">2. Alertas de Sede Incompleta</h5>
-                <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">Banner de advertencia ámbar que aparece si falta configurar datos legales como RUC o Razón Social. Es <strong>crucial</strong> completar esta información para la validez de tus boletas.</p>
+              <div className="p-4 bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl border border-zinc-100 dark:border-zinc-700">
+                <h5 className="font-semibold text-xs text-blue-600 mb-2">2. Alertas de Sede Incompleta</h5>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">Banner de advertencia ámbar que aparece si falta configurar datos legales como RUC o Razón Social. Es <strong>crucial</strong> completar esta información para la validez de tus boletas.</p>
               </div>
-              <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-100 dark:border-gray-700">
-                <h5 className="font-bold text-xs text-blue-600 mb-2">3. Gráfico de Ventas Semanal</h5>
-                <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">Visualización interactiva que muestra la tendencia de tus ingresos en los últimos 7 días, permitiéndote identificar los días de mayor demanda.</p>
+              <div className="p-4 bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl border border-zinc-100 dark:border-zinc-700">
+                <h5 className="font-semibold text-xs text-blue-600 mb-2">3. Gráfico de Ventas Semanal</h5>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">Visualización interactiva que muestra la tendencia de tus ingresos en los últimos 7 días, permitiéndote identificar los días de mayor demanda.</p>
               </div>
-              <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-100 dark:border-gray-700">
-                <h5 className="font-bold text-xs text-blue-600 mb-2">4. Alertas de Stock Bajo</h5>
-                <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">Panel crítico que lista los productos que han caído por debajo de su <strong>Stock Mínimo</strong>. Haz clic para ir al módulo de compras.</p>
+              <div className="p-4 bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl border border-zinc-100 dark:border-zinc-700">
+                <h5 className="font-semibold text-xs text-blue-600 mb-2">4. Alertas de Stock Bajo</h5>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">Panel crítico que lista los productos que han caído por debajo de su <strong>Stock Mínimo</strong>. Haz clic para ir al módulo de compras.</p>
               </div>
-              <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-100 dark:border-gray-700">
-                <h5 className="font-bold text-xs text-blue-600 mb-2">5. Actividad Reciente</h5>
-                <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">Historial cronológico de las últimas transacciones (número de ticket, fecha/hora y monto). Usa "Ver Todo" para navegar al historial completo.</p>
+              <div className="p-4 bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl border border-zinc-100 dark:border-zinc-700">
+                <h5 className="font-semibold text-xs text-blue-600 mb-2">5. Actividad Reciente</h5>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">Historial cronológico de las últimas transacciones (número de ticket, fecha/hora y monto). Usa "Ver Todo" para navegar al historial completo.</p>
               </div>
             </div>
           </div>
 
           <div className="p-5 bg-blue-50 dark:bg-blue-900/10 rounded-3xl border border-blue-100 dark:border-blue-900/30 space-y-3">
-            <h4 className="font-bold text-blue-700 dark:text-blue-300 flex items-center gap-2 text-sm uppercase tracking-widest">
+            <h4 className="font-semibold text-blue-700 dark:text-blue-300 flex items-center gap-2 text-sm uppercase tracking-widest">
               <Settings size={16} />
               Cómo usar esta vista
             </h4>
-            <ol className="list-decimal list-inside space-y-2 text-xs text-gray-600 dark:text-gray-400">
+            <ol className="list-decimal list-inside space-y-2 text-xs text-zinc-600 dark:text-zinc-400">
               <li><strong>Revisión Matutina:</strong> Verifica productos en stock y alertas para planificar el día.</li>
               <li><strong>Monitoreo en Vivo:</strong> Observa cómo sube el indicador de ventas durante la jornada.</li>
               <li><strong>Análisis de Tendencias:</strong> Al final de la semana, utiliza el gráfico para medir el éxito de promociones o cambios de horario.</li>
@@ -164,37 +164,37 @@ export function Ayuda() {
           <p>El módulo de <strong>Productos</strong> es el corazón de tu inventario. Aquí defines qué vendes, a qué precio y cómo se clasifica.</p>
           
           <div className="space-y-4">
-            <h4 className="font-bold text-gray-800 dark:text-white flex items-center gap-2 text-sm uppercase tracking-widest border-b border-gray-100 dark:border-gray-700 pb-2">
+            <h4 className="font-semibold text-zinc-800 dark:text-white flex items-center gap-2 text-sm uppercase tracking-widest border-b border-zinc-100 dark:border-zinc-700 pb-2">
               <Tag size={16} className="text-rose-500" />
               Pestañas del Módulo
             </h4>
             <div className="grid grid-cols-1 gap-4 text-xs">
-              <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-100 dark:border-gray-700">
+              <div className="p-4 bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl border border-zinc-100 dark:border-zinc-700">
                 <span className="font-bold text-rose-600 block mb-2">1. Pestaña de Productos:</span>
-                <ul className="space-y-1 list-disc list-inside text-gray-500 dark:text-gray-400">
+                <ul className="space-y-1 list-disc list-inside text-zinc-500 dark:text-zinc-400">
                   <li><strong>Búsqueda:</strong> Filtra por nombre o código de barras.</li>
                   <li><strong>Nuevo Producto:</strong> Genera códigos correlativos automáticos (ej. PROD-0005).</li>
                   <li><strong>Editar:</strong> Modifica precios, nombres o categorías.</li>
                   <li><strong>Desactivar:</strong> Oculta del POS pero mantiene historial.</li>
                 </ul>
               </div>
-              <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-100 dark:border-gray-700">
+              <div className="p-4 bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl border border-zinc-100 dark:border-zinc-700">
                 <span className="font-bold text-rose-600 block mb-2">2. Pestaña de Categorías:</span>
-                <p className="text-gray-500 dark:text-gray-400">Organiza por familias (Lácteos, Limpieza). Asigna colores únicos para identificación visual en el POS y consulta el contador de productos por categoría.</p>
+                <p className="text-zinc-500 dark:text-zinc-400">Organiza por familias (Lácteos, Limpieza). Asigna colores únicos para identificación visual en el POS y consulta el contador de productos por categoría.</p>
               </div>
-              <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-100 dark:border-gray-700">
+              <div className="p-4 bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl border border-zinc-100 dark:border-zinc-700">
                 <span className="font-bold text-rose-600 block mb-2">3. Pestaña de Unidades de Medida:</span>
-                <p className="text-gray-500 dark:text-gray-400">Define cómo cuantificas (Kilogramos, Unidades, Litros). Es esencial para que el stock se muestre correctamente (ej. "50 KG" vs "50 Unidades").</p>
+                <p className="text-zinc-500 dark:text-zinc-400">Define cómo cuantificas (Kilogramos, Unidades, Litros). Es esencial para que el stock se muestre correctamente (ej. "50 KG" vs "50 Unidades").</p>
               </div>
             </div>
           </div>
 
           <div className="p-5 bg-rose-50 dark:bg-rose-900/10 rounded-3xl border border-rose-100 dark:border-rose-900/30 space-y-4">
-            <h4 className="font-bold text-rose-700 dark:text-rose-300 flex items-center gap-2 text-sm uppercase tracking-widest">
+            <h4 className="font-semibold text-rose-700 dark:text-rose-300 flex items-center gap-2 text-sm uppercase tracking-widest">
               <Plus size={16} />
               Paso a Paso: Registrar Nuevo Producto
             </h4>
-            <ol className="list-decimal list-inside space-y-2 text-xs text-gray-600 dark:text-gray-400">
+            <ol className="list-decimal list-inside space-y-2 text-xs text-zinc-600 dark:text-zinc-400">
               <li>Haz clic en <strong>"+ Nuevo producto"</strong>.</li>
               <li>Escribe la <strong>Unidad de Medida</strong> (ej. "Kilo") y selecciónala.</li>
               <li>Ingresa el <strong>Nombre comercial</strong> (ej. "Arroz Costeño Extra 1kg").</li>
@@ -205,13 +205,13 @@ export function Ayuda() {
           </div>
 
           <div className="space-y-2">
-             <h5 className="font-bold text-xs uppercase tracking-tighter text-gray-400">Reactivación de Productos</h5>
-             <p className="text-[10px] leading-relaxed text-gray-500">Si desactivaste un producto por error, ve al final de la tabla de productos a la sección <strong>"Productos desactivados"</strong> para restaurarlo.</p>
+             <h5 className="font-semibold text-xs uppercase tracking-tighter text-zinc-400">Reactivación de Productos</h5>
+             <p className="text-[10px] leading-relaxed text-zinc-500">Si desactivaste un producto por error, ve al final de la tabla de productos a la sección <strong>"Productos desactivados"</strong> para restaurarlo.</p>
           </div>
 
-          <div className="flex items-start gap-3 p-4 bg-indigo-50 dark:bg-indigo-900/10 rounded-2xl border border-indigo-100 dark:border-indigo-900/30">
-            <AlertCircle size={18} className="text-indigo-600 shrink-0 mt-0.5" />
-            <p className="text-xs text-indigo-700 dark:text-indigo-400"><strong>IMPORTANTE:</strong> Se recomienda usar el código de barras real del producto con un lector láser para agilizar las ventas.</p>
+          <div className="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-900/10 rounded-2xl border border-blue-100 dark:border-blue-900/30">
+            <AlertCircle size={18} className="text-blue-600 shrink-0 mt-0.5" />
+            <p className="text-xs text-blue-700 dark:text-blue-400"><strong>IMPORTANTE:</strong> Se recomienda usar el código de barras real del producto con un lector láser para agilizar las ventas.</p>
           </div>
         </div>
       )
@@ -240,7 +240,7 @@ export function Ayuda() {
           </div>
 
           <div className="space-y-4">
-            <h4 className="font-bold text-gray-800 dark:text-white flex items-center gap-2 text-sm uppercase tracking-widest border-b border-gray-100 dark:border-gray-700 pb-2">
+            <h4 className="font-semibold text-zinc-800 dark:text-white flex items-center gap-2 text-sm uppercase tracking-widest border-b border-zinc-100 dark:border-zinc-700 pb-2">
               <Info size={16} className="text-emerald-500" />
               Exploración y Filtrado
             </h4>
@@ -260,12 +260,12 @@ export function Ayuda() {
             </ul>
           </div>
 
-          <div className="p-5 bg-gray-50 dark:bg-gray-900/50 rounded-3xl border border-gray-100 dark:border-gray-700 space-y-4">
-            <h4 className="font-bold text-gray-700 dark:text-gray-300 flex items-center gap-2 text-sm uppercase tracking-widest">
+          <div className="p-5 bg-zinc-50 dark:bg-zinc-900/50 rounded-3xl border border-zinc-100 dark:border-zinc-700 space-y-4">
+            <h4 className="font-semibold text-zinc-700 dark:text-zinc-300 flex items-center gap-2 text-sm uppercase tracking-widest">
               <Lightbulb size={16} />
               ¿Cuándo usar esta vista?
             </h4>
-            <ul className="space-y-3 text-xs text-gray-500 dark:text-gray-400">
+            <ul className="space-y-3 text-xs text-zinc-500 dark:text-zinc-400">
               <li className="flex items-start gap-2">
                 <span className="text-emerald-500 font-bold">•</span>
                 <span><strong>Auditoría de Pasillo:</strong> Compara el stock del sistema con los estantes físicos usando una tablet.</span>
@@ -281,9 +281,9 @@ export function Ayuda() {
             </ul>
           </div>
 
-          <div className="flex items-start gap-3 p-4 bg-indigo-50 dark:bg-indigo-900/10 rounded-2xl border border-indigo-100 dark:border-indigo-900/30">
-            <Info size={18} className="text-indigo-600 shrink-0 mt-0.5" />
-            <p className="text-xs text-indigo-700 dark:text-indigo-400"><strong>NOTA:</strong> El stock se actualiza automáticamente con cada Venta y Compra. No necesitas modificarlo manualmente aquí.</p>
+          <div className="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-900/10 rounded-2xl border border-blue-100 dark:border-blue-900/30">
+            <Info size={18} className="text-blue-600 shrink-0 mt-0.5" />
+            <p className="text-xs text-blue-700 dark:text-blue-400"><strong>NOTA:</strong> El stock se actualiza automáticamente con cada Venta y Compra. No necesitas modificarlo manualmente aquí.</p>
           </div>
         </div>
       )
@@ -297,7 +297,7 @@ export function Ayuda() {
           <p>El <strong>Kardex</strong> es el registro histórico e inmutable de todos los movimientos de tu mercadería. Es la herramienta definitiva para auditorías.</p>
           
           <div className="p-5 bg-amber-50 dark:bg-amber-900/10 rounded-3xl border border-amber-100 dark:border-amber-900/30 space-y-4">
-            <h4 className="font-bold text-amber-700 dark:text-amber-300 flex items-center gap-2 text-sm uppercase tracking-widest">
+            <h4 className="font-semibold text-amber-700 dark:text-amber-300 flex items-center gap-2 text-sm uppercase tracking-widest">
               <Info size={16} />
               Anatomía de la Fila
             </h4>
@@ -312,28 +312,28 @@ export function Ayuda() {
           </div>
 
           <div className="space-y-4">
-            <h4 className="font-bold text-gray-800 dark:text-white flex items-center gap-2 text-sm uppercase tracking-widest border-b border-gray-100 dark:border-gray-700 pb-2">
+            <h4 className="font-semibold text-zinc-800 dark:text-white flex items-center gap-2 text-sm uppercase tracking-widest border-b border-zinc-100 dark:border-zinc-700 pb-2">
               <History size={16} className="text-amber-500" />
               Herramientas de Análisis
             </h4>
             <div className="space-y-4">
-               <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-100 dark:border-gray-700">
-                  <h5 className="font-bold text-xs text-amber-600 mb-1">1. Filtrado por Producto</h5>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Muestra la "hoja de vida" del ítem con resumen de entradas, salidas y balance final.</p>
+               <div className="p-4 bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl border border-zinc-100 dark:border-zinc-700">
+                  <h5 className="font-semibold text-xs text-amber-600 mb-1">1. Filtrado por Producto</h5>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">Muestra la "hoja de vida" del ítem con resumen de entradas, salidas y balance final.</p>
                </div>
-               <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-100 dark:border-gray-700">
-                  <h5 className="font-bold text-xs text-amber-600 mb-1">2. Rango de Fechas</h5>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Audita qué pasó en un día específico, una semana o un mes completo.</p>
+               <div className="p-4 bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl border border-zinc-100 dark:border-zinc-700">
+                  <h5 className="font-semibold text-xs text-amber-600 mb-1">2. Rango de Fechas</h5>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">Audita qué pasó en un día específico, una semana o un mes completo.</p>
                </div>
-               <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-100 dark:border-gray-700">
-                  <h5 className="font-bold text-xs text-amber-600 mb-1">3. Exportación Excel</h5>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Descarga los datos para contabilidad externa o análisis avanzado en Excel.</p>
+               <div className="p-4 bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl border border-zinc-100 dark:border-zinc-700">
+                  <h5 className="font-semibold text-xs text-amber-600 mb-1">3. Exportación Excel</h5>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">Descarga los datos para contabilidad externa o análisis avanzado en Excel.</p>
                </div>
             </div>
           </div>
 
           <div className="p-5 bg-amber-50 dark:bg-amber-900/20 rounded-3xl space-y-4 border border-amber-100 dark:border-amber-900/30">
-             <h5 className="font-bold text-xs uppercase tracking-widest text-amber-600 dark:text-amber-400">🕵️ ¿Cómo detectar errores?</h5>
+             <h5 className="font-semibold text-xs uppercase tracking-widest text-amber-600 dark:text-amber-400">🕵️ ¿Cómo detectar errores?</h5>
              <ol className="list-decimal list-inside text-xs text-amber-800 dark:text-amber-200/80 space-y-2">
                 <li>Busca el producto en el Kardex.</li>
                 <li>Observa el Stock Resultante paso a paso.</li>
@@ -372,19 +372,19 @@ export function Ayuda() {
           </div>
 
           <div className="space-y-4">
-            <h4 className="font-bold text-gray-800 dark:text-white flex items-center gap-2 text-sm uppercase tracking-widest border-b border-gray-100 dark:border-gray-700 pb-2">
+            <h4 className="font-semibold text-zinc-800 dark:text-white flex items-center gap-2 text-sm uppercase tracking-widest border-b border-zinc-100 dark:border-zinc-700 pb-2">
               <FileText size={16} className="text-cyan-500" />
               Gestión de Boletas
             </h4>
-            <ul className="space-y-3 text-xs text-gray-500 dark:text-gray-400">
+            <ul className="space-y-3 text-xs text-zinc-500 dark:text-zinc-400">
               <li><strong>1. Buscar:</strong> Localiza por número de ticket (ej. #00015).</li>
               <li><strong>2. Ver Boleta:</strong> Abre el detalle (Fecha, Cajero, Método de pago, Desglose, Monto pagado y vuelto).</li>
               <li><strong>3. Reimprimir:</strong> Genera la versión ticket o PDF para el cliente.</li>
             </ul>
           </div>
 
-          <div className="p-5 bg-gray-50 dark:bg-gray-900/50 rounded-3xl border border-gray-100 dark:border-gray-700 space-y-4">
-            <h4 className="font-bold text-gray-700 dark:text-gray-300 text-sm uppercase tracking-widest">💰 Métodos de Pago</h4>
+          <div className="p-5 bg-zinc-50 dark:bg-zinc-900/50 rounded-3xl border border-zinc-100 dark:border-zinc-700 space-y-4">
+            <h4 className="font-semibold text-zinc-700 dark:text-zinc-300 text-sm uppercase tracking-widest">💰 Métodos de Pago</h4>
             <div className="space-y-2 text-xs">
               <div className="flex items-center gap-2">💵 <strong className="text-emerald-600">EFECTIVO:</strong> Facilita el cuadre físico.</div>
               <div className="flex items-center gap-2">💳 <strong className="text-blue-600">TARJETA / YAPE:</strong> Control de depósitos bancarios.</div>
@@ -392,7 +392,7 @@ export function Ayuda() {
           </div>
 
           <div className="p-5 bg-cyan-50 dark:bg-cyan-900/20 rounded-3xl space-y-4 border border-cyan-100 dark:border-cyan-900/30">
-             <h5 className="font-bold text-xs uppercase tracking-widest text-cyan-600 dark:text-cyan-400">🛠️ ¿Cómo realizar el cierre de caja?</h5>
+             <h5 className="font-semibold text-xs uppercase tracking-widest text-cyan-600 dark:text-cyan-400">🛠️ ¿Cómo realizar el cierre de caja?</h5>
              <ol className="list-decimal list-inside text-xs text-cyan-800 dark:text-cyan-200/80 space-y-2">
                 <li>Ve a esta vista al finalizar el turno.</li>
                 <li>Observa el monto en <strong>"Ventas de hoy"</strong>.</li>
@@ -416,29 +416,29 @@ export function Ayuda() {
           <p>Interfaz diseñada para la atención rápida, optimizada para escáneres de códigos de barras o búsqueda táctil.</p>
           
           <div className="space-y-6">
-            <div className="p-5 bg-gray-50 dark:bg-gray-900/50 rounded-3xl border border-gray-100 dark:border-gray-700">
-               <h5 className="font-bold text-xs text-blue-600 uppercase tracking-widest mb-3">1. Catálogo de Productos (Izquierda)</h5>
-               <ul className="space-y-3 text-xs text-gray-500 dark:text-gray-400">
+            <div className="p-5 bg-zinc-50 dark:bg-zinc-900/50 rounded-3xl border border-zinc-100 dark:border-zinc-700">
+               <h5 className="font-semibold text-xs text-blue-600 uppercase tracking-widest mb-3">1. Catálogo de Productos (Izquierda)</h5>
+               <ul className="space-y-3 text-xs text-zinc-500 dark:text-zinc-400">
                   <li><strong>Buscador Superior:</strong> Escribe nombre o escanea. Si el cursor está aquí, el producto se agrega automáticamente.</li>
                   <li><strong>Filtro Categorías:</strong> Botones rápidos para familias de productos.</li>
                   <li><strong>Tarjetas:</strong> Muestran precio y stock. Los productos "Agotados" se bloquean automáticamente.</li>
                </ul>
             </div>
-            <div className="p-5 bg-gray-50 dark:bg-gray-900/50 rounded-3xl border border-gray-100 dark:border-gray-700">
-               <h5 className="font-bold text-xs text-blue-600 uppercase tracking-widest mb-3">2. Ticket Actual (Derecha)</h5>
-               <ul className="space-y-3 text-xs text-gray-500 dark:text-gray-400">
+            <div className="p-5 bg-zinc-50 dark:bg-zinc-900/50 rounded-3xl border border-zinc-100 dark:border-zinc-700">
+               <h5 className="font-semibold text-xs text-blue-600 uppercase tracking-widest mb-3">2. Ticket Actual (Derecha)</h5>
+               <ul className="space-y-3 text-xs text-zinc-500 dark:text-zinc-400">
                   <li><strong>Ajustes:</strong> Usa [+] y [-] para cantidades o eliminar ítems.</li>
                   <li><strong>Totales:</strong> Cálculo automático de Subtotal, IGV y Total.</li>
                </ul>
             </div>
           </div>
 
-          <div className="p-6 bg-indigo-50 dark:bg-indigo-900/20 rounded-[2.5rem] space-y-5 shadow-sm border border-indigo-100 dark:border-indigo-900/30">
-            <h4 className="font-bold flex items-center gap-2 text-sm uppercase tracking-widest text-indigo-600 dark:text-indigo-400">
+          <div className="p-6 bg-blue-50 dark:bg-blue-900/20 rounded-[2.5rem] space-y-5 shadow-sm border border-blue-100 dark:border-blue-900/30">
+            <h4 className="font-semibold flex items-center gap-2 text-sm uppercase tracking-widest text-blue-600 dark:text-blue-400">
               <ShoppingCart size={16} />
               Proceso de Cobro (Paso a Paso)
             </h4>
-            <ol className="list-decimal list-inside text-xs text-indigo-900/80 dark:text-indigo-200/80 space-y-3">
+            <ol className="list-decimal list-inside text-xs text-blue-900/80 dark:text-blue-200/80 space-y-3">
               <li>Agrega los productos escaneando o buscando.</li>
               <li>Haz clic en <strong>"Cobrar"</strong> para abrir el modal.</li>
               <li>Elige <strong>Efectivo</strong> o <strong>Tarjeta/Yape</strong>.</li>
@@ -448,11 +448,11 @@ export function Ayuda() {
             </ol>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 text-[10px] uppercase font-black tracking-tighter text-gray-400">
-             <div className="p-3 border border-gray-100 dark:border-gray-800 rounded-xl flex items-center gap-2">
+          <div className="grid grid-cols-1 gap-4 text-[10px] uppercase font-black tracking-tighter text-zinc-400">
+             <div className="p-3 border border-zinc-100 dark:border-zinc-800 rounded-xl flex items-center gap-2">
                 <CheckCircle2 size={12} className="text-emerald-500" /> Búsqueda rápida sin mouse
              </div>
-             <div className="p-3 border border-gray-100 dark:border-gray-800 rounded-xl flex items-center gap-2">
+             <div className="p-3 border border-zinc-100 dark:border-zinc-800 rounded-xl flex items-center gap-2">
                 <CheckCircle2 size={12} className="text-emerald-500" /> Alertas de stock en vivo
              </div>
           </div>
@@ -473,20 +473,20 @@ export function Ayuda() {
           <p>El módulo de <strong>Compras</strong> es donde registras el ingreso de mercadería de tus proveedores. Es fundamental para mantener tu inventario actualizado y conocer tu inversión real.</p>
           
           <div className="space-y-5">
-            <h4 className="font-bold text-gray-800 dark:text-white flex items-center gap-2 text-sm uppercase tracking-widest border-b border-gray-100 dark:border-gray-700 pb-2">
+            <h4 className="font-semibold text-zinc-800 dark:text-white flex items-center gap-2 text-sm uppercase tracking-widest border-b border-zinc-100 dark:border-zinc-700 pb-2">
               <Truck size={16} className="text-orange-500" />
               Pasos para registrar una compra
             </h4>
             <div className="grid grid-cols-1 gap-4 text-xs">
-               <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-100 dark:border-gray-700">
+               <div className="p-4 bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl border border-zinc-100 dark:border-zinc-700">
                   <span className="font-bold text-orange-600 block mb-1">1. Datos del Documento:</span>
                   Ingresa el N° de Documento (Boleta o Factura del proveedor). Esto te servirá para referencias futuras. Si incluye impuestos, activa el interruptor de <strong>IGV</strong>.
                </div>
-               <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-100 dark:border-gray-700">
+               <div className="p-4 bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl border border-zinc-100 dark:border-zinc-700">
                   <span className="font-bold text-orange-600 block mb-1">2. Agregar Productos:</span>
                   Busca el producto, ingresa la <strong>Cantidad</strong> recibida y el <strong>Costo Unitario</strong>. El sistema recordará este costo para tus reportes. Presiona [+] para agregarlo al lote.
                </div>
-               <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-100 dark:border-gray-700">
+               <div className="p-4 bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl border border-zinc-100 dark:border-zinc-700">
                   <span className="font-bold text-orange-600 block mb-1">3. Verificación Final:</span>
                   Revisa la tabla inferior para asegurarte de que las cantidades y costos sean correctos. Puedes editar o eliminar ítems antes de finalizar.
                </div>
@@ -497,7 +497,7 @@ export function Ayuda() {
           </div>
 
           <div className="p-5 bg-orange-50 dark:bg-orange-900/10 rounded-3xl border border-orange-100 dark:border-orange-900/30 space-y-4">
-             <h4 className="font-bold text-orange-700 dark:text-orange-300 text-sm uppercase tracking-widest flex items-center gap-2">
+             <h4 className="font-semibold text-orange-700 dark:text-orange-300 text-sm uppercase tracking-widest flex items-center gap-2">
                 <CloudSync size={16} />
                 ¿Qué sucede al guardar?
              </h4>
@@ -509,13 +509,13 @@ export function Ayuda() {
           </div>
 
           <div className="space-y-2">
-             <h5 className="font-bold text-xs uppercase tracking-tighter text-gray-400">Consulta Histórica</h5>
-             <p className="text-[10px] leading-relaxed text-gray-500">En la pantalla principal verás el historial con tarjetas resumen de inversión total. Puedes abrir cualquier compra para ver el detalle de productos.</p>
+             <h5 className="font-semibold text-xs uppercase tracking-tighter text-zinc-400">Consulta Histórica</h5>
+             <p className="text-[10px] leading-relaxed text-zinc-500">En la pantalla principal verás el historial con tarjetas resumen de inversión total. Puedes abrir cualquier compra para ver el detalle de productos.</p>
           </div>
 
-          <div className="flex items-start gap-3 p-4 bg-indigo-50 dark:bg-indigo-900/10 rounded-2xl border border-indigo-100 dark:border-indigo-900/30">
-            <Info size={18} className="text-indigo-600 shrink-0 mt-0.5" />
-            <p className="text-xs text-indigo-700 dark:text-indigo-400"><strong>NOTA:</strong> Registrar tus compras sirve para tener un control financiero real. ¡No omitas ninguna!</p>
+          <div className="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-900/10 rounded-2xl border border-blue-100 dark:border-blue-900/30">
+            <Info size={18} className="text-blue-600 shrink-0 mt-0.5" />
+            <p className="text-xs text-blue-700 dark:text-blue-400"><strong>NOTA:</strong> Registrar tus compras sirve para tener un control financiero real. ¡No omitas ninguna!</p>
           </div>
         </div>
       )
@@ -529,16 +529,16 @@ export function Ayuda() {
           <p>El módulo de <strong>Clientes</strong> te permite gestionar una base de datos de tus compradores recurrentes. Agiliza la venta y te permite conocer mejor a tu público.</p>
           
           <div className="space-y-4">
-            <h4 className="font-bold text-gray-800 dark:text-white flex items-center gap-2 text-sm uppercase tracking-widest border-b border-gray-100 dark:border-gray-700 pb-2">
+            <h4 className="font-semibold text-zinc-800 dark:text-white flex items-center gap-2 text-sm uppercase tracking-widest border-b border-zinc-100 dark:border-zinc-700 pb-2">
               <UsersIcon size={16} className="text-violet-500" />
               Información del Cliente
             </h4>
             <div className="grid grid-cols-1 gap-4 text-xs">
-              <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-100 dark:border-gray-700">
+              <div className="p-4 bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl border border-zinc-100 dark:border-zinc-700">
                 <span className="font-bold text-violet-600 block mb-1">Identificación:</span>
                 Nombre completo y DNI/RUC (esencial para facturación legal).
               </div>
-              <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-100 dark:border-gray-700">
+              <div className="p-4 bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl border border-zinc-100 dark:border-zinc-700">
                 <span className="font-bold text-violet-600 block mb-1">Contacto y Stats:</span>
                 Teléfono, Email, N° de Compras y <strong>Total Gastado</strong> acumulado.
               </div>
@@ -546,8 +546,8 @@ export function Ayuda() {
           </div>
 
           <div className="p-5 bg-violet-50 dark:bg-violet-900/10 rounded-3xl border border-violet-100 dark:border-violet-900/30 space-y-4">
-            <h4 className="font-bold text-violet-700 dark:text-violet-300 text-sm uppercase tracking-widest">➕ Registro de Clientes</h4>
-            <ol className="list-decimal list-inside text-xs space-y-2 text-gray-600 dark:text-gray-400">
+            <h4 className="font-semibold text-violet-700 dark:text-violet-300 text-sm uppercase tracking-widest">➕ Registro de Clientes</h4>
+            <ol className="list-decimal list-inside text-xs space-y-2 text-zinc-600 dark:text-zinc-400">
                <li>Haz clic en <strong>"+ Agregar cliente"</strong>.</li>
                <li>Ingresa los datos (DNI/RUC es muy importante para búsquedas rápidas).</li>
                <li>Guarda para que el cliente esté disponible en el sistema.</li>
@@ -555,16 +555,16 @@ export function Ayuda() {
           </div>
 
           <div className="space-y-3">
-             <h5 className="font-bold text-xs uppercase tracking-widest text-gray-400">💡 Estrategia de Crecimiento</h5>
-             <ul className="text-xs space-y-2 text-gray-500">
+             <h5 className="font-semibold text-xs uppercase tracking-widest text-zinc-400">💡 Estrategia de Crecimiento</h5>
+             <ul className="text-xs space-y-2 text-zinc-500">
                 <li>• <strong>Clientes Estrella:</strong> Identifica a los de mayor gasto y ofréceles descuentos.</li>
                 <li>• <strong>Agilidad en el POS:</strong> Selecciona al cliente para que su nombre aparezca en la boleta automáticamente.</li>
              </ul>
           </div>
 
-          <div className="flex items-start gap-3 p-4 bg-indigo-50 dark:bg-indigo-900/10 rounded-2xl border border-indigo-100 dark:border-indigo-900/30">
-            <AlertCircle size={18} className="text-indigo-600 shrink-0 mt-0.5" />
-            <p className="text-xs text-indigo-700 dark:text-indigo-400"><strong>TIP:</strong> Mantener una base de datos es el primer paso para implementar programas de puntos o membresías.</p>
+          <div className="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-900/10 rounded-2xl border border-blue-100 dark:border-blue-900/30">
+            <AlertCircle size={18} className="text-blue-600 shrink-0 mt-0.5" />
+            <p className="text-xs text-blue-700 dark:text-blue-400"><strong>TIP:</strong> Mantener una base de datos es el primer paso para implementar programas de puntos o membresías.</p>
           </div>
         </div>
       )
@@ -572,40 +572,40 @@ export function Ayuda() {
     {
       id: 'usuarios',
       title: '09. Control de Usuarios y Seguridad',
-      icon: <UserCog size={20} className="text-slate-600" />,
+      icon: <UserCog size={20} className="text-zinc-600" />,
       content: (
         <div className="space-y-6">
           <p>El módulo de <strong>Usuarios</strong> es vital para proteger la integridad de tu información. Define quién tiene permiso para entrar y qué acciones puede realizar.</p>
           
           <div className="grid grid-cols-1 gap-4">
-            <div className="p-4 bg-slate-50 dark:bg-slate-900/20 rounded-2xl border border-slate-100 dark:border-slate-800">
-              <span className="font-bold text-slate-700 dark:text-slate-300 text-xs block mb-1">1. Administrador:</span>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Acceso total a todas las vistas, incluyendo configuración, reportes financieros y eliminación de datos.</p>
+            <div className="p-4 bg-zinc-50 dark:bg-zinc-900/20 rounded-2xl border border-zinc-100 dark:border-zinc-800">
+              <span className="font-bold text-zinc-700 dark:text-zinc-300 text-xs block mb-1">1. Administrador:</span>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">Acceso total a todas las vistas, incluyendo configuración, reportes financieros y eliminación de datos.</p>
             </div>
-            <div className="p-4 bg-slate-50 dark:bg-slate-900/20 rounded-2xl border border-slate-100 dark:border-slate-800">
-              <span className="font-bold text-slate-700 dark:text-slate-300 text-xs block mb-1">2. Cajero / Vendedor:</span>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Acceso limitado principalmente al Punto de Venta, Inventario y sus propias ventas. No ve reportes de rentabilidad avanzada.</p>
+            <div className="p-4 bg-zinc-50 dark:bg-zinc-900/20 rounded-2xl border border-zinc-100 dark:border-zinc-800">
+              <span className="font-bold text-zinc-700 dark:text-zinc-300 text-xs block mb-1">2. Cajero / Vendedor:</span>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">Acceso limitado principalmente al Punto de Venta, Inventario y sus propias ventas. No ve reportes de rentabilidad avanzada.</p>
             </div>
           </div>
 
-          <div className="p-6 bg-slate-100 dark:bg-slate-900/40 rounded-[2.5rem] space-y-5 shadow-sm border border-slate-200 dark:border-slate-800">
-            <h4 className="font-bold flex items-center gap-2 text-sm uppercase tracking-widest text-slate-600 dark:text-slate-400">
+          <div className="p-6 bg-zinc-100 dark:bg-zinc-900/40 rounded-[2.5rem] space-y-5 shadow-sm border border-zinc-200 dark:border-zinc-800">
+            <h4 className="font-semibold flex items-center gap-2 text-sm uppercase tracking-widest text-zinc-600 dark:text-zinc-400">
                <Plus size={16} />
                Registro de Nuevo Usuario
             </h4>
-            <ul className="text-xs text-slate-700 dark:text-slate-300 space-y-3">
+            <ul className="text-xs text-zinc-700 dark:text-zinc-300 space-y-3">
                <li>• <strong>Username:</strong> Nombre corto para iniciar sesión (ej. jdoe).</li>
                <li>• <strong>Contraseña:</strong> Clave segura de al menos 4 caracteres.</li>
                <li>• <strong>Rol y Sede:</strong> Define sus permisos y local asignado.</li>
             </ul>
           </div>
 
-          <div className="p-5 bg-indigo-50 dark:bg-indigo-900/10 rounded-3xl border border-indigo-100 dark:border-indigo-900/30 space-y-3">
-            <h4 className="font-bold text-indigo-700 dark:text-indigo-300 text-sm uppercase tracking-widest flex items-center gap-2">
+          <div className="p-5 bg-blue-50 dark:bg-blue-900/10 rounded-3xl border border-blue-100 dark:border-blue-900/30 space-y-3">
+            <h4 className="font-semibold text-blue-700 dark:text-blue-300 text-sm uppercase tracking-widest flex items-center gap-2">
               <ShieldCheck size={16} />
               Gestión de Estados
             </h4>
-            <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">Si un empleado deja de trabajar, cámbialo a <strong>INACTIVO</strong>. Nunca lo elimines; esto mantiene el rastro de sus operaciones en los reportes históricos por auditoría.</p>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">Si un empleado deja de trabajar, cámbialo a <strong>INACTIVO</strong>. Nunca lo elimines; esto mantiene el rastro de sus operaciones en los reportes históricos por auditoría.</p>
           </div>
 
           <div className="flex items-start gap-3 p-4 bg-red-50 dark:bg-red-900/20 rounded-2xl border border-red-100 dark:border-red-900/30">
@@ -618,24 +618,24 @@ export function Ayuda() {
     {
       id: 'configuracion',
       title: '10. Configuración del Sistema',
-      icon: <Settings size={20} className="text-gray-600" />,
+      icon: <Settings size={20} className="text-zinc-600" />,
       content: (
         <div className="space-y-6">
           <p>Panel de control técnico para personalizar el funcionamiento de MiniMarket Pro y realizar mantenimiento crítico.</p>
           
           <div className="space-y-4">
-            <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-100 dark:border-gray-700">
-              <h5 className="font-bold text-xs text-indigo-600 uppercase mb-2">🏢 Datos del Negocio</h5>
-              <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">Razón Social, RUC y contacto. Esta información aparecerá en la cabecera de tus boletas y es vital para la legalidad.</p>
+            <div className="p-4 bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl border border-zinc-100 dark:border-zinc-700">
+              <h5 className="font-semibold text-xs text-blue-600 uppercase mb-2">🏢 Datos del Negocio</h5>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">Razón Social, RUC y contacto. Esta información aparecerá en la cabecera de tus boletas y es vital para la legalidad.</p>
             </div>
-            <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-100 dark:border-gray-700">
-              <h5 className="font-bold text-xs text-indigo-600 uppercase mb-2">📡 Identidad de Sede</h5>
-              <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">Configura el ID único (ej. SEDE-SUR) y la URL de la Sede Central si eres una sucursal.</p>
+            <div className="p-4 bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl border border-zinc-100 dark:border-zinc-700">
+              <h5 className="font-semibold text-xs text-blue-600 uppercase mb-2">📡 Identidad de Sede</h5>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">Configura el ID único (ej. SEDE-SUR) y la URL de la Sede Central si eres una sucursal.</p>
             </div>
           </div>
 
-          <div className="p-5 bg-indigo-50 dark:bg-indigo-900/10 rounded-3xl border border-indigo-100 dark:border-indigo-900/30 space-y-4">
-            <h4 className="font-bold text-indigo-700 dark:text-indigo-300 text-sm uppercase tracking-widest flex items-center gap-2">
+          <div className="p-5 bg-blue-50 dark:bg-blue-900/10 rounded-3xl border border-blue-100 dark:border-blue-900/30 space-y-4">
+            <h4 className="font-semibold text-blue-700 dark:text-blue-300 text-sm uppercase tracking-widest flex items-center gap-2">
                <Settings size={16} />
                Mantenimiento de Datos
             </h4>
@@ -646,8 +646,8 @@ export function Ayuda() {
           </div>
 
           <div className="space-y-3">
-             <h5 className="font-bold text-xs uppercase tracking-widest text-gray-400">🔔 Preferencias</h5>
-             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-gray-500">
+             <h5 className="font-semibold text-xs uppercase tracking-widest text-zinc-400">🔔 Preferencias</h5>
+             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-zinc-500">
                 <div className="flex items-center gap-2"><CheckCircle2 size={12} className="text-emerald-500" /> Alertas de Stock Crítico</div>
                 <div className="flex items-center gap-2"><CheckCircle2 size={12} className="text-emerald-500" /> Cierre de Sesión Automático</div>
              </div>
@@ -670,16 +670,16 @@ export function Ayuda() {
           
           <div className="space-y-6">
             <div className="p-5 bg-purple-50 dark:bg-purple-900/10 rounded-3xl border border-purple-100 dark:border-purple-900/30">
-               <h5 className="font-bold text-xs text-purple-700 uppercase tracking-widest mb-3">🏛️ Modo Sede Central (Servidor)</h5>
-               <ol className="text-xs space-y-2 list-decimal list-inside text-gray-500 dark:text-gray-400">
+               <h5 className="font-semibold text-xs text-purple-700 uppercase tracking-widest mb-3">🏛️ Modo Sede Central (Servidor)</h5>
+               <ol className="text-xs space-y-2 list-decimal list-inside text-zinc-500 dark:text-zinc-400">
                   <li><strong>Iniciar Servidor:</strong> Comienza la transmisión de datos.</li>
                   <li><strong>IP Local:</strong> Número al que las sucursales deben conectar (ej. 192.168.1.15).</li>
                   <li><strong>Monitoreo:</strong> Lista de locales conectados y su última actividad.</li>
                </ol>
             </div>
-            <div className="p-5 bg-gray-50 dark:bg-gray-900/50 rounded-3xl border border-gray-100 dark:border-gray-700">
-               <h5 className="font-bold text-xs text-gray-600 uppercase tracking-widest mb-3">🏬 Modo Sucursal (Local)</h5>
-               <ul className="text-xs space-y-2 text-gray-500 dark:text-gray-400">
+            <div className="p-5 bg-zinc-50 dark:bg-zinc-900/50 rounded-3xl border border-zinc-100 dark:border-zinc-700">
+               <h5 className="font-semibold text-xs text-zinc-600 uppercase tracking-widest mb-3">🏬 Modo Sucursal (Local)</h5>
+               <ul className="text-xs space-y-2 text-zinc-500 dark:text-zinc-400">
                   <li>• <strong>Ventas Pendientes:</strong> Cantidad de tickets aún no enviados.</li>
                   <li>• <strong>Sincronizar Ahora:</strong> Envía Ventas, Kardex y Stock; y descarga el nuevo Catálogo de precios.</li>
                </ul>
@@ -687,16 +687,16 @@ export function Ayuda() {
           </div>
 
           <div className="p-6 bg-purple-50 dark:bg-purple-900/20 rounded-[2.5rem] space-y-5 shadow-sm border border-purple-100 dark:border-purple-900/30">
-             <h5 className="font-bold text-sm uppercase tracking-widest text-purple-600 dark:text-purple-400">🔄 Flujo Recomendado</h5>
+             <h5 className="font-semibold text-sm uppercase tracking-widest text-purple-600 dark:text-purple-400">🔄 Flujo Recomendado</h5>
              <div className="space-y-4 text-xs text-purple-900/80 dark:text-purple-200/80">
                 <p><strong>Administrador:</strong> Mantén el servidor activo todo el horario de atención.</p>
                 <p><strong>Cajero:</strong> Sincroniza al abrir para actualizar precios y al cerrar para respaldar ventas.</p>
              </div>
           </div>
 
-          <div className="flex items-start gap-3 p-4 bg-indigo-50 dark:bg-indigo-900/10 rounded-2xl border border-indigo-100 dark:border-indigo-900/30">
-            <Info size={18} className="text-indigo-600 shrink-0 mt-0.5" />
-            <p className="text-xs text-indigo-700 dark:text-indigo-400 italic">Si no tienes internet, puedes seguir vendiendo. El sistema sincronizará automáticamente al recuperar la conexión.</p>
+          <div className="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-900/10 rounded-2xl border border-blue-100 dark:border-blue-900/30">
+            <Info size={18} className="text-blue-600 shrink-0 mt-0.5" />
+            <p className="text-xs text-blue-700 dark:text-blue-400 italic">Si no tienes internet, puedes seguir vendiendo. El sistema sincronizará automáticamente al recuperar la conexión.</p>
           </div>
         </div>
       )
@@ -710,28 +710,28 @@ export function Ayuda() {
           <p>Transforma los datos de ventas y compras en información estratégica para medir el éxito de tu negocio.</p>
           
           <div className="space-y-4">
-            <h4 className="font-bold text-gray-800 dark:text-white flex items-center gap-2 text-sm uppercase tracking-widest border-b border-gray-100 dark:border-gray-700 pb-2">
+            <h4 className="font-semibold text-zinc-800 dark:text-white flex items-center gap-2 text-sm uppercase tracking-widest border-b border-zinc-100 dark:border-zinc-700 pb-2">
               <PieChart size={16} className="text-pink-500" />
               Indicadores Mensuales (KPIs)
             </h4>
             <div className="grid grid-cols-2 gap-4 text-xs">
-              <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-100 dark:border-gray-700">
+              <div className="p-4 bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl border border-zinc-100 dark:border-zinc-700">
                  <span className="text-pink-600 font-bold block mb-1">Ingresos:</span> Dinero total facturado en el mes.
               </div>
-              <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-100 dark:border-gray-700">
+              <div className="p-4 bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl border border-zinc-100 dark:border-zinc-700">
                  <span className="text-pink-600 font-bold block mb-1">Volumen:</span> Productos físicos vendidos.
               </div>
-              <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-100 dark:border-gray-700">
+              <div className="p-4 bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl border border-zinc-100 dark:border-zinc-700">
                  <span className="text-pink-600 font-bold block mb-1">Emisión:</span> Cantidad total de tickets emitidos.
               </div>
-              <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-100 dark:border-gray-700">
+              <div className="p-4 bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl border border-zinc-100 dark:border-zinc-700">
                  <span className="text-pink-600 font-bold block mb-1">Gasto:</span> Promedio de compra por visita.
               </div>
             </div>
           </div>
 
           <div className="p-5 bg-pink-50 dark:bg-pink-900/10 rounded-3xl border border-pink-100 dark:border-pink-900/30 space-y-4">
-             <h4 className="font-bold text-pink-700 dark:text-pink-300 text-sm uppercase tracking-widest">📉 Análisis Visual</h4>
+             <h4 className="font-semibold text-pink-700 dark:text-pink-300 text-sm uppercase tracking-widest">📉 Análisis Visual</h4>
              <ul className="text-xs space-y-3">
                 <li>• <strong>Gráfico Mensual:</strong> Evolución de ingresos (últimos 6 meses). Detecta estacionalidad.</li>
                 <li>• <strong>Ranking Top 5:</strong> Productos más rentables. ¡Nunca te quedes sin stock de estos!</li>
@@ -739,7 +739,7 @@ export function Ayuda() {
           </div>
 
           <div className="p-6 bg-pink-50 dark:bg-pink-900/20 rounded-[2.5rem] text-center shadow-sm border border-pink-100 dark:border-pink-900/30 space-y-3">
-             <h5 className="font-bold text-sm uppercase tracking-widest text-pink-600 dark:text-pink-400">📄 Exportación de Reportes</h5>
+             <h5 className="font-semibold text-sm uppercase tracking-widest text-pink-600 dark:text-pink-400">📄 Exportación de Reportes</h5>
              <p className="text-xs text-pink-900/80 dark:text-pink-200/80">Genera un documento PDF profesional con todos los gráficos y tablas actuales para socios o contabilidad.</p>
           </div>
 
@@ -753,29 +753,29 @@ export function Ayuda() {
     {
       id: 'ayuda',
       title: '13. Centro de Ayuda',
-      icon: <HelpCircle size={20} className="text-gray-500" />,
+      icon: <HelpCircle size={20} className="text-zinc-500" />,
       content: (
         <div className="space-y-6">
           <p>Recurso interactivo para resolver dudas rápidas sobre el funcionamiento del sistema y conceptos técnicos.</p>
           
           <div className="space-y-4">
-             <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-100 dark:border-gray-700">
-                <h5 className="font-bold text-xs mb-1">Explorador de Módulos:</h5>
-                <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">Descripción breve y concisa de las 14 vistas principales del sistema.</p>
+             <div className="p-4 bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl border border-zinc-100 dark:border-zinc-700">
+                <h5 className="font-semibold text-xs mb-1">Explorador de Módulos:</h5>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">Descripción breve y concisa de las 14 vistas principales del sistema.</p>
              </div>
-             <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-100 dark:border-gray-700">
-                <h5 className="font-bold text-xs mb-1">Flujo de Información:</h5>
-                <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">Explicación de las fases de Abastecimiento, Operación y Auditoría.</p>
+             <div className="p-4 bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl border border-zinc-100 dark:border-zinc-700">
+                <h5 className="font-semibold text-xs mb-1">Flujo de Información:</h5>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">Explicación de las fases de Abastecimiento, Operación y Auditoría.</p>
              </div>
           </div>
 
-          <div className="p-5 bg-indigo-50 dark:bg-indigo-900/10 rounded-3xl border border-indigo-100 dark:border-indigo-800 space-y-4">
-             <h4 className="font-bold text-indigo-700 dark:text-indigo-300 text-sm uppercase tracking-widest">💬 FAQ y Soporte</h4>
+          <div className="p-5 bg-blue-50 dark:bg-blue-900/10 rounded-3xl border border-blue-100 dark:border-blue-800 space-y-4">
+             <h4 className="font-semibold text-blue-700 dark:text-blue-300 text-sm uppercase tracking-widest">💬 FAQ y Soporte</h4>
              <ul className="text-xs space-y-3">
                 <li>• <strong>¿Actualizar Stock?:</strong> Usa Compras para ingresos e Inventario para correcciones.</li>
                 <li>• <strong>¿Sin internet?:</strong> Funciona 100% localmente y sincroniza después.</li>
              </ul>
-             <div className="pt-3 border-t border-indigo-100 dark:border-indigo-800 text-[10px] text-gray-500 dark:text-gray-400 italic">
+             <div className="pt-3 border-t border-blue-100 dark:border-blue-800 text-[10px] text-zinc-500 dark:text-zinc-400 italic">
                 Soporte: soporte@minimarketpro.com | Para asistencia inmediata contacta vía telefónica.
              </div>
           </div>
@@ -785,14 +785,14 @@ export function Ayuda() {
     {
       id: 'login',
       title: '14. Acceso al Sistema (Login)',
-      icon: <LogIn size={20} className="text-indigo-600" />,
+      icon: <LogIn size={20} className="text-blue-600" />,
       content: (
         <div className="space-y-6">
           <p>La seguridad de tu información comienza aquí. Solo personal autorizado puede ingresar a MiniMarket Pro.</p>
           
-          <div className="p-5 bg-indigo-50 dark:bg-indigo-900/10 rounded-3xl border border-indigo-100 dark:border-indigo-900/30 space-y-4">
-            <h4 className="font-bold text-indigo-700 dark:text-indigo-300 text-sm uppercase tracking-widest">🚪 Cómo Iniciar Sesión</h4>
-            <ol className="text-xs list-decimal list-inside space-y-2 text-gray-500 dark:text-gray-400">
+          <div className="p-5 bg-blue-50 dark:bg-blue-900/10 rounded-3xl border border-blue-100 dark:border-blue-900/30 space-y-4">
+            <h4 className="font-semibold text-blue-700 dark:text-blue-300 text-sm uppercase tracking-widest">🚪 Cómo Iniciar Sesión</h4>
+            <ol className="text-xs list-decimal list-inside space-y-2 text-zinc-500 dark:text-zinc-400">
                <li>Ingresa tu <strong>Usuario</strong> asignado (ej. admin).</li>
                <li>Escribe tu <strong>Contraseña</strong> secreta (oculta por seguridad).</li>
                <li>Haz clic en "Ingresar al sistema".</li>
@@ -800,8 +800,8 @@ export function Ayuda() {
           </div>
 
           <div className="space-y-4">
-            <h4 className="font-bold text-gray-800 dark:text-white text-sm uppercase tracking-widest border-b border-gray-100 dark:border-gray-700 pb-2">🔒 Seguridad y Acceso</h4>
-            <ul className="text-xs space-y-3 text-gray-500 dark:text-gray-400">
+            <h4 className="font-semibold text-zinc-800 dark:text-white text-sm uppercase tracking-widest border-b border-zinc-100 dark:border-zinc-700 pb-2">🔒 Seguridad y Acceso</h4>
+            <ul className="text-xs space-y-3 text-zinc-500 dark:text-zinc-400">
                <li>• <strong>Encriptación:</strong> Claves protegidas por algoritmos avanzados.</li>
                <li>• <strong>Roles:</strong> El sistema limita funciones automáticamente según tu perfil.</li>
                <li>• <strong>Cierre de Sesión:</strong> Usa el botón en el menú lateral para salir de forma segura.</li>
@@ -824,16 +824,16 @@ export function Ayuda() {
   return (
     <div className="max-w-7xl mx-auto space-y-16 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20 px-4 md:px-6">
       {/* Hero Section */}
-      <header className="relative py-16 px-8 bg-white dark:bg-gray-800 rounded-[2.5rem] shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden text-center">
-        <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-indigo-500/10 via-transparent to-transparent"></div>
+      <header className="relative py-16 px-8 bg-white dark:bg-zinc-800 rounded-[2.5rem] shadow-sm border border-zinc-100 dark:border-zinc-700 overflow-hidden text-center">
+        <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-blue-500/10 via-transparent to-transparent"></div>
         <div className="relative z-10 space-y-4">
-          <div className="inline-flex p-4 bg-indigo-600 rounded-2xl shadow-xl mb-4">
+          <div className="inline-flex p-4 bg-blue-600 rounded-2xl shadow-xl mb-4">
             <HelpCircle size={40} className="text-white" />
           </div>
-          <h1 className="text-4xl md:text-5xl font-black text-gray-900 dark:text-white tracking-tight">
+          <h1 className="text-4xl md:text-5xl font-semibold text-zinc-900 dark:text-white tracking-tight">
             Manual de Usuario Integral
           </h1>
-          <p className="text-gray-500 dark:text-gray-400 text-lg max-w-3xl mx-auto">
+          <p className="text-zinc-500 dark:text-zinc-400 text-lg max-w-3xl mx-auto">
             Explora a detalle el funcionamiento de MiniMarket Pro a través de nuestras guías interactivas.
           </p>
         </div>
@@ -842,31 +842,31 @@ export function Ayuda() {
       {/* Flujo de Información */}
       <section className="space-y-10">
         <div className="flex items-center gap-3 px-4">
-          <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-xl">
-            <Info className="text-indigo-600" />
+          <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
+            <Info className="text-blue-600" />
           </div>
-          <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Flujo de Trabajo Detallado</h2>
+          <h2 className="text-3xl font-semibold text-zinc-900 dark:text-white">Flujo de Trabajo Detallado</h2>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
           {flowSteps.map((step, idx) => (
-            <div key={idx} className="bg-white dark:bg-gray-800 rounded-[2rem] border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-xl transition-all duration-300 p-8 flex flex-col gap-6 group">
+            <div key={step.title} className="bg-white dark:bg-zinc-800 rounded-[2rem] border border-zinc-100 dark:border-zinc-700 shadow-sm hover:shadow-xl transition-all duration-300 p-8 flex flex-col gap-6 group">
               <div className="flex items-center justify-between">
-                <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl group-hover:scale-110 transition-transform">
+                <div className="p-4 bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl group-hover:scale-110 transition-transform">
                   {step.icon}
                 </div>
-                <span className="text-4xl font-black text-gray-100 dark:text-gray-700/50">0{idx + 1}</span>
+                <span className="text-4xl font-black text-zinc-100 dark:text-zinc-700/50">0{idx + 1}</span>
               </div>
               <div className="space-y-4 flex-1">
-                <h3 className="text-2xl font-bold text-gray-900 dark:text-white">{step.title}</h3>
-                <p className="text-gray-600 dark:text-gray-400 leading-relaxed text-sm">
+                <h3 className="text-2xl font-semibold text-zinc-900 dark:text-white">{step.title}</h3>
+                <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed text-sm">
                   {step.desc}
                 </p>
               </div>
-              <div className="space-y-2 pt-4 border-t border-gray-50 dark:border-gray-700">
-                <p className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">Acciones clave:</p>
+              <div className="space-y-2 pt-4 border-t border-zinc-50 dark:border-zinc-700">
+                <p className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Acciones clave:</p>
                 {step.details.map((detail, dIdx) => (
-                  <div key={dIdx} className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                  <div key={dIdx} className="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
                     <CheckCircle2 size={12} className="text-emerald-500" />
                     {detail}
                   </div>
@@ -883,17 +883,17 @@ export function Ayuda() {
           <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
             <FileText className="text-blue-600" />
           </div>
-          <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Explorador de Módulos</h2>
+          <h2 className="text-3xl font-semibold text-zinc-900 dark:text-white">Explorador de Módulos</h2>
         </div>
 
         <div className="grid grid-cols-1 gap-4 px-2">
           {detailedGuides.map((guide) => (
             <div 
               key={guide.id} 
-              className={`bg-white dark:bg-gray-800 rounded-3xl border transition-all duration-300 overflow-hidden ${
+              className={`bg-white dark:bg-zinc-800 rounded-3xl border transition-all duration-300 overflow-hidden ${
                 expandedGuide === guide.id 
-                ? 'border-indigo-500 shadow-lg shadow-indigo-100 dark:shadow-none' 
-                : 'border-gray-100 dark:border-gray-700 shadow-sm'
+                ? 'border-blue-500 shadow-lg shadow-blue-100 dark:shadow-none' 
+                : 'border-zinc-100 dark:border-zinc-700 shadow-sm'
               }`}
             >
               <button 
@@ -902,17 +902,17 @@ export function Ayuda() {
               >
                 <div className="flex items-center gap-4">
                   <div className={`p-3 rounded-2xl transition-colors ${
-                    expandedGuide === guide.id ? 'bg-indigo-600 text-white' : 'bg-gray-50 dark:bg-gray-900/50 group-hover:bg-indigo-50 dark:group-hover:bg-indigo-900/20'
+                    expandedGuide === guide.id ? 'bg-blue-600 text-white' : 'bg-zinc-50 dark:bg-zinc-900/50 group-hover:bg-blue-50 dark:group-hover:bg-blue-900/20'
                   }`}>
                     {guide.icon}
                   </div>
                   <span className={`font-black text-lg tracking-tight ${
-                    expandedGuide === guide.id ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-800 dark:text-white'
+                    expandedGuide === guide.id ? 'text-blue-600 dark:text-blue-400' : 'text-zinc-800 dark:text-white'
                   }`}>
                     {guide.title}
                   </span>
                 </div>
-                {expandedGuide === guide.id ? <ChevronDown className="text-indigo-500" /> : <ChevronRight className="text-gray-400" />}
+                {expandedGuide === guide.id ? <ChevronDown className="text-blue-500" /> : <ChevronRight className="text-zinc-400" />}
               </button>
               
               <div 
@@ -920,8 +920,8 @@ export function Ayuda() {
                   expandedGuide === guide.id ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'
                 }`}
               >
-                <div className="px-6 pb-8 pt-2 border-t border-gray-50 dark:border-gray-700/50">
-                  <div className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
+                <div className="px-6 pb-8 pt-2 border-t border-zinc-50 dark:border-zinc-700/50">
+                  <div className="text-zinc-600 dark:text-zinc-400 text-sm leading-relaxed">
                     {guide.content}
                   </div>
                 </div>
@@ -932,14 +932,14 @@ export function Ayuda() {
       </section>
 
       {/* Soporte y Ayuda */}
-      <div className="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-[3rem] p-10 md:p-16 text-white relative overflow-hidden shadow-2xl">
+      <div className="bg-gradient-to-br from-blue-600 to-violet-700 rounded-[3rem] p-10 md:p-16 text-white relative overflow-hidden shadow-2xl">
         <div className="absolute top-0 right-0 p-12 opacity-10">
           <Lightbulb size={200} />
         </div>
         <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <div className="space-y-6 text-center lg:text-left">
-            <h2 className="text-4xl font-black">¿Necesita asistencia experta?</h2>
-            <p className="text-indigo-100 text-lg leading-relaxed">
+            <h2 className="text-4xl font-semibold">¿Necesita asistencia experta?</h2>
+            <p className="text-blue-100 text-lg leading-relaxed">
               Nuestro equipo de soporte está disponible para ayudarle con la configuración técnica de sus sedes, problemas de red o personalización de comprobantes.
             </p>
             <div className="flex flex-wrap justify-center lg:justify-start gap-4 pt-4">
@@ -955,7 +955,7 @@ export function Ayuda() {
           </div>
           
           <div className="bg-white/5 dark:bg-black/20 backdrop-blur-xl p-8 rounded-[2.5rem] border border-white/10 space-y-6">
-            <h3 className="text-2xl font-bold flex items-center gap-2">
+            <h3 className="text-2xl font-semibold flex items-center gap-2">
               <MessageSquare size={24} />
               Preguntas Rápidas
             </h3>
@@ -973,8 +973,8 @@ export function Ayuda() {
         </div>
       </div>
 
-      <footer className="text-center pt-8 border-t border-gray-100 dark:border-gray-800">
-        <p className="text-gray-400 dark:text-gray-500 text-sm">
+      <footer className="text-center pt-8 border-t border-zinc-100 dark:border-zinc-800">
+        <p className="text-zinc-400 dark:text-zinc-500 text-sm">
           MiniMarket Pro v1.0.0 • Manual de Usuario Detallado • 2026
         </p>
       </footer>

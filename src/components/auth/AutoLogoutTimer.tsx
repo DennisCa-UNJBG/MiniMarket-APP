@@ -39,11 +39,11 @@ export function AutoLogoutTimer() {
     <div 
       className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm border ${
         warn ? 'bg-red-50 border-red-100 text-red-600 dark:bg-red-900/20 dark:border-red-900/50 dark:text-red-400 animate-pulse' 
-             : 'bg-white border-gray-200 text-gray-500 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400'
+             : 'bg-white border-zinc-200 text-zinc-500 dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-400'
       }`}
       title="Cierre de sesión automático"
     >
-      <Timer size={14} className={warn ? 'text-red-500' : 'text-gray-400'} />
+      <Timer size={14} className={warn ? 'text-red-500' : 'text-zinc-400'} />
       <span>{format(Math.floor(timeLeft / 60))}:{format(timeLeft % 60)}</span>
     </div>
   );

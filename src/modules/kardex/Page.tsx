@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useReducer } from 'react';
 import { 
   History, 
   Search, 
@@ -27,8 +27,8 @@ const columns: TableColumn<any>[] = [
     header: 'Fecha y Hora',
     render: (row) => (
       <div className="flex items-center gap-2">
-        <Calendar size={14} className="text-gray-400" />
-        <span className="text-sm text-gray-600 dark:text-gray-400">
+        <Calendar size={14} className="text-zinc-400" />
+        <span suppressHydrationWarning className="text-sm text-zinc-600 dark:text-zinc-400">
           {new Date(row.fecha + " UTC").toLocaleString()}
         </span>
       </div>
@@ -37,7 +37,7 @@ const columns: TableColumn<any>[] = [
   {
     key: 'producto_nombre',
     header: 'Producto',
-    render: (row) => <span className="text-xs font-medium text-gray-700 dark:text-gray-300 line-clamp-1">{row.producto_nombre}</span>,
+    render: (row) => <span className="text-xs font-medium text-zinc-700 dark:text-zinc-300 line-clamp-1">{row.producto_nombre}</span>,
   },
   {
     key: 'tipo_movimiento',
@@ -49,7 +49,7 @@ const columns: TableColumn<any>[] = [
         AJUSTE:  { variant: 'amber' as const,   icon: <ArrowLeftRight size={12} /> },
       };
       const type = row.tipo_movimiento as keyof typeof config;
-      const { variant } = config[type] || { variant: 'indigo', icon: null };
+      const { variant } = config[type] || { variant: 'blue', icon: null };
       return (
         <div className="flex items-center gap-2">
           <Badge label={row.tipo_movimiento} variant={variant} />
@@ -62,7 +62,7 @@ const columns: TableColumn<any>[] = [
     header: 'Concepto / Motivo',
     render: (row) => (
       <div className="flex flex-col">
-        <span className="text-sm font-medium text-gray-800 dark:text-white line-clamp-1">{row.referencia}</span>
+        <span className="text-sm font-medium text-zinc-800 dark:text-white line-clamp-1">{row.referencia}</span>
       </div>
     ),
   },
@@ -81,7 +81,7 @@ const columns: TableColumn<any>[] = [
     header: 'Stock Resultante',
     align: 'right',
     render: (row) => (
-      <span className="font-black text-gray-900 dark:text-white bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-md">
+      <span className="font-black text-zinc-900 dark:text-white bg-zinc-100 dark:bg-zinc-700 px-2 py-1 rounded-md">
         {row.saldo_posterior}
       </span>
     ),
@@ -89,18 +89,83 @@ const columns: TableColumn<any>[] = [
   {
     key: 'usuario_nombre',
     header: 'Usuario',
-    render: (row) => <span className="text-xs text-gray-500">{row.usuario_nombre}</span>,
+    render: (row) => <span className="text-xs text-zinc-500">{row.usuario_nombre}</span>,
   },
 ];
 
+interface KardexState {
+  selectedProduct: Product | null;
+  search: string;
+  showProductList: boolean;
+  dateRange: { start: string; end: string };
+  filterType: 'today' | 'all' | 'filtered';
+  page: number;
+  pageSize: number;
+}
+
+type KardexAction =
+  | { type: 'SET_SELECTED_PRODUCT'; payload: Product | null }
+  | { type: 'SET_SEARCH'; payload: string }
+  | { type: 'SET_SHOW_PRODUCT_LIST'; payload: boolean }
+  | { type: 'SET_DATE_RANGE'; payload: Partial<KardexState['dateRange']> | ((prev: KardexState['dateRange']) => KardexState['dateRange']) }
+  | { type: 'SET_FILTER_TYPE'; payload: 'today' | 'all' | 'filtered' }
+  | { type: 'SET_PAGE'; payload: number }
+  | { type: 'SET_PAGE_SIZE'; payload: number };
+
+function kardexReducer(state: KardexState, action: KardexAction): KardexState {
+  switch (action.type) {
+    case 'SET_SELECTED_PRODUCT':
+      return { ...state, selectedProduct: action.payload };
+    case 'SET_SEARCH':
+      return { ...state, search: action.payload };
+    case 'SET_SHOW_PRODUCT_LIST':
+      return { ...state, showProductList: action.payload };
+    case 'SET_DATE_RANGE':
+      return {
+        ...state,
+        dateRange: typeof action.payload === 'function'
+          ? action.payload(state.dateRange)
+          : { ...state.dateRange, ...action.payload }
+      };
+    case 'SET_FILTER_TYPE':
+      return { ...state, filterType: action.payload };
+    case 'SET_PAGE':
+      return { ...state, page: action.payload };
+    case 'SET_PAGE_SIZE':
+      return { ...state, pageSize: action.payload };
+    default:
+      return state;
+  }
+}
+
 export function Kardex() {
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [search, setSearch] = useState('');
-  const [showProductList, setShowProductList] = useState(false);
-  const [dateRange, setDateRange] = useState({ start: '', end: '' });
-  const [filterType, setFilterType] = useState<'today' | 'all' | 'filtered'>('today');
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [state, dispatch] = useReducer(kardexReducer, {
+    selectedProduct: null,
+    search: '',
+    showProductList: false,
+    dateRange: { start: '', end: '' },
+    filterType: 'today',
+    page: 1,
+    pageSize: 10
+  });
+
+  const {
+    selectedProduct,
+    search,
+    showProductList,
+    dateRange,
+    filterType,
+    page,
+    pageSize
+  } = state;
+
+  const setSelectedProduct = (payload: Product | null) => dispatch({ type: 'SET_SELECTED_PRODUCT', payload });
+  const setSearch = (payload: string) => dispatch({ type: 'SET_SEARCH', payload });
+  const setShowProductList = (payload: boolean) => dispatch({ type: 'SET_SHOW_PRODUCT_LIST', payload });
+  const setDateRange = (payload: Partial<KardexState['dateRange']> | ((prev: KardexState['dateRange']) => KardexState['dateRange'])) => dispatch({ type: 'SET_DATE_RANGE', payload });
+  const setFilterType = (payload: 'today' | 'all' | 'filtered') => dispatch({ type: 'SET_FILTER_TYPE', payload });
+  const setPage = (payload: number) => dispatch({ type: 'SET_PAGE', payload });
+  const setPageSize = (payload: number) => dispatch({ type: 'SET_PAGE_SIZE', payload });
 
   // Queries
   const { data: products = [] } = useQuery({
@@ -205,7 +270,7 @@ export function Kardex() {
       <PageHeader 
         title="Kardex de Inventario" 
         subtitle={selectedProduct ? `Historial: ${selectedProduct.nombre}` : (dateRange.start ? "Movimientos filtrados" : "Movimientos registrados hoy")}
-        icon={<History className="text-indigo-600" />}
+        icon={<History className="text-blue-600" />}
         action={
           <div className="flex gap-2">
             <Tooltip text="Se exportaran los datos visualizados en la tabla" position="top">
@@ -235,7 +300,7 @@ export function Kardex() {
         {/* Panel de Selección */}
         <aside className="lg:col-span-1 space-y-4">
           <Card className="p-4 overflow-visible">
-            <h4 className="text-sm font-bold text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
+            <h4 className="text-sm font-semibold text-zinc-700 dark:text-zinc-200 mb-4 flex items-center gap-2">
               <Filter size={16} /> Seleccionar Producto
             </h4>
             <div className="space-y-4 relative">
@@ -252,56 +317,58 @@ export function Kardex() {
                   onFocus={() => setShowProductList(true)}
                 />
                 {showProductList && search && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl shadow-xl z-50 max-h-60 overflow-y-auto">
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 rounded-xl shadow-xl z-50 max-h-60 overflow-y-auto">
                     {filteredProducts.length > 0 ? (
                       filteredProducts.map(p => (
                         <button
                           key={p.id}
-                          className="w-full text-left px-3 py-2 text-sm hover:bg-indigo-50 dark:hover:bg-gray-700 transition-colors"
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 dark:hover:bg-zinc-700 transition-colors"
                           onClick={() => handleSelectProduct(p)}
                         >
-                          <p className="font-medium text-gray-800 dark:text-white">{p.nombre}</p>
-                          <p className="text-[10px] text-gray-400">{p.codigo_barras}</p>
+                          <p className="font-medium text-zinc-800 dark:text-white">{p.nombre}</p>
+                          <p className="text-[10px] text-zinc-400">{p.codigo_barras}</p>
                         </button>
                       ))
                     ) : (
-                      <div className="p-3 text-center text-xs text-gray-400">No hay resultados</div>
+                      <div className="p-3 text-center text-xs text-zinc-400">No hay resultados</div>
                     )}
                   </div>
                 )}
               </div>
               
               {selectedProduct ? (
-                <div className="p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl border border-indigo-100 dark:border-indigo-800/30">
-                  <p className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase mb-1">Seleccionado</p>
-                  <p className="text-sm font-bold text-gray-800 dark:text-white truncate">{selectedProduct.nombre}</p>
-                  <p className="text-xs text-gray-500 mt-1">Stock Actual: <span className="font-bold text-indigo-600">{selectedProduct.stock_actual}</span></p>
+                <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800/30">
+                  <p className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase mb-1">Seleccionado</p>
+                  <p className="text-sm font-bold text-zinc-800 dark:text-white truncate">{selectedProduct.nombre}</p>
+                  <p className="text-xs text-zinc-500 mt-1">Stock Actual: <span className="font-bold text-blue-600">{selectedProduct.stock_actual}</span></p>
                 </div>
               ) : (
-                <div className="p-4 border-2 border-dashed border-gray-100 dark:border-gray-700 rounded-xl text-center">
-                  <p className="text-xs text-gray-400 italic">Filtrando por todos los productos</p>
+                <div className="p-4 border-2 border-dashed border-zinc-100 dark:border-zinc-700 rounded-xl text-center">
+                  <p className="text-xs text-zinc-400 italic">Filtrando por todos los productos</p>
                 </div>
               )}
 
-              <div className="pt-4 border-t border-gray-100 dark:border-gray-700">
-                <h4 className="text-[10px] font-bold text-gray-400 uppercase mb-3 tracking-widest">Rango de Fechas</h4>
+              <div className="pt-4 border-t border-zinc-100 dark:border-zinc-700">
+                <h4 className="text-[10px] font-semibold text-zinc-400 uppercase mb-3 tracking-widest">Rango de Fechas</h4>
                 <div className="space-y-3">
                   <div>
-                    <label className="text-[10px] font-medium text-gray-500 mb-1 block">DESDE</label>
+                    <label htmlFor="fecha-desde" className="text-[10px] font-medium text-zinc-500 mb-1 block">DESDE</label>
                     <input 
+                      id="fecha-desde"
                       type="date" 
-                      className="w-full px-3 py-1.5 text-xs border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-400" 
+                      className="w-full px-3 py-1.5 text-xs border border-zinc-200 dark:border-zinc-600 rounded-lg bg-zinc-50 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-400" 
                       value={dateRange.start}
-                      onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
+                      onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] font-medium text-gray-500 mb-1 block">HASTA</label>
+                    <label htmlFor="fecha-hasta" className="text-[10px] font-medium text-zinc-500 mb-1 block">HASTA</label>
                     <input 
+                      id="fecha-hasta"
                       type="date" 
-                      className="w-full px-3 py-1.5 text-xs border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-400" 
+                      className="w-full px-3 py-1.5 text-xs border border-zinc-200 dark:border-zinc-600 rounded-lg bg-zinc-50 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-400" 
                       value={dateRange.end}
-                      onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
+                      onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
                     />
                   </div>
                   <Button fullWidth size="sm" onClick={handleFilter} className="mt-2">
@@ -313,11 +380,11 @@ export function Kardex() {
           </Card>
           
           {selectedProduct && (
-            <Card className="p-4 bg-gradient-to-br from-indigo-600 to-violet-700 text-white border-none shadow-lg shadow-indigo-200 dark:shadow-none">
-               <h4 className="text-xs font-bold opacity-80 uppercase tracking-widest mb-3">Resumen de Movimientos</h4>
+            <Card className="p-4 bg-gradient-to-br from-blue-600 to-violet-700 text-white border-none shadow-lg shadow-blue-200 dark:shadow-none">
+               <h4 className="text-xs font-semibold opacity-80 uppercase tracking-widest mb-3">Resumen de Movimientos</h4>
                <div className="space-y-3">
                  <div className="flex justify-between items-center">
-                   <span className="text-sm opacity-90 text-indigo-100">Total Entradas</span>
+                   <span className="text-sm opacity-90 text-blue-100">Total Entradas</span>
                    <span className="font-bold">+{totalIngresos} un.</span>
                  </div>
                  <div className="flex justify-between items-center text-red-100">

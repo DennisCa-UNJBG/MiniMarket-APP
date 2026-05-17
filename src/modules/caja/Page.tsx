@@ -19,6 +19,16 @@ import { Tooltip } from '../../components/ui/Tooltip';
 import { Button } from '../../components/ui/Button';
 import { notificationService } from '../../lib/notifications';
 
+const formatDate = (dateStr: string) => {
+  if (!dateStr) return '';
+  return new Date(dateStr + " UTC").toLocaleDateString();
+};
+
+const formatTime = (dateStr: string) => {
+  if (!dateStr) return '';
+  return new Date(dateStr + " UTC").toLocaleTimeString();
+};
+
 export function Caja() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -93,8 +103,8 @@ export function Caja() {
       header: 'Apertura',
       render: (row) => (
         <div className="flex flex-col">
-          <span className="text-xs font-bold text-gray-700 dark:text-gray-200">{new Date(row.fecha_apertura + " UTC").toLocaleDateString()}</span>
-          <span className="text-[10px] text-gray-400">{new Date(row.fecha_apertura + " UTC").toLocaleTimeString()}</span>
+          <span className="text-xs font-bold text-zinc-700 dark:text-zinc-200">{formatDate(row.fecha_apertura)}</span>
+          <span className="text-[10px] text-zinc-400">{formatTime(row.fecha_apertura)}</span>
         </div>
       )
     },
@@ -103,10 +113,10 @@ export function Caja() {
       header: 'Cierre',
       render: (row) => row.fecha_cierre ? (
         <div className="flex flex-col">
-          <span className="text-xs font-bold text-gray-700 dark:text-gray-200">{new Date(row.fecha_cierre + " UTC").toLocaleDateString()}</span>
-          <span className="text-[10px] text-gray-400">{new Date(row.fecha_cierre + " UTC").toLocaleTimeString()}</span>
+          <span className="text-xs font-bold text-zinc-700 dark:text-zinc-200">{formatDate(row.fecha_cierre)}</span>
+          <span className="text-[10px] text-zinc-400">{formatTime(row.fecha_cierre)}</span>
         </div>
-      ) : <span className="text-[10px] italic text-gray-300">En curso...</span>
+      ) : <span className="text-[10px] italic text-zinc-300">En curso...</span>
     },
     {
       key: 'monto_inicial',
@@ -118,17 +128,17 @@ export function Caja() {
       key: 'monto_final',
       header: 'Final',
       align: 'right',
-      render: (row) => row.monto_final ? <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400">S/ {row.monto_final.toFixed(2)}</span> : '-'
+      render: (row) => row.monto_final ? <span className="text-sm font-bold text-blue-600 dark:text-blue-400">S/ {row.monto_final.toFixed(2)}</span> : '-'
     },
     {
       key: 'usuario_nombre',
       header: 'Usuario',
       render: (row) => (
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center text-gray-500">
+          <div className="size-6 bg-zinc-100 dark:bg-zinc-700 rounded-full flex items-center justify-center text-zinc-500">
             <User size={12} />
           </div>
-          <span className="text-xs text-gray-600 dark:text-gray-400">{row.usuario_nombre}</span>
+          <span className="text-xs text-zinc-600 dark:text-zinc-400">{row.usuario_nombre}</span>
         </div>
       )
     }
@@ -146,10 +156,10 @@ export function Caja() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Panel de Control Principal */}
         <div className="lg:col-span-1 space-y-6">
-          <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+          <div className="bg-white dark:bg-zinc-800 rounded-3xl p-6 shadow-sm border border-zinc-100 dark:border-zinc-700">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2">
-                <Wallet size={20} className="text-indigo-500" />
+              <h3 className="text-lg font-semibold text-zinc-800 dark:text-white flex items-center gap-2">
+                <Wallet size={20} className="text-blue-500" />
                 Estado Actual
               </h3>
               <Badge 
@@ -166,16 +176,17 @@ export function Caja() {
                   </p>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-gray-500 uppercase tracking-widest px-1">Monto Inicial (S/)</label>
+                  <label htmlFor="monto-inicial-caja" className="text-xs font-bold text-zinc-500 uppercase tracking-widest px-1">Monto Inicial (S/)</label>
                   <div className="relative">
-                    <Banknote className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                    <Banknote className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
                     <input
+                      id="monto-inicial-caja"
                       type="number"
                       step="0.01"
                       value={montoInicial}
                       onChange={(e) => setMontoInicial(e.target.value)}
                       placeholder="0.00"
-                      className="w-full pl-10 pr-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-100 dark:border-gray-600 rounded-2xl text-lg font-bold text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all"/>
+                      className="w-full pl-10 pr-4 py-3 bg-zinc-50 dark:bg-zinc-700 border border-zinc-100 dark:border-zinc-600 rounded-2xl text-lg font-bold text-zinc-800 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"/>
                   </div>
                 </div>
                 <Tooltip text="Iniciar el monto de caja por Turno" position="top-right" className="w-full">
@@ -193,34 +204,34 @@ export function Caja() {
               </form>
             ) : (
               <form onSubmit={handleCerrar} className="space-y-6">
-                <div className="p-5 bg-indigo-50 dark:bg-indigo-900/20 rounded-3xl border border-indigo-100 dark:border-indigo-800/50">
+                <div className="p-5 bg-blue-50 dark:bg-blue-900/20 rounded-3xl border border-blue-100 dark:border-blue-800/50">
                   <div className="flex items-center justify-between mb-4">
-                    <p className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">Resumen del Turno</p>
-                    <TrendingUp size={16} className="text-indigo-400" />
+                    <p className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest">Resumen del Turno</p>
+                    <TrendingUp size={16} className="text-blue-400" />
                   </div>
                   <div className="space-y-3">
                     <div className="flex justify-between items-center">
-                      <span className="text-xs text-gray-500 dark:text-gray-400">Monto Inicial (Fondo):</span>
-                      <span className="text-xs font-bold text-gray-700 dark:text-gray-200">S/ {cajaAbierta.monto_inicial.toFixed(2)}</span>
+                      <span className="text-xs text-zinc-500 dark:text-zinc-400">Monto Inicial (Fondo):</span>
+                      <span className="text-xs font-bold text-zinc-700 dark:text-zinc-200">S/ {cajaAbierta.monto_inicial.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-xs text-gray-500 dark:text-gray-400">Ventas en Efectivo (+):</span>
+                      <span className="text-xs text-zinc-500 dark:text-zinc-400">Ventas en Efectivo (+):</span>
                       <span className="text-xs font-bold text-emerald-600">S/ {resumenVentas?.total_efectivo.toFixed(2) || '0.00'}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-xs text-gray-500 dark:text-gray-400">Compras en Efectivo (-):</span>
+                      <span className="text-xs text-zinc-500 dark:text-zinc-400">Compras en Efectivo (-):</span>
                       <span className="text-xs font-bold text-red-500">S/ {resumenVentas?.total_gastos_efectivo.toFixed(2) || '0.00'}</span>
                     </div>
                     <div className="flex justify-between items-center opacity-60">
-                      <span className="text-xs text-gray-400">Pagos Digitales (Ref):</span>
-                      <span className="text-xs font-medium text-gray-500 italic">S/ {resumenVentas?.total_digital.toFixed(2) || '0.00'}</span>
+                      <span className="text-xs text-zinc-400">Pagos Digitales (Ref):</span>
+                      <span className="text-xs font-medium text-zinc-500 italic">S/ {resumenVentas?.total_digital.toFixed(2) || '0.00'}</span>
                     </div>
-                    <div className="pt-2 border-t border-indigo-100 dark:border-indigo-800 flex justify-between items-center">
+                    <div className="pt-2 border-t border-blue-100 dark:border-blue-800 flex justify-between items-center">
                       <div className="flex flex-col">
-                        <span className="text-sm font-bold text-gray-700 dark:text-gray-200">Total Esperado en Físico:</span>
-                        <span className="text-[10px] text-indigo-400 font-medium">Solo efectivo + fondo - compras</span>
+                        <span className="text-sm font-bold text-zinc-700 dark:text-zinc-200">Total Esperado en Físico:</span>
+                        <span className="text-[10px] text-blue-400 font-medium">Solo efectivo + fondo - compras</span>
                       </div>
-                      <span className="text-lg font-black text-indigo-600 dark:text-indigo-400">
+                      <span className="text-lg font-black text-blue-600 dark:text-blue-400">
                         S/ {(cajaAbierta.monto_inicial + (resumenVentas?.total_efectivo || 0) - (resumenVentas?.total_gastos_efectivo || 0)).toFixed(2)}
                       </span>
                     </div>
@@ -228,16 +239,17 @@ export function Caja() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-gray-500 uppercase tracking-widest px-1">Monto Final Real (S/)</label>
+                  <label htmlFor="monto-final-caja" className="text-xs font-bold text-zinc-500 uppercase tracking-widest px-1">Monto Final Real (S/)</label>
                   <div className="relative">
-                    <Banknote className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                    <Banknote className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
                     <input
+                      id="monto-final-caja"
                       type="number"
                       step="0.01"
                       value={montoFinal}
                       onChange={(e) => setMontoFinal(e.target.value)}
                       placeholder="Ingresa lo que hay en caja..."
-                      className="w-full pl-10 pr-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-100 dark:border-gray-600 rounded-2xl text-lg font-bold text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                      className="w-full pl-10 pr-4 py-3 bg-zinc-50 dark:bg-zinc-700 border border-zinc-100 dark:border-zinc-600 rounded-2xl text-lg font-bold text-zinc-800 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                     />
                   </div>
                 </div>
@@ -258,10 +270,10 @@ export function Caja() {
         </div>
 
         {/* Historial de Movimientos */}
-        <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden flex flex-col">
-          <div className="p-6 border-b border-gray-50 dark:border-gray-700/50 flex items-center justify-between">
-            <h3 className="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2">
-              <History size={20} className="text-indigo-500" />
+        <div className="lg:col-span-2 bg-white dark:bg-zinc-800 rounded-3xl shadow-sm border border-zinc-100 dark:border-zinc-700 overflow-hidden flex flex-col">
+          <div className="p-6 border-b border-zinc-50 dark:border-zinc-700/50 flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-zinc-800 dark:text-white flex items-center gap-2">
+              <History size={20} className="text-blue-500" />
               Historial de Turnos
             </h3>
           </div>

@@ -24,27 +24,38 @@ export const syncService = {
       throw new Error(error.error || 'Error al descargar productos');
     }
 
-    const { data: productosCentral } = await response.json();
-    const db = await getDb();
+    const [{ data: productosCentral }, db] = await Promise.all([
+      response.json(),
+      getDb()
+    ]);
 
     let actualizados = 0;
     let creados = 0;
 
-    for (const p of productosCentral) {
-      // 2. Gestionar Categoría
-      let categoriaId: number | null = null;
-      if (p.categoria) {
-        const catRes = await db.select<any[]>('SELECT id FROM categorias WHERE nombre = $1', [p.categoria]);
-        if (catRes.length > 0) {
-          categoriaId = catRes[0].id;
-        } else {
-          // Crear categoría si no existe
-          const insCat = await db.execute('INSERT INTO categorias (nombre, color) VALUES ($1, $2)', [p.categoria, '#6366f1']);
-          categoriaId = insCat.lastInsertId ?? null;
+    // 1. Obtener categorías únicas de los productos de la central
+    const uniqueCats = Array.from(new Set(productosCentral.map((p: any) => p.categoria).filter(Boolean))) as string[];
+    
+    // 2. Pre-cargar todas las categorías existentes
+    const catList = await db.select<any[]>('SELECT id, nombre FROM categorias');
+    const catMap = new Map<string, number>(catList.map(c => [c.nombre.toLowerCase(), c.id]));
+
+    // 3. Crear las categorías que falten de forma secuencial (para evitar duplicados en la BD)
+    for (const catName of uniqueCats) {
+      const catNorm = catName.toLowerCase();
+      if (!catMap.has(catNorm)) {
+        const insCat = await db.execute('INSERT INTO categorias (nombre, color) VALUES ($1, $2)', [catName, '#6366f1']);
+        const newId = insCat.lastInsertId ?? null;
+        if (newId) {
+          catMap.set(catNorm, newId);
         }
       }
+    }
 
-      // 3. Upsert Producto
+    // 4. Procesar todos los productos en paralelo de forma segura
+    await Promise.all(productosCentral.map(async (p: any) => {
+      const categoriaId = p.categoria ? (catMap.get(p.categoria.toLowerCase()) ?? null) : null;
+
+      // Upsert Producto
       const prodRes = await db.select<any[]>('SELECT id FROM productos WHERE codigo_barras = $1', [p.codigo_barras]);
       
       let productoId: number;
@@ -64,7 +75,7 @@ export const syncService = {
         creados++;
       }
 
-      // 4. Actualizar Precios (Solo si vienen de la central)
+      // Actualizar Precios (Solo si vienen de la central)
       if (p.precio_venta !== null && p.precio_compra !== null) {
         // Desactivar precios anteriores
         await db.execute('UPDATE precios_historial SET activo = 0 WHERE producto_id = $1', [productoId]);
@@ -74,7 +85,7 @@ export const syncService = {
           [productoId, p.precio_compra, p.precio_venta]
         );
       }
-    }
+    }));
 
     return { creados, actualizados };
   },
@@ -98,13 +109,15 @@ export const syncService = {
       throw new Error(error.error || 'Error al descargar usuarios');
     }
 
-    const { data: usuariosCentral } = await response.json();
-    const db = await getDb();
+    const [{ data: usuariosCentral }, db] = await Promise.all([
+      response.json(),
+      getDb()
+    ]);
 
     let actualizados = 0;
     let creados = 0;
 
-    for (const u of usuariosCentral) {
+    await Promise.all(usuariosCentral.map(async (u: any) => {
       const userRes = await db.select<any[]>('SELECT id FROM usuarios WHERE username = $1', [u.username]);
       
       if (userRes.length > 0) {
@@ -120,7 +133,7 @@ export const syncService = {
         );
         creados++;
       }
-    }
+    }));
 
     return { creados, actualizados };
   },
@@ -143,9 +156,7 @@ export const syncService = {
 
     if (ventasPendientes.length === 0) return { enviadas: 0 };
 
-    const payloadVentas = [];
-
-    for (const v of ventasPendientes) {
+    const payloadVentas = await Promise.all(ventasPendientes.map(async (v) => {
       // 2. Obtener detalles de cada venta con código de barras
       const detalles = await db.select<any[]>(
         `SELECT vd.*, p.codigo_barras 
@@ -155,7 +166,7 @@ export const syncService = {
         [v.id]
       );
 
-      payloadVentas.push({
+      return {
         fecha: v.fecha,
         total: v.total,
         usuario_id: v.usuario_id,
@@ -166,8 +177,8 @@ export const syncService = {
           precio_unitario: d.precio_unitario,
           subtotal: d.subtotal
         }))
-      });
-    }
+      };
+    }));
 
     // 3. Enviar a la central
     const response = await fetch(`${config.api_url_central}/api/sincronizar`, {
@@ -188,9 +199,9 @@ export const syncService = {
     }
 
     // 4. Marcar como sincronizadas localmente
-    for (const v of ventasPendientes) {
-      await db.execute('UPDATE ventas SET sincronizado = 1 WHERE id = $1', [v.id]);
-    }
+    await Promise.all(ventasPendientes.map(v =>
+      db.execute('UPDATE ventas SET sincronizado = 1 WHERE id = $1', [v.id])
+    ));
 
     return { enviadas: ventasPendientes.length };
   },
@@ -278,9 +289,9 @@ export const syncService = {
     }
 
     // Marcar como sincronizados
-    for (const m of movimientos) {
-      await db.execute('UPDATE kardex SET sincronizado = 1 WHERE id = $1', [m.id]);
-    }
+    await Promise.all(movimientos.map(m =>
+      db.execute('UPDATE kardex SET sincronizado = 1 WHERE id = $1', [m.id])
+    ));
 
     return { enviadas: movimientos.length };
   }

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useReducer } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import {
   Store,
@@ -29,17 +29,22 @@ import { useAuth } from '../../contexts/AuthContext';
 import { authService } from '../login/Service';
 import { allNavItems } from '../../config/navigation';
 
+const formatDateTimeLocal = (dateStr: string) => {
+  if (!dateStr) return '';
+  return new Date(dateStr).toLocaleString();
+};
+
 function Section({ icon: Icon, title, description, children }: { icon: React.ElementType; title: string; description: string; children: React.ReactNode }) {
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-      <div className="p-6 border-b border-gray-50 dark:border-gray-700/50 bg-gray-50/30 dark:bg-gray-800/50">
+    <div className="bg-white dark:bg-zinc-800 rounded-3xl border border-zinc-100 dark:border-zinc-700 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+      <div className="p-6 border-b border-zinc-50 dark:border-zinc-700/50 bg-zinc-50/30 dark:bg-zinc-800/50">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl text-indigo-600 dark:text-indigo-400">
+          <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-xl text-blue-600 dark:text-blue-400">
             <Icon size={20} />
           </div>
           <div>
-            <h3 className="text-base font-black text-gray-800 dark:text-white tracking-tight">{title}</h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400">{description}</p>
+            <h3 className="text-base font-semibold text-zinc-800 dark:text-white tracking-tight">{title}</h3>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">{description}</p>
           </div>
         </div>
       </div>
@@ -57,14 +62,14 @@ function Field({ label, value, onChange, type = 'text', placeholder }: { label: 
 
   return (
     <div className="flex flex-col gap-1.5">
-      <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">{label}</label>
+      <label className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">{label}</label>
       <div className="relative">
         <input
           type={inputType}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          className={`w-full px-4 py-2.5 text-sm font-medium border border-gray-100 dark:border-gray-700 rounded-2xl bg-gray-50/50 dark:bg-gray-900/50 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all ${isPassword ? 'pr-11' : ''}`}
+          className={`w-full px-4 py-2.5 text-sm font-medium border border-zinc-100 dark:border-zinc-700 rounded-2xl bg-zinc-50/50 dark:bg-zinc-900/50 text-zinc-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all ${isPassword ? 'pr-11' : ''}`}
         />
         {isPassword && (
           <Button
@@ -72,7 +77,7 @@ function Field({ label, value, onChange, type = 'text', placeholder }: { label: 
             variant="ghost"
             size="sm"
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-indigo-500 dark:hover:text-indigo-400"
+            className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1 text-zinc-400 hover:text-blue-500 dark:hover:text-blue-400"
             title={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
             icon={showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
           />
@@ -82,37 +87,115 @@ function Field({ label, value, onChange, type = 'text', placeholder }: { label: 
   );
 }
 
+interface ConfiguracionState {
+  connectionStatus: 'idle' | 'success' | 'error';
+  prefs: AppPreferences;
+  localSucursal: SucursalConfig;
+  localNegocio: DatosNegocio;
+  securityData: {
+    newPassword: string;
+    confirmPassword: string;
+  };
+  newShortcutCombo: string;
+  newShortcutPath: string;
+  isRecordingCombo: boolean;
+}
+
+type ConfiguracionAction =
+  | { type: 'SET_CONNECTION_STATUS'; payload: 'idle' | 'success' | 'error' }
+  | { type: 'SET_PREFS'; payload: AppPreferences }
+  | { type: 'SET_LOCAL_SUCURSAL'; payload: Partial<SucursalConfig> | ((prev: SucursalConfig) => SucursalConfig) }
+  | { type: 'SET_LOCAL_NEGOCIO'; payload: Partial<DatosNegocio> | ((prev: DatosNegocio) => DatosNegocio) }
+  | { type: 'SET_SECURITY_DATA'; payload: Partial<{ newPassword: string; confirmPassword: string }> | ((prev: { newPassword: string; confirmPassword: string }) => { newPassword: string; confirmPassword: string }) }
+  | { type: 'SET_NEW_SHORTCUT_COMBO'; payload: string }
+  | { type: 'SET_NEW_SHORTCUT_PATH'; payload: string }
+  | { type: 'SET_IS_RECORDING_COMBO'; payload: boolean };
+
+function configuracionReducer(state: ConfiguracionState, action: ConfiguracionAction): ConfiguracionState {
+  switch (action.type) {
+    case 'SET_CONNECTION_STATUS':
+      return { ...state, connectionStatus: action.payload };
+    case 'SET_PREFS':
+      return { ...state, prefs: action.payload };
+    case 'SET_LOCAL_SUCURSAL':
+      return {
+        ...state,
+        localSucursal: typeof action.payload === 'function'
+          ? action.payload(state.localSucursal)
+          : { ...state.localSucursal, ...action.payload } as SucursalConfig
+      };
+    case 'SET_LOCAL_NEGOCIO':
+      return {
+        ...state,
+        localNegocio: typeof action.payload === 'function'
+          ? action.payload(state.localNegocio)
+          : { ...state.localNegocio, ...action.payload } as DatosNegocio
+      };
+    case 'SET_SECURITY_DATA':
+      return {
+        ...state,
+        securityData: typeof action.payload === 'function'
+          ? action.payload(state.securityData)
+          : { ...state.securityData, ...action.payload } as any
+      };
+    case 'SET_NEW_SHORTCUT_COMBO':
+      return { ...state, newShortcutCombo: action.payload };
+    case 'SET_NEW_SHORTCUT_PATH':
+      return { ...state, newShortcutPath: action.payload };
+    case 'SET_IS_RECORDING_COMBO':
+      return { ...state, isRecordingCombo: action.payload };
+    default:
+      return state;
+  }
+}
+
 export function Configuracion() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   
-  const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle');
-  
-  const [prefs, setPrefs] = useState<AppPreferences>(preferenciasService.get());
-  
-  const [localSucursal, setLocalSucursal] = useState<SucursalConfig>({
-    sucursal_id: '',
-    nombre_sucursal: '',
-    api_url_central: ''
+  const [state, dispatch] = useReducer(configuracionReducer, {
+    connectionStatus: 'idle',
+    prefs: preferenciasService.get(),
+    localSucursal: {
+      sucursal_id: '',
+      nombre_sucursal: '',
+      api_url_central: ''
+    },
+    localNegocio: {
+      razon_social: '',
+      ruc: '',
+      direccion: '',
+      telefono: '',
+      email: ''
+    },
+    securityData: {
+      newPassword: '',
+      confirmPassword: ''
+    },
+    newShortcutCombo: '',
+    newShortcutPath: allNavItems[0].to,
+    isRecordingCombo: false
   });
 
-  const [localNegocio, setLocalNegocio] = useState<DatosNegocio>({
-    razon_social: '',
-    ruc: '',
-    direccion: '',
-    telefono: '',
-    email: ''
-  });
+  const {
+    connectionStatus,
+    prefs,
+    localSucursal,
+    localNegocio,
+    securityData,
+    newShortcutCombo,
+    newShortcutPath,
+    isRecordingCombo
+  } = state;
 
-  const [securityData, setSecurityData] = useState({
-    newPassword: '',
-    confirmPassword: ''
-  });
-
-  // Atajos de teclado
-  const [newShortcutCombo, setNewShortcutCombo] = useState('');
-  const [newShortcutPath, setNewShortcutPath] = useState(allNavItems[0].to);
-  const [isRecordingCombo, setIsRecordingCombo] = useState(false);
+  const setConnectionStatus = (payload: 'idle' | 'success' | 'error') => dispatch({ type: 'SET_CONNECTION_STATUS', payload });
+  const setPrefs = (payload: AppPreferences) => dispatch({ type: 'SET_PREFS', payload });
+  const setLocalSucursal = (payload: Partial<SucursalConfig> | ((prev: SucursalConfig) => SucursalConfig)) => dispatch({ type: 'SET_LOCAL_SUCURSAL', payload });
+  const setLocalNegocio = (payload: Partial<DatosNegocio> | ((prev: DatosNegocio) => DatosNegocio)) => dispatch({ type: 'SET_LOCAL_NEGOCIO', payload });
+  const setSecurityData = (payload: Partial<{ newPassword: string; confirmPassword: string }> | ((prev: { newPassword: string; confirmPassword: string }) => { newPassword: string; confirmPassword: string })) => dispatch({ type: 'SET_SECURITY_DATA', payload });
+  const setNewShortcutCombo = (payload: string) => dispatch({ type: 'SET_NEW_SHORTCUT_COMBO', payload });
+  const setNewShortcutPath = (payload: string) => dispatch({ type: 'SET_NEW_SHORTCUT_PATH', payload });
+  const setIsRecordingCombo = (payload: boolean) => dispatch({ type: 'SET_IS_RECORDING_COMBO', payload });
 
   // Queries
   const { data: dbStats = { size: 0, path: 'Cargando...' } } = useQuery({
@@ -258,11 +341,19 @@ export function Configuracion() {
   const syncMutation = useMutation({
     mutationFn: async () => {
       notificationService.info('Sincronizando', 'Actualizando catálogo, usuarios y enviando ventas...');
-      const { enviadas: vEnviadas } = await syncService.pushSales();
-      const { enviadas: kEnviadas } = await syncService.pushKardex();
-      await syncService.pushStockLevels();
-      const { creados: pCreados, actualizados: pActualizados } = await syncService.pullProducts();
-      const { creados: uCreados, actualizados: uActualizados } = await syncService.pullUsers();
+      const [
+        { enviadas: vEnviadas },
+        { enviadas: kEnviadas },
+        _,
+        { creados: pCreados, actualizados: pActualizados },
+        { creados: uCreados, actualizados: uActualizados }
+      ] = await Promise.all([
+        syncService.pushSales(),
+        syncService.pushKardex(),
+        syncService.pushStockLevels(),
+        syncService.pullProducts(),
+        syncService.pullUsers()
+      ]);
       return { vEnviadas, kEnviadas, pCreados, pActualizados, uCreados, uActualizados };
     },
     onSuccess: (data) => {
@@ -346,10 +437,10 @@ export function Configuracion() {
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-black text-gray-800 dark:text-white tracking-tight">Configuración del Sistema</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Administra los parámetros globales de tu minimarket.</p>
+          <h2 className="text-2xl font-semibold text-zinc-800 dark:text-white tracking-tight">Configuración del Sistema</h2>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">Administra los parámetros globales de tu minimarket.</p>
         </div>
-        <Badge label="Versión 0.8.6" variant="indigo" />
+        <Badge label="Versión 0.8.6" variant="blue" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -363,43 +454,53 @@ export function Configuracion() {
           <form onSubmit={handleSucursalSave} className="space-y-5">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">ID de Sede Único</label>
+                <label htmlFor="id-sede-unico" className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">ID de Sede Único</label>
                 <input
+                  id="id-sede-unico"
                   type="text"
                   value={localSucursal.sucursal_id}
-                  onChange={(e) => setLocalSucursal({...localSucursal, sucursal_id: e.target.value})}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setLocalSucursal(prev => ({...prev, sucursal_id: val}));
+                  }}
                   placeholder="Ej: SEDE-01"
-                  className="w-full px-4 py-2.5 text-sm font-medium border border-gray-100 dark:border-gray-700 rounded-2xl bg-gray-50/50 dark:bg-gray-900/50 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                  className="w-full px-4 py-2.5 text-sm font-medium border border-zinc-100 dark:border-zinc-700 rounded-2xl bg-zinc-50/50 dark:bg-zinc-900/50 text-zinc-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">Nombre de Sucursal</label>
+                <label htmlFor="nombre-sucursal-config" className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Nombre de Sucursal</label>
                 <input
+                  id="nombre-sucursal-config"
                   type="text"
                   value={localSucursal.nombre_sucursal}
-                  onChange={(e) => setLocalSucursal({...localSucursal, nombre_sucursal: e.target.value})}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setLocalSucursal(prev => ({...prev, nombre_sucursal: val}));
+                  }}
                   placeholder="Ej: Sucursal Centro"
-                  className="w-full px-4 py-2.5 text-sm font-medium border border-gray-100 dark:border-gray-700 rounded-2xl bg-gray-50/50 dark:bg-gray-900/50 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                  className="w-full px-4 py-2.5 text-sm font-medium border border-zinc-100 dark:border-zinc-700 rounded-2xl bg-zinc-50/50 dark:bg-zinc-900/50 text-zinc-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                 />
               </div>
               <div className="sm:col-span-2">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">URL API Sede Central</label>
+                  <label htmlFor="url-api-central" className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">URL API Sede Central</label>
                   <div className="flex gap-2">
                     <div className="relative flex-1">
                       <input
+                        id="url-api-central"
                         type="url"
                         value={localSucursal.api_url_central}
                         onChange={(e) => {
-                          setLocalSucursal({...localSucursal, api_url_central: e.target.value});
+                          const val = e.target.value;
+                          setLocalSucursal(prev => ({...prev, api_url_central: val}));
                           setConnectionStatus('idle');
                         }}
                         placeholder="https://central.tu-negocio.com/api"
-                        className="w-full px-4 py-2.5 text-sm font-medium border border-gray-100 dark:border-gray-700 rounded-2xl bg-gray-50/50 dark:bg-gray-900/50 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                        className="w-full px-4 py-2.5 text-sm font-medium border border-zinc-100 dark:border-zinc-700 rounded-2xl bg-zinc-50/50 dark:bg-zinc-900/50 text-zinc-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                       />
                       <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
-                        {connectionStatus === 'success' && <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />}
-                        {connectionStatus === 'error' && <div className="w-2 h-2 rounded-full bg-red-500" />}
+                        {connectionStatus === 'success' && <div className="size-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />}
+                        {connectionStatus === 'error' && <div className="size-2 rounded-full bg-red-500" />}
                       </div>
                     </div>
                     <Tooltip text="Probar Conexión" position="top">
@@ -414,7 +515,7 @@ export function Configuracion() {
                             ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-800'
                             : connectionStatus === 'error'
                             ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-100 dark:border-red-800'
-                            : 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 border-indigo-100 dark:border-indigo-800'
+                            : 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-100 dark:border-blue-800'
                         }`}
                         icon={<RefreshCw size={18} className={testConnectionMutation.isPending ? 'animate-spin' : ''} />}
                       />
@@ -431,14 +532,14 @@ export function Configuracion() {
                     onClick={handleSync}
                     isLoading={syncMutation.isPending}
                     disabled={!localSucursal.api_url_central}
-                    className="w-full flex items-center justify-center gap-2 px-6 py-3 text-indigo-600 dark:text-indigo-400 text-sm font-bold rounded-2xl hover:bg-indigo-100 border border-indigo-100 dark:border-indigo-800"
+                    className="w-full flex items-center justify-center gap-2 px-6 py-3 text-blue-600 dark:text-blue-400 text-sm font-bold rounded-2xl hover:bg-blue-100 border border-blue-100 dark:border-blue-800"
                     icon={<RefreshCw size={18} className={syncMutation.isPending ? 'animate-spin' : ''} />}
                   >
                     Sincronizar con Sede Central
                   </Button>
                   {localSucursal.ultima_sincronizacion && (
-                    <p className="text-[9px] font-bold text-indigo-400 uppercase tracking-tighter mt-1 text-right">
-                      Última: {new Date(localSucursal.ultima_sincronizacion).toLocaleString()}
+                    <p className="text-[9px] font-bold text-blue-400 uppercase tracking-tighter mt-1 text-right">
+                      Última: {formatDateTimeLocal(localSucursal.ultima_sincronizacion)}
                     </p>
                   )}
                 </div>
@@ -463,13 +564,13 @@ export function Configuracion() {
         >
           <form onSubmit={handleNegocioSave} className="space-y-5">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field label="Razón Social" value={localNegocio.razon_social} onChange={val => setLocalNegocio({...localNegocio, razon_social: val})} placeholder="Ej: Minimarket El Sol S.A.C." />
-              <Field label="RUC / Identificación" value={localNegocio.ruc} onChange={val => setLocalNegocio({...localNegocio, ruc: val})} placeholder="Ej: 20123456789" />
+              <Field label="Razón Social" value={localNegocio.razon_social} onChange={val => setLocalNegocio(prev => ({...prev, razon_social: val}))} placeholder="Ej: Minimarket El Sol S.A.C." />
+              <Field label="RUC / Identificación" value={localNegocio.ruc} onChange={val => setLocalNegocio(prev => ({...prev, ruc: val}))} placeholder="Ej: 20123456789" />
               <div className="sm:col-span-2">
-                <Field label="Dirección Fiscal" value={localNegocio.direccion} onChange={val => setLocalNegocio({...localNegocio, direccion: val})} placeholder="Av. Principal 123, Tacna" />
+                <Field label="Dirección Fiscal" value={localNegocio.direccion} onChange={val => setLocalNegocio(prev => ({...prev, direccion: val}))} placeholder="Av. Principal 123, Tacna" />
               </div>
-              <Field label="Teléfono de Contacto" value={localNegocio.telefono} onChange={val => setLocalNegocio({...localNegocio, telefono: val})} placeholder="Ej: 052 123 456" />
-              <Field label="Correo Electrónico" value={localNegocio.email} onChange={val => setLocalNegocio({...localNegocio, email: val})} placeholder="contacto@empresa.com" />
+              <Field label="Teléfono de Contacto" value={localNegocio.telefono} onChange={val => setLocalNegocio(prev => ({...prev, telefono: val}))} placeholder="Ej: 052 123 456" />
+              <Field label="Correo Electrónico" value={localNegocio.email} onChange={val => setLocalNegocio(prev => ({...prev, email: val}))} placeholder="contacto@empresa.com" />
             </div>
             <Button 
               type="submit"
@@ -491,23 +592,23 @@ export function Configuracion() {
           <form onSubmit={handleUpdatePassword} className="space-y-5">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">Usuario</label>
-                <input disabled value={user?.username || 'admin'} className="w-full px-4 py-2.5 text-sm font-medium border border-gray-100 dark:border-gray-700 rounded-2xl bg-gray-100 dark:bg-gray-800 text-gray-500 cursor-not-allowed" />
+                <label htmlFor="config-usuario" className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Usuario</label>
+                <input id="config-usuario" disabled value={user?.username || 'admin'} className="w-full px-4 py-2.5 text-sm font-medium border border-zinc-100 dark:border-zinc-700 rounded-2xl bg-zinc-100 dark:bg-zinc-800 text-zinc-500 cursor-not-allowed" />
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">Rol del Sistema</label>
-                <input disabled value={user?.rol_id === 1 ? 'Administrador' : 'Cajero'} className="w-full px-4 py-2.5 text-sm font-medium border border-gray-100 dark:border-gray-700 rounded-2xl bg-gray-100 dark:bg-gray-800 text-gray-500 cursor-not-allowed" />
+                <label htmlFor="config-rol" className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Rol del Sistema</label>
+                <input id="config-rol" disabled value={user?.rol_id === 1 ? 'Administrador' : 'Cajero'} className="w-full px-4 py-2.5 text-sm font-medium border border-zinc-100 dark:border-zinc-700 rounded-2xl bg-zinc-100 dark:bg-zinc-800 text-zinc-500 cursor-not-allowed" />
               </div>
               <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Field label="Nueva Contraseña" value={securityData.newPassword} onChange={val => setSecurityData({...securityData, newPassword: val})} type="password" placeholder="Nueva clave" />
-                <Field label="Confirmar Nueva" value={securityData.confirmPassword} onChange={val => setSecurityData({...securityData, confirmPassword: val})} type="password" placeholder="Repite clave" />
+                <Field label="Nueva Contraseña" value={securityData.newPassword} onChange={val => setSecurityData(prev => ({...prev, newPassword: val}))} type="password" placeholder="Nueva clave" />
+                <Field label="Confirmar Nueva" value={securityData.confirmPassword} onChange={val => setSecurityData(prev => ({...prev, confirmPassword: val}))} type="password" placeholder="Repite clave" />
               </div>
             </div>
             <Button 
               type="submit"
               variant="secondary"
               isLoading={updatePasswordMutation.isPending}
-              className="w-full sm:w-auto px-6 py-2.5 font-bold rounded-2xl bg-gray-800 dark:bg-gray-700 hover:bg-gray-900 text-white"
+              className="w-full sm:w-auto px-6 py-2.5 font-bold rounded-2xl bg-zinc-800 dark:bg-zinc-700 hover:bg-zinc-900 text-white"
             >
               Actualizar Credenciales
             </Button>
@@ -521,17 +622,17 @@ export function Configuracion() {
           description="Estado y mantenimiento de la base de datos local."
         >
           <div className="space-y-6">
-            <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-100 dark:border-gray-800">
+            <div className="p-4 bg-zinc-50/50 dark:bg-zinc-900/50 rounded-2xl border border-zinc-100 dark:border-zinc-800">
               <div className="flex items-center justify-between mb-2">
-                <p className="text-sm font-bold text-gray-700 dark:text-gray-200">Motor de Base de Datos</p>
+                <p className="text-sm font-bold text-zinc-700 dark:text-zinc-200">Motor de Base de Datos</p>
                 <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400 text-[10px] font-black rounded-full uppercase tracking-widest">
                   Activo
                 </span>
               </div>
-              <p className="text-xs text-gray-400 dark:text-gray-500 font-mono">
+              <p className="text-xs text-zinc-400 dark:text-zinc-500 font-mono">
                 SQLite (Local) • {formatSize(dbStats.size)}
               </p>
-              <p className="text-[9px] text-gray-400 dark:text-gray-500 font-mono truncate mt-1" title={dbStats.path}>
+              <p className="text-[9px] text-zinc-400 dark:text-zinc-500 font-mono truncate mt-1" title={dbStats.path}>
                 {dbStats.path}
               </p>
             </div>
@@ -541,7 +642,7 @@ export function Configuracion() {
                   variant="ghost"
                   onClick={handleOptimize}
                   isLoading={optimizeMutation.isPending}
-                  className="flex-1 px-4 py-2.5 border border-gray-200 dark:border-gray-700 text-xs font-bold text-gray-600 dark:text-gray-300 rounded-2xl"
+                  className="flex-1 px-4 py-2.5 border border-zinc-200 dark:border-zinc-700 text-xs font-bold text-zinc-600 dark:text-zinc-300 rounded-2xl"
                 >
                   Optimizar Tablas
                 </Button>
@@ -573,14 +674,14 @@ export function Configuracion() {
             ].map(({ id, label, desc }) => {
               const active = prefs[id as keyof AppPreferences] as boolean;
               return (
-                <div key={label} className="flex items-center justify-between py-3 border-b border-gray-50 dark:border-gray-700 last:border-0">
+                <div key={label} className="flex items-center justify-between py-3 border-b border-zinc-50 dark:border-zinc-700 last:border-0">
                   <div className="min-w-0 pr-4">
-                    <p className="text-sm font-bold text-gray-700 dark:text-gray-200 truncate">{label}</p>
-                    <p className="text-[10px] text-gray-400 dark:text-gray-500">{desc}</p>
+                    <p className="text-sm font-bold text-zinc-700 dark:text-zinc-200 truncate">{label}</p>
+                    <p className="text-[10px] text-zinc-400 dark:text-zinc-500">{desc}</p>
                   </div>
                   <button 
                     onClick={() => handleToggle(id as keyof AppPreferences)}
-                    className={`w-10 h-5 rounded-full relative transition-colors ${active ? 'bg-indigo-500' : 'bg-gray-200 dark:bg-gray-700'}`}
+                    className={`w-10 h-5 rounded-full relative transition-colors ${active ? 'bg-blue-500' : 'bg-zinc-200 dark:bg-zinc-700'}`}
                   >
                     <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-all ${active ? 'right-0.5' : 'left-0.5'}`} />
                   </button>
@@ -589,10 +690,10 @@ export function Configuracion() {
             })}
 
             {prefs.enableAutoLogout && (
-              <div className="mt-4 p-4 bg-indigo-50/50 dark:bg-indigo-900/10 rounded-2xl border border-indigo-100/50 dark:border-indigo-900/20 animate-in zoom-in-95 duration-200">
+              <div className="mt-4 p-4 bg-blue-50/50 dark:bg-blue-900/10 rounded-2xl border border-blue-100/50 dark:border-blue-900/20 animate-in zoom-in-95 duration-200">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs font-bold text-indigo-900 dark:text-indigo-300">Tiempo de Inactividad</p>
+                    <p className="text-xs font-bold text-blue-900 dark:text-blue-300">Tiempo de Inactividad</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <input 
@@ -601,19 +702,19 @@ export function Configuracion() {
                       max="1440"
                       value={prefs.inactivityTimeout}
                       onChange={(e) => handleUpdatePref('inactivityTimeout', parseInt(e.target.value) || 1)}
-                      className="w-16 px-2 py-1 text-center text-sm font-black bg-white dark:bg-gray-800 border border-indigo-200 dark:border-indigo-700 rounded-lg text-indigo-600 dark:text-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                      className="w-16 px-2 py-1 text-center text-sm font-black bg-white dark:bg-zinc-800 border border-blue-200 dark:border-blue-700 rounded-lg text-blue-600 dark:text-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                     />
-                    <span className="text-xs font-bold text-indigo-400 uppercase tracking-widest">min</span>
+                    <span className="text-xs font-bold text-blue-400 uppercase tracking-widest">min</span>
                   </div>
                 </div>
               </div>
             )}
 
             {/* Brillo */}
-            <div className="flex items-center justify-between py-3 border-t border-gray-50 dark:border-gray-700 mt-2 pt-4">
+            <div className="flex items-center justify-between py-3 border-t border-zinc-50 dark:border-zinc-700 mt-2 pt-4">
               <div className="min-w-0 pr-4">
-                <p className="text-sm font-bold text-gray-700 dark:text-gray-200 truncate">Brillo General</p>
-                <p className="text-[10px] text-gray-400 dark:text-gray-500">Ajusta la iluminación para cuidar tu vista.</p>
+                <p className="text-sm font-bold text-zinc-700 dark:text-zinc-200 truncate">Brillo General</p>
+                <p className="text-[10px] text-zinc-400 dark:text-zinc-500">Ajusta la iluminación para cuidar tu vista.</p>
               </div>
               <div className="flex items-center gap-3">
                 <input 
@@ -622,9 +723,9 @@ export function Configuracion() {
                   max="100" 
                   value={prefs.brightness ?? 100}
                   onChange={(e) => handleUpdatePref('brightness', parseInt(e.target.value))}
-                  className="w-24 accent-indigo-500"
+                  className="w-24 accent-blue-500"
                 />
-                <span className="text-xs font-bold text-gray-500 w-8 text-right">{prefs.brightness ?? 100}%</span>
+                <span className="text-xs font-bold text-zinc-500 w-8 text-right">{prefs.brightness ?? 100}%</span>
               </div>
             </div>
           </div>
@@ -637,13 +738,14 @@ export function Configuracion() {
           description="Configura atajos rápidos para navegar entre las vistas."
         >
           <div className="space-y-4">
-            <div className="bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-100 dark:border-gray-800 p-4 space-y-4">
+            <div className="bg-zinc-50/50 dark:bg-zinc-900/50 rounded-2xl border border-zinc-100 dark:border-zinc-800 p-4 space-y-4">
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">Seleccionar Vista</label>
+                <label htmlFor="select-vista-shortcut" className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Seleccionar Vista</label>
                 <select 
+                  id="select-vista-shortcut"
                   value={newShortcutPath}
                   onChange={(e) => setNewShortcutPath(e.target.value)}
-                  className="w-full px-4 py-2.5 text-sm font-medium border border-gray-100 dark:border-gray-700 rounded-2xl bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                  className="w-full px-4 py-2.5 text-sm font-medium border border-zinc-100 dark:border-zinc-700 rounded-2xl bg-white dark:bg-zinc-800 text-zinc-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                 >
                   {allNavItems.map(item => {
                     const isAssigned = Object.values(prefs.shortcuts || {}).includes(item.to);
@@ -656,9 +758,10 @@ export function Configuracion() {
                 </select>
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">Combinación de Teclas</label>
+                <label htmlFor="combo-teclas-shortcut" className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Combinación de Teclas</label>
                 <div className="flex gap-2">
                   <button 
+                    id="combo-teclas-shortcut"
                     type="button"
                     onClick={() => {
                       setIsRecordingCombo(true);
@@ -685,7 +788,7 @@ export function Configuracion() {
                         }
                       }
                     }}
-                    className={`flex-1 px-4 py-2.5 text-sm font-medium border rounded-2xl transition-all text-left ${isRecordingCombo ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 shadow-[0_0_0_2px_rgba(99,102,241,0.2)]' : 'border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-500'}`}
+                    className={`flex-1 px-4 py-2.5 text-sm font-medium border rounded-2xl transition-all text-left ${isRecordingCombo ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 shadow-[0_0_0_2px_rgba(59,130,246,0.2)]' : 'border-zinc-100 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-500'}`}
                   >
                     {isRecordingCombo ? 'Presiona una combinación...' : (newShortcutCombo || 'Haz clic aquí para grabar')}
                   </button>
@@ -704,12 +807,12 @@ export function Configuracion() {
                 Object.entries(prefs.shortcuts || {}).map(([combo, path]) => {
                   const viewLabel = allNavItems.find(i => i.to === path)?.label || path;
                   return (
-                    <div key={combo} className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm">
+                    <div key={combo} className="flex items-center justify-between p-3 bg-white dark:bg-zinc-800 rounded-xl border border-zinc-100 dark:border-zinc-700 shadow-sm">
                       <div className="flex items-center gap-3">
-                        <div className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-xs font-mono font-bold rounded-lg border border-gray-200 dark:border-gray-600">
+                        <div className="px-2 py-1 bg-zinc-100 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-mono font-bold rounded-lg border border-zinc-200 dark:border-zinc-600">
                           {combo}
                         </div>
-                        <span className="text-sm font-medium text-gray-500 dark:text-gray-400 flex items-center gap-2">
+                        <span className="text-sm font-medium text-zinc-500 dark:text-zinc-400 flex items-center gap-2">
                           <ArrowRight size={14} />
                           {viewLabel}
                         </span>
@@ -719,13 +822,13 @@ export function Configuracion() {
                         size="sm"
                         icon={<Trash2 size={16} />}
                         onClick={() => handleRemoveShortcut(combo)}
-                        className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+                        className="p-2 text-zinc-400 dark:text-zinc-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-zinc-100 dark:hover:bg-zinc-700/50"
                       />
                     </div>
                   );
                 })
               ) : (
-                <p className="text-sm text-gray-400 dark:text-gray-500 italic text-center py-4">No hay atajos configurados.</p>
+                <p className="text-sm text-zinc-400 dark:text-zinc-500 italic text-center py-4">No hay atajos configurados.</p>
               )}
             </div>
           </div>

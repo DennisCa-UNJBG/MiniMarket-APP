@@ -25,8 +25,10 @@ export const sucursalService = {
    * Guarda o actualiza la configuración
    */
   async saveConfig(config: SucursalConfig, usuarioId: number) {
-    const db = await getDb();
-    const existing = await this.getConfig();
+    const [db, existing] = await Promise.all([
+      getDb(),
+      this.getConfig()
+    ]);
 
     if (existing) {
       await db.execute(

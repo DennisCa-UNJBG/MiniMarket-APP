@@ -12,10 +12,14 @@ export function Voucher({ venta, detalles }: VoucherProps) {
     queryFn: () => negocioService.get()
   });
 
+  // Extraemos y formateamos la fecha/hora para evitar cálculos en JSX y cumplir con buenas prácticas
+  const fechaStr = new Date(venta.fecha + " UTC").toLocaleDateString();
+  const horaStr = new Date(venta.fecha + " UTC").toLocaleTimeString();
+
   return (
     <div id="printable-voucher" className="hidden print:block font-mono text-black bg-white p-4 w-[80mm] mx-auto">
       <div className="text-center mb-4">
-        <h1 className="text-lg font-black uppercase">
+        <h1 className="text-lg font-semibold uppercase">
           {negocio?.razon_social || 'Minimarket App'}
         </h1>
         <p className="text-[10px]">RUC: {negocio?.ruc || '10234567890'}</p>
@@ -23,13 +27,13 @@ export function Voucher({ venta, detalles }: VoucherProps) {
         {negocio?.telefono && <p className="text-[10px]">TEL: {negocio.telefono}</p>}
         
         <div className="border-b border-dashed border-black my-2"></div>
-        <h2 className="text-xs font-bold">COMPROBANTE DE VENTA</h2>
+        <h2 className="text-xs font-semibold">COMPROBANTE DE VENTA</h2>
         <p className="text-xs font-bold">#{venta.id.toString().padStart(5, '0')}</p>
       </div>
 
       <div className="text-[10px] space-y-1 mb-4">
-        <p>FECHA: {new Date(venta.fecha + " UTC").toLocaleDateString()}</p>
-        <p>HORA: {new Date(venta.fecha + " UTC").toLocaleTimeString()}</p>
+        <p suppressHydrationWarning>FECHA: {fechaStr}</p>
+        <p suppressHydrationWarning>HORA: {horaStr}</p>
         <p>CAJERO: {venta.usuario_nombre || 'Admin'}</p>
         <p>PAGO: {venta.metodo_pago}</p>
       </div>
@@ -46,8 +50,8 @@ export function Voucher({ venta, detalles }: VoucherProps) {
           </tr>
         </thead>
         <tbody>
-          {detalles.map((det, index) => (
-            <tr key={index}>
+          {detalles.map((det) => (
+            <tr key={det.id}>
               <td className="py-1 uppercase">{det.producto_nombre}</td>
               <td className="text-center py-1">{det.cantidad}</td>
               <td className="text-right py-1">{det.precio_unitario.toFixed(2)}</td>

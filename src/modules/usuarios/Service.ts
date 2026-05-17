@@ -40,8 +40,10 @@ export const userService = {
    * Crea un nuevo usuario
    */
   async create(user: any, adminId: number) {
-    const db = await getDb();
-    const passwordHash = await authService.hashPassword(user.password);
+    const [db, passwordHash] = await Promise.all([
+      getDb(),
+      authService.hashPassword(user.password)
+    ]);
     
     const result = await db.execute(
       'INSERT INTO usuarios (username, password_hash, nombre_completo, rol_id, sucursal_id, estado) VALUES (?, ?, ?, ?, ?, ?)',

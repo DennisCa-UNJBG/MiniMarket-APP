@@ -48,7 +48,7 @@ export const inventarioService = {
     const compraId = resCabecera.lastInsertId as number;
 
     // 2. Procesar cada producto del lote
-    for (const item of compra.items) {
+    await Promise.all(compra.items.map(async (item) => {
       // A. Insertar Detalle de Compra
       await db.execute(
         `INSERT INTO compras_detalle (compra_id, producto_id, cantidad, costo_unitario, subtotal) 
@@ -91,7 +91,7 @@ export const inventarioService = {
          VALUES (?, ?, ?, 1)`,
         [item.producto_id, item.costo_unitario, precioVenta]
       );
-    }
+    }));
 
     // 3. Log de Auditoría
     await logService.register({
@@ -109,8 +109,10 @@ export const inventarioService = {
    * Obtiene los últimos movimientos del kardex
    */
   async getMovimientos(limit = 50): Promise<any[]> {
-    const db = await getDb();
-    const config = await sucursalService.getConfig();
+    const [db, config] = await Promise.all([
+      getDb(),
+      sucursalService.getConfig()
+    ]);
     const sucursalId = config?.sucursal_id || 'LOCAL';
 
     return db.select(`
@@ -128,26 +130,30 @@ export const inventarioService = {
    * Obtiene los movimientos del kardex para un producto específico (Paginado)
    */
   async getMovimientosPorProducto(productoId: number, page = 1, pageSize = 10): Promise<{ data: any[], total: number }> {
-    const db = await getDb();
-    const config = await sucursalService.getConfig();
+    const [db, config] = await Promise.all([
+      getDb(),
+      sucursalService.getConfig()
+    ]);
     const sucursalId = config?.sucursal_id || 'LOCAL';
     const offset = (page - 1) * pageSize;
 
-    const totalRes = await db.select<any[]>(
-      'SELECT COUNT(*) as count FROM kardex WHERE producto_id = ? AND (sucursal_id = ? OR sucursal_id IS NULL)',
-      [productoId, sucursalId]
-    );
+    // Obtener total de registros y datos paginados en paralelo
+    const [totalRes, data] = await Promise.all([
+      db.select<any[]>(
+        'SELECT COUNT(*) as count FROM kardex WHERE producto_id = ? AND (sucursal_id = ? OR sucursal_id IS NULL)',
+        [productoId, sucursalId]
+      ),
+      db.select<any[]>(`
+        SELECT k.*, p.nombre as producto_nombre, u.nombre_completo as usuario_nombre
+        FROM kardex k
+        JOIN productos p ON k.producto_id = p.id
+        JOIN usuarios u ON k.usuario_id = u.id
+        WHERE k.producto_id = ? AND (k.sucursal_id = ? OR k.sucursal_id IS NULL)
+        ORDER BY k.fecha DESC
+        LIMIT ? OFFSET ?
+      `, [productoId, sucursalId, pageSize, offset])
+    ]);
     const total = totalRes[0]?.count || 0;
-
-    const data = await db.select<any[]>(`
-      SELECT k.*, p.nombre as producto_nombre, u.nombre_completo as usuario_nombre
-      FROM kardex k
-      JOIN productos p ON k.producto_id = p.id
-      JOIN usuarios u ON k.usuario_id = u.id
-      WHERE k.producto_id = ? AND (k.sucursal_id = ? OR k.sucursal_id IS NULL)
-      ORDER BY k.fecha DESC
-      LIMIT ? OFFSET ?
-    `, [productoId, sucursalId, pageSize, offset]);
 
     return { data, total };
   },
@@ -156,27 +162,31 @@ export const inventarioService = {
    * Obtiene los movimientos realizados en el día actual (Paginado)
    */
   async getMovimientosDia(page = 1, pageSize = 10): Promise<{ data: any[], total: number }> {
-    const db = await getDb();
-    const config = await sucursalService.getConfig();
+    const [db, config] = await Promise.all([
+      getDb(),
+      sucursalService.getConfig()
+    ]);
     const sucursalId = config?.sucursal_id || 'LOCAL';
     const offset = (page - 1) * pageSize;
 
-    const totalRes = await db.select<any[]>(
-      "SELECT COUNT(*) as count FROM kardex WHERE date(fecha, 'localtime') = date('now', 'localtime') AND (sucursal_id = ? OR sucursal_id IS NULL)",
-      [sucursalId]
-    );
+    // Obtener total de registros y datos paginados en paralelo
+    const [totalRes, data] = await Promise.all([
+      db.select<any[]>(
+        "SELECT COUNT(*) as count FROM kardex WHERE date(fecha, 'localtime') = date('now', 'localtime') AND (sucursal_id = ? OR sucursal_id IS NULL)",
+        [sucursalId]
+      ),
+      db.select<any[]>(`
+        SELECT k.*, p.nombre as producto_nombre, u.nombre_completo as usuario_nombre
+        FROM kardex k
+        JOIN productos p ON k.producto_id = p.id
+        JOIN usuarios u ON k.usuario_id = u.id
+        WHERE date(k.fecha, 'localtime') = date('now', 'localtime')
+        AND (k.sucursal_id = ? OR k.sucursal_id IS NULL)
+        ORDER BY k.fecha DESC
+        LIMIT ? OFFSET ?
+      `, [sucursalId, pageSize, offset])
+    ]);
     const total = totalRes[0]?.count || 0;
-
-    const data = await db.select<any[]>(`
-      SELECT k.*, p.nombre as producto_nombre, u.nombre_completo as usuario_nombre
-      FROM kardex k
-      JOIN productos p ON k.producto_id = p.id
-      JOIN usuarios u ON k.usuario_id = u.id
-      WHERE date(k.fecha, 'localtime') = date('now', 'localtime')
-      AND (k.sucursal_id = ? OR k.sucursal_id IS NULL)
-      ORDER BY k.fecha DESC
-      LIMIT ? OFFSET ?
-    `, [sucursalId, pageSize, offset]);
 
     return { data, total };
   },
@@ -206,22 +216,20 @@ export const inventarioService = {
       params.push(filters.fechaFin);
     }
 
-    // 1. Total
-    const countQuery = `SELECT COUNT(*) as count FROM kardex k ${whereClause}`;
-    const totalRes = await db.select<any[]>(countQuery, params);
+    // Obtener total y datos filtrados en paralelo
+    const [totalRes, data] = await Promise.all([
+      db.select<any[]>(`SELECT COUNT(*) as count FROM kardex k ${whereClause}`, params),
+      db.select<any[]>(`
+        SELECT k.*, p.nombre as producto_nombre, u.nombre_completo as usuario_nombre
+        FROM kardex k
+        JOIN productos p ON k.producto_id = p.id
+        JOIN usuarios u ON k.usuario_id = u.id
+        ${whereClause}
+        ORDER BY k.fecha DESC
+        LIMIT ? OFFSET ?
+      `, [...params, pageSize, offset])
+    ]);
     const total = totalRes[0]?.count || 0;
-
-    // 2. Data
-    const dataQuery = `
-      SELECT k.*, p.nombre as producto_nombre, u.nombre_completo as usuario_nombre
-      FROM kardex k
-      JOIN productos p ON k.producto_id = p.id
-      JOIN usuarios u ON k.usuario_id = u.id
-      ${whereClause}
-      ORDER BY k.fecha DESC
-      LIMIT ? OFFSET ?
-    `;
-    const data = await db.select<any[]>(dataQuery, [...params, pageSize, offset]);
 
     return { data, total };
   },
@@ -230,25 +238,29 @@ export const inventarioService = {
    * Obtiene el historial de cabeceras de compras (Paginado)
    */
   async getCompras(page = 1, pageSize = 10): Promise<{ data: any[], total: number }> {
-    const db = await getDb();
-    const config = await sucursalService.getConfig();
+    const [db, config] = await Promise.all([
+      getDb(),
+      sucursalService.getConfig()
+    ]);
     const sucursalId = config?.sucursal_id || 'LOCAL';
     const offset = (page - 1) * pageSize;
 
-    const totalRes = await db.select<any[]>(
-      'SELECT COUNT(*) as count FROM compras_ingresos WHERE sucursal_id = ? OR sucursal_id IS NULL',
-      [sucursalId]
-    );
+    // Obtener total de registros y datos paginados en paralelo
+    const [totalRes, data] = await Promise.all([
+      db.select<any[]>(
+        'SELECT COUNT(*) as count FROM compras_ingresos WHERE sucursal_id = ? OR sucursal_id IS NULL',
+        [sucursalId]
+      ),
+      db.select<any[]>(`
+        SELECT c.*, u.nombre_completo as usuario_nombre
+        FROM compras_ingresos c
+        JOIN usuarios u ON c.usuario_id = u.id
+        WHERE c.sucursal_id = ? OR c.sucursal_id IS NULL
+        ORDER BY c.fecha DESC
+        LIMIT ? OFFSET ?
+      `, [sucursalId, pageSize, offset])
+    ]);
     const total = totalRes[0]?.count || 0;
-
-    const data = await db.select<any[]>(`
-      SELECT c.*, u.nombre_completo as usuario_nombre
-      FROM compras_ingresos c
-      JOIN usuarios u ON c.usuario_id = u.id
-      WHERE c.sucursal_id = ? OR c.sucursal_id IS NULL
-      ORDER BY c.fecha DESC
-      LIMIT ? OFFSET ?
-    `, [sucursalId, pageSize, offset]);
 
     return { data, total };
   },
@@ -276,12 +288,12 @@ export const inventarioService = {
     const items = await db.select<any[]>('SELECT producto_id, cantidad FROM compras_detalle WHERE compra_id = ?', [compraId]);
     
     // 2. Revertir stock de cada producto
-    for (const item of items) {
-      await db.execute(
+    await Promise.all(items.map(item =>
+      db.execute(
         'UPDATE productos SET stock_actual = stock_actual - ? WHERE id = ?',
         [item.cantidad, item.producto_id]
-      );
-    }
+      )
+    ));
 
     // 3. Eliminar registros del Kardex asociados a esta compra
     // Usamos el patrón "COMPRA #ID" que definimos en registrarCompraCompleta

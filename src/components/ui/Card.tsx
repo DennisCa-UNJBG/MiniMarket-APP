@@ -12,8 +12,8 @@ export function Card({ children, className = '', onClick, hoverable = false }: C
     <div
       onClick={onClick}
       className={`
-        bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl shadow-sm overflow-hidden
-        ${hoverable ? 'hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-500/50 transition-all cursor-pointer' : ''}
+        bg-white dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 rounded-2xl shadow-sm overflow-hidden
+        ${hoverable ? 'hover:shadow-md hover:border-blue-300 dark:hover:border-blue-500/50 transition-all cursor-pointer' : ''}
         ${className}
       `}
     >
@@ -28,7 +28,7 @@ interface CardHeaderProps {
 }
 
 Card.Header = ({ children, className = '' }: CardHeaderProps) => (
-  <div className={`px-6 py-4 border-b border-gray-100 dark:border-gray-700 ${className}`}>
+  <div className={`px-6 py-4 border-b border-zinc-100 dark:border-zinc-700 ${className}`}>
     {children}
   </div>
 );
@@ -40,7 +40,7 @@ Card.Body = ({ children, className = '' }: CardHeaderProps) => (
 );
 
 Card.Footer = ({ children, className = '' }: CardHeaderProps) => (
-  <div className={`px-6 py-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50 ${className}`}>
+  <div className={`px-6 py-4 border-t border-zinc-100 dark:border-zinc-700 bg-zinc-50/50 dark:bg-zinc-800/50 ${className}`}>
     {children}
   </div>
 );

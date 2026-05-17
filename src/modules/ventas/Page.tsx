@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useReducer } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   TrendingUp,
@@ -26,12 +26,22 @@ import { EmptyState } from '../../components/ui/EmptyState';
 import { Tooltip } from '../../components/ui/Tooltip';
 import { Button } from '../../components/ui/Button';
 
+const formatDate = (dateStr: string) => {
+  if (!dateStr) return '';
+  return new Date(dateStr + " UTC").toLocaleDateString();
+};
+
+const formatTime = (dateStr: string) => {
+  if (!dateStr) return '';
+  return new Date(dateStr + " UTC").toLocaleTimeString();
+};
+
 const getColumns = (onViewDetail: (sale: any) => void, onAnular: (sale: any) => void): TableColumn<any>[] => [
   {
     key: 'id',
     header: 'N° Venta',
     render: (row) => (
-      <span className="font-mono text-xs font-bold text-indigo-600 dark:text-indigo-400">
+      <span className="font-mono text-xs font-bold text-blue-600 dark:text-blue-400">
         #{row.id.toString().padStart(5, '0')}
       </span>
     ),
@@ -41,10 +51,10 @@ const getColumns = (onViewDetail: (sale: any) => void, onAnular: (sale: any) => 
     header: 'Fecha / Hora',
     render: (row) => (
       <div className="flex flex-col">
-        <span className="text-xs font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+        <span suppressHydrationWarning className="text-xs font-medium text-zinc-700 dark:text-zinc-300 flex items-center gap-1">
           <Calendar size={10} /> {new Date(row.fecha + " UTC").toLocaleDateString()}
         </span>
-        <span className="text-[10px] text-gray-400 flex items-center gap-1">
+        <span suppressHydrationWarning className="text-[10px] text-zinc-400 flex items-center gap-1">
           <Clock size={10} /> {new Date(row.fecha + " UTC").toLocaleTimeString()}
         </span>
       </div>
@@ -54,7 +64,7 @@ const getColumns = (onViewDetail: (sale: any) => void, onAnular: (sale: any) => 
     key: 'usuario_nombre', 
     header: 'Cajero',
     render: (row) => (
-      <span className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-1">
+      <span className="text-xs text-zinc-600 dark:text-zinc-400 flex items-center gap-1">
         <User size={12} /> {row.usuario_nombre}
       </span>
     )
@@ -73,14 +83,14 @@ const getColumns = (onViewDetail: (sale: any) => void, onAnular: (sale: any) => 
     key: 'items_count',   
     header: 'Ítems', 
     align: 'center',
-    render: (row) => <Badge label={row.items_count} variant="indigo" />
+    render: (row) => <Badge label={row.items_count} variant="blue" />
   },
   {
     key: 'total',
     header: 'Total',
     align: 'right',
     render: (row) => (
-      <span className="font-bold text-gray-900 dark:text-white">S/ {row.total.toFixed(2)}</span>
+      <span className="font-bold text-zinc-900 dark:text-white">S/ {row.total.toFixed(2)}</span>
     ),
   },
   {
@@ -116,7 +126,7 @@ const getColumns = (onViewDetail: (sale: any) => void, onAnular: (sale: any) => 
             variant="ghost"
             size="sm"
             icon={<Receipt size={13} />}
-            className="text-[10px] font-bold uppercase tracking-tighter text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800"
+            className="text-[10px] font-bold uppercase tracking-tighter text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 border border-blue-100 dark:border-blue-800"
           >
             Ver Boleta
           </Button>
@@ -126,14 +136,57 @@ const getColumns = (onViewDetail: (sale: any) => void, onAnular: (sale: any) => 
   },
 ];
 
+interface VentasState {
+  page: number;
+  pageSize: number;
+  search: string;
+  selectedSale: any;
+  saleDetails: any[];
+}
+
+type VentasAction =
+  | { type: 'SET_PAGE'; payload: number }
+  | { type: 'SET_PAGE_SIZE'; payload: number }
+  | { type: 'SET_SEARCH'; payload: string }
+  | { type: 'SET_SELECTED_SALE'; payload: any }
+  | { type: 'SET_SALE_DETAILS'; payload: any[] };
+
+function ventasReducer(state: VentasState, action: VentasAction): VentasState {
+  switch (action.type) {
+    case 'SET_PAGE':
+      return { ...state, page: action.payload };
+    case 'SET_PAGE_SIZE':
+      return { ...state, pageSize: action.payload };
+    case 'SET_SEARCH':
+      return { ...state, search: action.payload };
+    case 'SET_SELECTED_SALE':
+      return { ...state, selectedSale: action.payload };
+    case 'SET_SALE_DETAILS':
+      return { ...state, saleDetails: action.payload };
+    default:
+      return state;
+  }
+}
+
 export function Ventas() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-  const [search, setSearch] = useState('');
-  const [selectedSale, setSelectedSale] = useState<any>(null);
-  const [saleDetails, setSaleDetails] = useState<any[]>([]);
+  
+  const [state, dispatch] = useReducer(ventasReducer, {
+    page: 1,
+    pageSize: 10,
+    search: '',
+    selectedSale: null,
+    saleDetails: []
+  });
+
+  const { page, pageSize, search, selectedSale, saleDetails } = state;
+
+  const setPage = (payload: number) => dispatch({ type: 'SET_PAGE', payload });
+  const setPageSize = (payload: number) => dispatch({ type: 'SET_PAGE_SIZE', payload });
+  const setSearch = (payload: string) => dispatch({ type: 'SET_SEARCH', payload });
+  const setSelectedSale = (payload: any) => dispatch({ type: 'SET_SELECTED_SALE', payload });
+  const setSaleDetails = (payload: any[]) => dispatch({ type: 'SET_SALE_DETAILS', payload });
 
   // Queries
   const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
@@ -205,7 +258,7 @@ export function Ventas() {
   const crecimientoPositivo = crecimientoValor >= 0;
 
   const summaryCards = [
-    { label: 'Ventas de hoy',   value: `S/ ${resumen.total.toFixed(2)}`, sub: `${resumen.count} transacciones`,   icon: ShoppingCart, color: 'bg-indigo-500', up: true },
+    { label: 'Ventas de hoy',   value: `S/ ${resumen.total.toFixed(2)}`, sub: `${resumen.count} transacciones`,   icon: ShoppingCart, color: 'bg-blue-500', up: true },
     { label: 'Crecimiento vs Ayer', value: crecimientoLabel, sub: `Ayer: S/ ${resumenAyer.total.toFixed(2)}`, icon: TrendingUp, color: crecimientoPositivo ? 'bg-emerald-500' : 'bg-rose-500', up: crecimientoPositivo },
     { label: 'Promedio Ticket', value: `S/ ${(resumen.total / (resumen.count || 1)).toFixed(2)}`, sub: 'por venta', icon: DollarSign, color: 'bg-amber-500', up: true },
   ];
@@ -228,20 +281,20 @@ export function Ventas() {
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {summaryCards.map(({ label, value, sub, icon: Icon, color }) => (
-          <div key={label} className="bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-100 dark:border-gray-700 shadow-sm flex items-center gap-4">
+          <div key={label} className="bg-white dark:bg-zinc-800 rounded-2xl p-5 border border-zinc-100 dark:border-zinc-700 shadow-sm flex items-center gap-4">
             <div className={`${color} p-3 rounded-xl flex-shrink-0`}>
               <Icon size={20} className="text-white" />
             </div>
             <div>
-              <p className="text-xs text-gray-500 dark:text-gray-400">{label}</p>
-              <p className="text-lg font-bold text-gray-800 dark:text-white">{value}</p>
-              <p className="text-[11px] text-gray-400 dark:text-gray-500">{sub}</p>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">{label}</p>
+              <p className="text-lg font-bold text-zinc-800 dark:text-white">{value}</p>
+              <p className="text-[11px] text-zinc-400 dark:text-zinc-500">{sub}</p>
             </div>
           </div>
         ))}
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 shadow-sm">
+      <div className="bg-white dark:bg-zinc-800 rounded-2xl border border-zinc-100 dark:border-zinc-700 p-4 shadow-sm">
         <div className="relative max-w-sm">
           <input
             id="search-sales"
@@ -249,7 +302,7 @@ export function Ventas() {
             placeholder="Buscar por N° de venta..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-4 pr-4 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
+            className="w-full pl-4 pr-4 py-2 text-sm border border-zinc-200 dark:border-zinc-600 rounded-lg bg-zinc-50 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
           />
         </div>
       </div>
@@ -292,25 +345,25 @@ export function Ventas() {
         >
           <div className="space-y-6">
             {/* Cabecera del Detalle */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-100 dark:border-gray-700">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-700">
               <div>
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Fecha</p>
-                <p className="text-xs font-semibold text-gray-700 dark:text-gray-200">{new Date(selectedSale.fecha + " UTC").toLocaleDateString()}</p>
+                <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Fecha</p>
+                <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-200">{formatDate(selectedSale.fecha)}</p>
               </div>
               <div>
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Hora</p>
-                <p className="text-xs font-semibold text-gray-700 dark:text-gray-200">{new Date(selectedSale.fecha + " UTC").toLocaleTimeString()}</p>
+                <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Hora</p>
+                <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-200">{formatTime(selectedSale.fecha)}</p>
               </div>
               <div>
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Cajero</p>
-                <p className="text-xs font-semibold text-gray-700 dark:text-gray-200">{selectedSale.usuario_nombre}</p>
+                <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Cajero</p>
+                <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-200">{selectedSale.usuario_nombre}</p>
               </div>
               <div>
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Pago</p>
-                <Badge label={selectedSale.metodo_pago} variant={selectedSale.metodo_pago === 'EFECTIVO' ? 'emerald' : 'indigo'} />
+                <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Pago</p>
+                <Badge label={selectedSale.metodo_pago} variant={selectedSale.metodo_pago === 'EFECTIVO' ? 'emerald' : 'blue'} />
               </div>
               <div>
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Estado</p>
+                <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Estado</p>
                 <Badge 
                   label={selectedSale.estado === 'anulado' ? 'ANULADO' : 'COMPLETADO'} 
                   variant={selectedSale.estado === 'anulado' ? 'red' : 'emerald'} 
@@ -319,52 +372,52 @@ export function Ventas() {
             </div>
 
             {/* Tabla de Items */}
-            <div className="border border-gray-100 dark:border-gray-700 rounded-2xl overflow-hidden">
+            <div className="border border-zinc-100 dark:border-zinc-700 rounded-2xl overflow-hidden">
               <table className="w-full text-left border-collapse">
-                <thead className="bg-gray-50 dark:bg-gray-700/50">
+                <thead className="bg-zinc-50 dark:bg-zinc-700/50">
                   <tr>
-                    <th className="px-4 py-2 text-[10px] font-bold text-gray-500 uppercase">Producto</th>
-                    <th className="px-4 py-2 text-[10px] font-bold text-gray-500 uppercase text-center">Cant.</th>
-                    <th className="px-4 py-2 text-[10px] font-bold text-gray-500 uppercase text-right">Precio</th>
-                    <th className="px-4 py-2 text-[10px] font-bold text-gray-500 uppercase text-right">Subtotal</th>
+                    <th className="px-4 py-2 text-[10px] font-bold text-zinc-500 uppercase">Producto</th>
+                    <th className="px-4 py-2 text-[10px] font-bold text-zinc-500 uppercase text-center">Cant.</th>
+                    <th className="px-4 py-2 text-[10px] font-bold text-zinc-500 uppercase text-right">Precio</th>
+                    <th className="px-4 py-2 text-[10px] font-bold text-zinc-500 uppercase text-right">Subtotal</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
+                <tbody className="divide-y divide-zinc-50 dark:divide-zinc-700">
                   {saleDetails.map((det) => (
-                    <tr key={det.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-700/30 transition-colors">
-                      <td className="px-4 py-3 text-sm text-gray-800 dark:text-gray-200 font-medium">{det.producto_nombre}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 text-center">{det.cantidad} {det.unidad_medida}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 text-right">S/ {det.precio_unitario.toFixed(2)}</td>
-                      <td className="px-4 py-3 text-sm text-gray-900 dark:text-white font-bold text-right">S/ {det.subtotal.toFixed(2)}</td>
+                    <tr key={det.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-700/30 transition-colors">
+                      <td className="px-4 py-3 text-sm text-zinc-800 dark:text-zinc-200 font-medium">{det.producto_nombre}</td>
+                      <td className="px-4 py-3 text-sm text-zinc-600 dark:text-zinc-400 text-center">{det.cantidad} {det.unidad_medida}</td>
+                      <td className="px-4 py-3 text-sm text-zinc-600 dark:text-zinc-400 text-right">S/ {det.precio_unitario.toFixed(2)}</td>
+                      <td className="px-4 py-3 text-sm text-zinc-900 dark:text-white font-bold text-right">S/ {det.subtotal.toFixed(2)}</td>
                     </tr>
                   ))}
                 </tbody>
-                <tfoot className="bg-gray-50/50 dark:bg-gray-700/20">
+                <tfoot className="bg-zinc-50/50 dark:bg-zinc-700/20">
                   <tr>
-                    <td colSpan={3} className="px-4 py-2 text-right font-medium text-gray-500 text-xs italic">IGV ({selectedSale.igv_porcentaje || 0}%):</td>
-                    <td className="px-4 py-2 text-right text-sm font-bold text-gray-700 dark:text-gray-300">S/ {(selectedSale.igv || 0).toFixed(2)}</td>
+                    <td colSpan={3} className="px-4 py-2 text-right font-medium text-zinc-500 text-xs italic">IGV ({selectedSale.igv_porcentaje || 0}%):</td>
+                    <td className="px-4 py-2 text-right text-sm font-bold text-zinc-700 dark:text-zinc-300">S/ {(selectedSale.igv || 0).toFixed(2)}</td>
                   </tr>
                   <tr>
-                    <td colSpan={3} className="px-4 py-2 text-right font-medium text-gray-500 text-xs italic">Subtotal items:</td>
-                    <td className="px-4 py-2 text-right text-sm font-bold text-gray-700 dark:text-gray-300">S/ {selectedSale.total.toFixed(2)}</td>
+                    <td colSpan={3} className="px-4 py-2 text-right font-medium text-zinc-500 text-xs italic">Subtotal items:</td>
+                    <td className="px-4 py-2 text-right text-sm font-bold text-zinc-700 dark:text-zinc-300">S/ {selectedSale.total.toFixed(2)}</td>
                   </tr>
                   <tr>
-                    <td colSpan={3} className="px-4 py-2 text-right font-medium text-gray-500 text-xs italic">Monto Pagado:</td>
+                    <td colSpan={3} className="px-4 py-2 text-right font-medium text-zinc-500 text-xs italic">Monto Pagado:</td>
                     <td className="px-4 py-2 text-right text-sm font-bold text-emerald-600 dark:text-emerald-400">S/ {(selectedSale.monto_pagado || 0).toFixed(2)}</td>
                   </tr>
                   <tr>
-                    <td colSpan={3} className="px-4 py-2 text-right font-medium text-gray-500 text-xs italic">Vuelto entregado:</td>
+                    <td colSpan={3} className="px-4 py-2 text-right font-medium text-zinc-500 text-xs italic">Vuelto entregado:</td>
                     <td className="px-4 py-2 text-right text-sm font-bold text-orange-600 dark:text-orange-400">S/ {(selectedSale.vuelto || 0).toFixed(2)}</td>
                   </tr>
-                  <tr className="bg-indigo-50/30 dark:bg-indigo-900/10">
-                    <td colSpan={3} className="px-4 py-4 text-right font-black text-gray-700 dark:text-gray-200 text-sm uppercase tracking-tighter">Total Final:</td>
-                    <td className="px-4 py-4 text-right text-xl font-black text-indigo-600 dark:text-indigo-400">S/ {selectedSale.total.toFixed(2)}</td>
+                  <tr className="bg-blue-50/30 dark:bg-blue-900/10">
+                    <td colSpan={3} className="px-4 py-4 text-right font-black text-zinc-700 dark:text-zinc-200 text-sm uppercase tracking-tighter">Total Final:</td>
+                    <td className="px-4 py-4 text-right text-xl font-black text-blue-600 dark:text-blue-400">S/ {selectedSale.total.toFixed(2)}</td>
                   </tr>
                 </tfoot>
               </table>
             </div>
 
-            <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-700">
+            <div className="flex justify-end gap-3 pt-4 border-t border-zinc-100 dark:border-zinc-700">
               <Button
                 variant="secondary"
                 onClick={() => setSelectedSale(null)}
@@ -375,7 +428,7 @@ export function Ventas() {
               <Button
                 onClick={handlePrint}
                 icon={<Printer size={18} />}
-                className="font-bold shadow-lg shadow-indigo-200 dark:shadow-none"
+                className="font-bold shadow-lg shadow-blue-200 dark:shadow-none"
               >
                 Imprimir Boleta
               </Button>

@@ -112,16 +112,16 @@ export function DataTable<T extends object>({
   };
 
   return (
-    <div className="flex flex-col gap-0 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+    <div className="flex flex-col gap-0 bg-white dark:bg-zinc-800 rounded-2xl border border-zinc-100 dark:border-zinc-700 shadow-sm overflow-hidden">
       {/* ── Tabla ───────────────────────────────────────────────────────────── */}
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
+            <tr className="border-b border-zinc-100 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-700/50">
               {columns.map((col) => (
                 <th
                   key={col.key}
-                  className={`px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide ${alignClass[col.align ?? 'left']}`}
+                  className={`px-4 py-3 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide ${alignClass[col.align ?? 'left']}`}
                 >
                   {col.header}
                 </th>
@@ -129,12 +129,12 @@ export function DataTable<T extends object>({
             </tr>
           </thead>
 
-          <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+          <tbody className="divide-y divide-zinc-100 dark:divide-zinc-700">
             {pageData.length === 0 ? (
               <tr>
                 <td
                   colSpan={columns.length}
-                  className="px-4 py-12 text-center text-sm text-gray-400 dark:text-gray-500 p-0"
+                  className="px-4 py-12 text-center text-sm text-zinc-400 dark:text-zinc-500 p-0"
                 >
                   {emptyState ? emptyState : (
                     <div className="py-12">
@@ -147,7 +147,7 @@ export function DataTable<T extends object>({
               pageData.map((row, index) => (
                 <tr
                   key={keyExtractor(row, startIndex + index)}
-                  className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors"
+                  className="hover:bg-zinc-50 dark:hover:bg-zinc-700/30 transition-colors"
                 >
                   {columns.map((col) => (
                     <td
@@ -168,21 +168,21 @@ export function DataTable<T extends object>({
 
       {/* ── Paginación ──────────────────────────────────────────────────────── */}
       {totalItems > 0 && (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-700/20">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-zinc-100 dark:border-zinc-700 bg-zinc-50/50 dark:bg-zinc-700/20">
           {/* Info + selector de filas */}
-          <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+          <div className="flex items-center gap-3 text-xs text-zinc-500 dark:text-zinc-400">
             <span>
               {totalItems > 0 ? displayStartIndex + 1 : 0}–{displayEndIndex} de{' '}
-              <span className="font-semibold text-gray-700 dark:text-gray-200">{totalItems}</span>{' '}
+              <span className="font-semibold text-zinc-700 dark:text-zinc-200">{totalItems}</span>{' '}
               registros
             </span>
-            <span className="hidden sm:block text-gray-200 dark:text-gray-600">|</span>
+            <span className="hidden sm:block text-zinc-200 dark:text-zinc-600">|</span>
             <div className="hidden sm:flex items-center gap-1.5">
               <span>Filas:</span>
               <select
                 value={pageSize}
                 onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-                className="px-1.5 py-0.5 text-xs border border-gray-200 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                className="px-1.5 py-0.5 text-xs border border-zinc-200 dark:border-zinc-600 rounded-md bg-white dark:bg-zinc-700 text-zinc-700 dark:text-zinc-200 focus:outline-none focus:ring-1 focus:ring-blue-400"
               >
                 {pageSizeOptions.map((opt) => (
                   <option key={opt} value={opt}>{opt}</option>
@@ -197,7 +197,7 @@ export function DataTable<T extends object>({
             <button
               onClick={() => handlePageChange(1)}
               disabled={safePage === 1}
-              className="p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="p-1.5 rounded-lg text-zinc-400 dark:text-zinc-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-zinc-100 dark:hover:bg-zinc-700/50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               aria-label="Primera página"
             >
               <ChevronsLeft size={15} />
@@ -207,7 +207,7 @@ export function DataTable<T extends object>({
             <button
               onClick={() => handlePageChange(safePage - 1)}
               disabled={safePage === 1}
-              className="p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="p-1.5 rounded-lg text-zinc-400 dark:text-zinc-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-zinc-100 dark:hover:bg-zinc-700/50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               aria-label="Página anterior"
             >
               <ChevronLeft size={15} />
@@ -221,8 +221,8 @@ export function DataTable<T extends object>({
                 className={[
                   'min-w-[30px] h-[30px] px-1 text-xs font-medium rounded-lg transition-colors',
                   n === safePage
-                    ? 'bg-indigo-600 text-white'
-                    : 'text-gray-600 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-gray-700 hover:text-indigo-600',
+                    ? 'bg-blue-600 text-white'
+                    : 'text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700/50 hover:text-blue-600 dark:hover:text-blue-400',
                 ].join(' ')}
               >
                 {n}
@@ -233,7 +233,7 @@ export function DataTable<T extends object>({
             <button
               onClick={() => handlePageChange(safePage + 1)}
               disabled={safePage === totalPages}
-              className="p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="p-1.5 rounded-lg text-zinc-400 dark:text-zinc-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-zinc-100 dark:hover:bg-zinc-700/50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               aria-label="Página siguiente"
             >
               <ChevronRight size={15} />
@@ -243,7 +243,7 @@ export function DataTable<T extends object>({
             <button
               onClick={() => handlePageChange(totalPages)}
               disabled={safePage === totalPages}
-              className="p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="p-1.5 rounded-lg text-zinc-400 dark:text-zinc-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-zinc-100 dark:hover:bg-zinc-700/50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               aria-label="Última página"
             >
               <ChevronsRight size={15} />

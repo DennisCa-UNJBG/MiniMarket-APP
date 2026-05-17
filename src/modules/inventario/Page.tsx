@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useReducer } from 'react';
 import {
   Search,
   Filter,
@@ -25,15 +25,67 @@ const statusBadge: Record<StockStatus, { label: string; variant: 'emerald' | 'am
   out: { label: 'Sin stock',  variant: 'red'     },
 };
 
+interface InventarioState {
+  search: string;
+  showFilters: boolean;
+  statusFilter: 'all' | 'low' | 'out';
+  categoryFilter: number | 'all';
+  catSearch: string;
+  showCatList: boolean;
+}
+
+type InventarioAction =
+  | { type: 'SET_SEARCH'; payload: string }
+  | { type: 'SET_SHOW_FILTERS'; payload: boolean }
+  | { type: 'SET_STATUS_FILTER'; payload: 'all' | 'low' | 'out' }
+  | { type: 'SET_CATEGORY_FILTER'; payload: number | 'all' }
+  | { type: 'SET_CAT_SEARCH'; payload: string }
+  | { type: 'SET_SHOW_CAT_LIST'; payload: boolean };
+
+function inventarioReducer(state: InventarioState, action: InventarioAction): InventarioState {
+  switch (action.type) {
+    case 'SET_SEARCH':
+      return { ...state, search: action.payload };
+    case 'SET_SHOW_FILTERS':
+      return { ...state, showFilters: action.payload };
+    case 'SET_STATUS_FILTER':
+      return { ...state, statusFilter: action.payload };
+    case 'SET_CATEGORY_FILTER':
+      return { ...state, categoryFilter: action.payload };
+    case 'SET_CAT_SEARCH':
+      return { ...state, catSearch: action.payload };
+    case 'SET_SHOW_CAT_LIST':
+      return { ...state, showCatList: action.payload };
+    default:
+      return state;
+  }
+}
+
 export function Inventario() {
-  const [search, setSearch] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<'all' | 'low' | 'out'>('all');
-  const [categoryFilter, setCategoryFilter] = useState<number | 'all'>('all');
-  
-  // Estados para el buscador de categorías
-  const [catSearch, setCatSearch] = useState('');
-  const [showCatList, setShowCatList] = useState(false);
+  const [state, dispatch] = useReducer(inventarioReducer, {
+    search: '',
+    showFilters: false,
+    statusFilter: 'all',
+    categoryFilter: 'all',
+    catSearch: '',
+    showCatList: false
+  });
+
+  const {
+    search,
+    showFilters,
+    statusFilter,
+    categoryFilter,
+    catSearch,
+    showCatList
+  } = state;
+
+  const setSearch = (payload: string) => dispatch({ type: 'SET_SEARCH', payload });
+  const setShowFilters = (payload: boolean) => dispatch({ type: 'SET_SHOW_FILTERS', payload });
+  const setStatusFilter = (payload: 'all' | 'low' | 'out') => dispatch({ type: 'SET_STATUS_FILTER', payload });
+  const setCategoryFilter = (payload: number | 'all') => dispatch({ type: 'SET_CATEGORY_FILTER', payload });
+  const setCatSearch = (payload: string) => dispatch({ type: 'SET_CAT_SEARCH', payload });
+  const setShowCatList = (payload: boolean) => dispatch({ type: 'SET_SHOW_CAT_LIST', payload });
 
   const { data: products = [], isLoading: loading } = useQuery({
     queryKey: ['products', true],
@@ -49,14 +101,14 @@ export function Inventario() {
     {
       key: 'codigo_barras',
       header: 'Código',
-      render: (row) => <span className="font-mono text-xs text-gray-500 dark:text-gray-400">{row.codigo_barras}</span>,
+      render: (row) => <span className="font-mono text-xs text-zinc-500 dark:text-zinc-400">{row.codigo_barras}</span>,
     },
     {
       key: 'nombre',
       header: 'Producto',
-      render: (row) => <span className="font-medium text-gray-800 dark:text-white">{row.nombre}</span>,
+      render: (row) => <span className="font-medium text-zinc-800 dark:text-white">{row.nombre}</span>,
     },
-    { key: 'categoria_nombre', header: 'Categoría', render: (row) => <Badge label={row.categoria_nombre || 'General'} variant="indigo" /> },
+    { key: 'categoria_nombre', header: 'Categoría', render: (row) => <Badge label={row.categoria_nombre || 'General'} variant="blue" /> },
     {
       key: 'stock_actual',
       header: 'Stock',
@@ -66,7 +118,7 @@ export function Inventario() {
         return (
           <div className="flex items-center justify-end gap-1.5">
             {status === 'low' && <AlertTriangle size={13} className="text-amber-500" />}
-            <span className={`font-semibold ${status === 'out' ? 'text-red-500' : 'text-gray-800 dark:text-white'}`}>
+            <span className={`font-semibold ${status === 'out' ? 'text-red-500' : 'text-zinc-800 dark:text-white'}`}>
               {row.stock_actual} {row.unidad_medida}
             </span>
           </div>
@@ -77,7 +129,7 @@ export function Inventario() {
       key: 'precio_compra',
       header: 'Último Costo',
       align: 'right',
-      render: (row) => <span className="text-gray-600 dark:text-gray-300">S/ {(row.precio_compra || 0).toFixed(2)}</span>,
+      render: (row) => <span className="text-zinc-600 dark:text-zinc-300">S/ {(row.precio_compra || 0).toFixed(2)}</span>,
     },
     {
       key: 'status',
@@ -118,38 +170,38 @@ export function Inventario() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <button 
           onClick={() => setStatusFilter('all')}
-          className={`bg-white dark:bg-gray-800 p-5 rounded-2xl border transition-all text-left shadow-sm ${statusFilter === 'all' ? 'border-indigo-500 ring-1 ring-indigo-500' : 'border-gray-100 dark:border-gray-700'}`}
+          className={`bg-white dark:bg-zinc-800 p-5 rounded-2xl border transition-all text-left shadow-sm ${statusFilter === 'all' ? 'border-blue-500 ring-1 ring-blue-500' : 'border-zinc-100 dark:border-zinc-700'}`}
         >
-          <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase">Total Productos</p>
-          <p className="text-2xl font-bold text-gray-800 dark:text-white mt-1">{products.length}</p>
+          <p className="text-xs font-medium text-zinc-400 dark:text-zinc-500 uppercase">Total Productos</p>
+          <p className="text-2xl font-bold text-zinc-800 dark:text-white mt-1">{products.length}</p>
         </button>
         <button 
           onClick={() => setStatusFilter('low')}
-          className={`bg-white dark:bg-gray-800 p-5 rounded-2xl border transition-all text-left shadow-sm ${statusFilter === 'low' ? 'border-amber-500 ring-1 ring-amber-500' : 'border-gray-100 dark:border-gray-700'}`}
+          className={`bg-white dark:bg-zinc-800 p-5 rounded-2xl border transition-all text-left shadow-sm ${statusFilter === 'low' ? 'border-amber-500 ring-1 ring-amber-500' : 'border-zinc-100 dark:border-zinc-700'}`}
         >
-          <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase">Stock Bajo</p>
+          <p className="text-xs font-medium text-zinc-400 dark:text-zinc-500 uppercase">Stock Bajo</p>
           <p className="text-2xl font-bold text-amber-500 mt-1">{products.filter(p => getStatus(p.stock_actual, p.stock_minimo) === 'low').length}</p>
         </button>
         <button 
           onClick={() => setStatusFilter('out')}
-          className={`bg-white dark:bg-gray-800 p-5 rounded-2xl border transition-all text-left shadow-sm ${statusFilter === 'out' ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-100 dark:border-gray-700'}`}
+          className={`bg-white dark:bg-zinc-800 p-5 rounded-2xl border transition-all text-left shadow-sm ${statusFilter === 'out' ? 'border-red-500 ring-1 ring-red-500' : 'border-zinc-100 dark:border-zinc-700'}`}
         >
-          <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase">Sin Stock</p>
+          <p className="text-xs font-medium text-zinc-400 dark:text-zinc-500 uppercase">Sin Stock</p>
           <p className="text-2xl font-bold text-red-500 mt-1">{products.filter(p => p.stock_actual <= 0).length}</p>
         </button>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 shadow-sm space-y-4">
+      <div className="bg-white dark:bg-zinc-800 rounded-2xl border border-zinc-100 dark:border-zinc-700 p-4 shadow-sm space-y-4">
         <div className="flex gap-3 flex-wrap">
           <div className="relative flex-1 min-w-[200px]">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
             <input
               type="text"
               placeholder="Buscar producto por nombre o código..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               disabled={loading}
-              className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition disabled:opacity-50"
+              className="w-full pl-9 pr-4 py-2 text-sm border border-zinc-200 dark:border-zinc-600 rounded-lg bg-zinc-50 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-400 transition disabled:opacity-50"
             />
           </div>
           <Button 
@@ -168,11 +220,12 @@ export function Inventario() {
         </div>
 
         {showFilters && (
-          <div className="flex flex-wrap gap-4 pt-4 border-t border-gray-100 dark:border-gray-700 animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="flex flex-wrap gap-4 pt-4 border-t border-zinc-100 dark:border-zinc-700 animate-in fade-in slide-in-from-top-2 duration-200">
             <div className="space-y-2 relative min-w-[220px]">
-              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Filtrar por Categoría</label>
+              <label htmlFor="filtro-categoria-search" className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Filtrar por Categoría</label>
               <div className="relative">
                 <input
+                  id="filtro-categoria-search"
                   type="text"
                   placeholder={categoryFilter === 'all' ? "Escribe para buscar..." : categories.find(c => c.id === categoryFilter)?.nombre || "Buscar..."}
                   value={catSearch}
@@ -181,19 +234,19 @@ export function Inventario() {
                     setCatSearch(e.target.value);
                     setShowCatList(true);
                   }}
-                  className="w-full px-3 py-1.5 text-xs border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                  className="w-full px-3 py-1.5 text-xs border border-zinc-200 dark:border-zinc-600 rounded-lg bg-zinc-50 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-400"
                 />
                 {showCatList && (
                   <>
                     <div className="fixed inset-0 z-10" onClick={() => setShowCatList(false)}></div>
-                    <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl shadow-xl z-20 max-h-48 overflow-y-auto py-1">
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 rounded-xl shadow-xl z-20 max-h-48 overflow-y-auto py-1">
                       <button
                         onClick={() => {
                           setCategoryFilter('all');
                           setCatSearch('');
                           setShowCatList(false);
                         }}
-                        className="w-full text-left px-3 py-2 text-xs hover:bg-indigo-50 dark:hover:bg-gray-700 text-indigo-600 dark:text-indigo-400 font-semibold"
+                        className="w-full text-left px-3 py-2 text-xs hover:bg-zinc-100 dark:hover:bg-zinc-700 text-blue-600 dark:text-blue-400 font-semibold"
                       >
                         Todas las categorías
                       </button>
@@ -205,7 +258,7 @@ export function Inventario() {
                             setCatSearch('');
                             setShowCatList(false);
                           }}
-                          className="w-full text-left px-3 py-2 text-xs hover:bg-indigo-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200"
+                          className="w-full text-left px-3 py-2 text-xs hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200"
                         >
                           {cat.nombre}
                         </button>
@@ -216,7 +269,7 @@ export function Inventario() {
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Estado de Stock</label>
+              <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">Estado de Stock</span>
               <div className="flex gap-2">
                 {(['all', 'low', 'out'] as const).map(status => (
                   <button
@@ -224,8 +277,8 @@ export function Inventario() {
                     onClick={() => setStatusFilter(status)}
                     className={`px-3 py-1.5 text-[10px] font-bold uppercase rounded-lg border transition-all ${
                       statusFilter === status 
-                        ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-200 dark:shadow-none' 
-                        : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 text-gray-500 hover:border-indigo-400'
+                        ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-200 dark:shadow-none' 
+                        : 'bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-600 text-zinc-500 hover:border-blue-400'
                     }`}
                   >
                     {status === 'all' ? 'Todo' : status === 'low' ? 'Bajo' : 'Agotado'}

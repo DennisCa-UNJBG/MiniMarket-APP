@@ -38,11 +38,11 @@ export function ProtectedRoute({ children, requiredPermission }: ProtectedRouteP
   if (!hasPermission()) {
     return (
       <div className="flex flex-col items-center justify-center h-[calc(100vh-200px)] p-6 text-center">
-        <div className="w-20 h-20 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mb-6">
+        <div className="size-20 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mb-6">
           <ShieldAlert size={40} className="text-red-600 dark:text-red-400" />
         </div>
-        <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">Acceso Denegado</h2>
-        <p className="text-gray-500 dark:text-gray-400 max-w-md mb-8">
+        <h2 className="text-2xl font-semibold text-zinc-800 dark:text-white mb-2">Acceso Denegado</h2>
+        <p className="text-zinc-500 dark:text-zinc-400 max-w-md mb-8">
           Lo sentimos, no tienes los permisos necesarios para acceder a esta sección. 
           Contacta con el administrador si crees que esto es un error.
         </p>

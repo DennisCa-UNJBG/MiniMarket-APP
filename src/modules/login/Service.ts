@@ -89,8 +89,10 @@ export const authService = {
    * Actualiza la contraseña del usuario de forma directa
    */
   async updatePassword(userId: number, newPasswordPlain: string): Promise<boolean> {
-    const db = await getDb();
-    const newHash = await this.hashPassword(newPasswordPlain);
+    const [db, newHash] = await Promise.all([
+      getDb(),
+      this.hashPassword(newPasswordPlain)
+    ]);
     await db.execute("UPDATE usuarios SET password_hash = ? WHERE id = ?", [newHash, userId]);
     return true;
   }

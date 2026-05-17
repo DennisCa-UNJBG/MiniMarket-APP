@@ -44,7 +44,7 @@ export const ventaService = {
     
     const ventaId = resVenta.lastInsertId as number;
 
-    for (const item of venta.items) {
+    await Promise.all(venta.items.map(async (item) => {
       const subtotal = item.cantidad * item.precio_unitario;
       
       // 2. Insertar Detalle
@@ -82,7 +82,7 @@ export const ventaService = {
           sucursalId
         ]
       );
-    }
+    }));
 
     // 5. Log de Auditoría
     await logService.register({
@@ -100,30 +100,32 @@ export const ventaService = {
    * Obtiene el historial de ventas con paginación
    */
   async getVentas(page = 1, pageSize = 10): Promise<{ data: any[], total: number }> {
-    const db = await getDb();
-    const config = await sucursalService.getConfig();
+    const [db, config] = await Promise.all([
+      getDb(),
+      sucursalService.getConfig()
+    ]);
     const sucursalId = config?.sucursal_id || 'LOCAL';
     const offset = (page - 1) * pageSize;
 
-    // 1. Obtener el total de registros para esta sucursal
-    const totalRes = await db.select<any[]>(
-      'SELECT COUNT(*) as count FROM ventas WHERE sucursal_id = ? OR sucursal_id IS NULL',
-      [sucursalId]
-    );
+    // Obtener total de registros y datos paginados en paralelo
+    const [totalRes, data] = await Promise.all([
+      db.select<any[]>(
+        'SELECT COUNT(*) as count FROM ventas WHERE sucursal_id = ? OR sucursal_id IS NULL',
+        [sucursalId]
+      ),
+      db.select<any[]>(`
+        SELECT 
+          v.*, 
+          u.nombre_completo as usuario_nombre,
+          (SELECT COUNT(*) FROM ventas_detalle WHERE venta_id = v.id) as items_count
+        FROM ventas v
+        JOIN usuarios u ON v.usuario_id = u.id
+        WHERE v.sucursal_id = ? OR v.sucursal_id IS NULL
+        ORDER BY v.fecha DESC
+        LIMIT ? OFFSET ?
+      `, [sucursalId, pageSize, offset])
+    ]);
     const total = totalRes[0]?.count || 0;
-
-    // 2. Obtener los datos paginados
-    const data = await db.select<any[]>(`
-      SELECT 
-        v.*, 
-        u.nombre_completo as usuario_nombre,
-        (SELECT COUNT(*) FROM ventas_detalle WHERE venta_id = v.id) as items_count
-      FROM ventas v
-      JOIN usuarios u ON v.usuario_id = u.id
-      WHERE v.sucursal_id = ? OR v.sucursal_id IS NULL
-      ORDER BY v.fecha DESC
-      LIMIT ? OFFSET ?
-    `, [sucursalId, pageSize, offset]);
 
     return { data, total };
   },
@@ -145,36 +147,38 @@ export const ventaService = {
    * Obtiene un resumen detallado de las ventas y gastos filtrado por fecha
    */
   async getResumenHoy(desde?: string): Promise<{ total: number, total_efectivo: number, total_digital: number, total_gastos_efectivo: number, count: number }> {
-    const db = await getDb();
-    const config = await sucursalService.getConfig();
+    const [db, config] = await Promise.all([
+      getDb(),
+      sucursalService.getConfig()
+    ]);
     const sucursalId = config?.sucursal_id || 'LOCAL';
 
     // Si no hay fecha 'desde', usamos el inicio del día actual
     const fechaFiltro = desde ? desde : "date('now', 'start of day')";
     const isTimestamp = desde ? true : false;
 
-    // 1. Obtener ventas
-    const ventas = await db.select<any[]>(`
-      SELECT 
-        COALESCE(SUM(total), 0) as total,
-        COALESCE(SUM(CASE WHEN metodo_pago = 'EFECTIVO' THEN total ELSE 0 END), 0) as total_efectivo,
-        COALESCE(SUM(CASE WHEN metodo_pago = 'TARJETA' THEN total ELSE 0 END), 0) as total_digital,
-        COUNT(*) as count
-      FROM ventas
-      WHERE ${isTimestamp ? "fecha >= ?" : "date(fecha, 'localtime') >= " + fechaFiltro}
-      AND estado != 'anulado'
-      AND (sucursal_id = ? OR sucursal_id IS NULL)
-    `, isTimestamp ? [desde, sucursalId] : [sucursalId]);
-
-    // 2. Obtener gastos por compras en efectivo
-    const gastos = await db.select<any[]>(`
-      SELECT COALESCE(SUM(total), 0) as total_gastos
-      FROM compras_ingresos
-      WHERE ${isTimestamp ? "fecha >= ?" : "date(fecha, 'localtime') >= " + fechaFiltro}
-      AND metodo_pago = 'EFECTIVO'
-      AND estado != 'anulado'
-      AND (sucursal_id = ? OR sucursal_id IS NULL)
-    `, isTimestamp ? [desde, sucursalId] : [sucursalId]);
+    // Obtener ventas y gastos en paralelo
+    const [ventas, gastos] = await Promise.all([
+      db.select<any[]>(`
+        SELECT 
+          COALESCE(SUM(total), 0) as total,
+          COALESCE(SUM(CASE WHEN metodo_pago = 'EFECTIVO' THEN total ELSE 0 END), 0) as total_efectivo,
+          COALESCE(SUM(CASE WHEN metodo_pago = 'TARJETA' THEN total ELSE 0 END), 0) as total_digital,
+          COUNT(*) as count
+        FROM ventas
+        WHERE ${isTimestamp ? "fecha >= ?" : "date(fecha, 'localtime') >= " + fechaFiltro}
+        AND estado != 'anulado'
+        AND (sucursal_id = ? OR sucursal_id IS NULL)
+      `, isTimestamp ? [desde, sucursalId] : [sucursalId]),
+      db.select<any[]>(`
+        SELECT COALESCE(SUM(total), 0) as total_gastos
+        FROM compras_ingresos
+        WHERE ${isTimestamp ? "fecha >= ?" : "date(fecha, 'localtime') >= " + fechaFiltro}
+        AND metodo_pago = 'EFECTIVO'
+        AND estado != 'anulado'
+        AND (sucursal_id = ? OR sucursal_id IS NULL)
+      `, isTimestamp ? [desde, sucursalId] : [sucursalId])
+    ]);
 
     return {
       ...ventas[0],
@@ -187,8 +191,10 @@ export const ventaService = {
    * Permite comparar hoy vs ayer para calcular crecimiento real
    */
   async getResumenRango(fechaInicio: string, fechaFin: string): Promise<{ total: number, count: number }> {
-    const db = await getDb();
-    const config = await sucursalService.getConfig();
+    const [db, config] = await Promise.all([
+      getDb(),
+      sucursalService.getConfig()
+    ]);
     const sucursalId = config?.sucursal_id || 'LOCAL';
 
     const result = await db.select<any[]>(`
@@ -224,12 +230,12 @@ export const ventaService = {
     const items = await db.select<any[]>('SELECT producto_id, cantidad FROM ventas_detalle WHERE venta_id = ?', [ventaId]);
     
     // 2. Revertir stock de cada producto
-    for (const item of items) {
-      await db.execute(
+    await Promise.all(items.map(item =>
+      db.execute(
         'UPDATE productos SET stock_actual = stock_actual + ? WHERE id = ?',
         [item.cantidad, item.producto_id]
-      );
-    }
+      )
+    ));
 
     // 3. Eliminar registros del Kardex asociados
     await db.execute(

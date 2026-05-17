@@ -38,8 +38,10 @@ export const negocioService = {
    * Guarda o actualiza los datos del negocio
    */
   async save(datos: DatosNegocio) {
-    const db = await getDb();
-    const current = await this.get();
+    const [db, current] = await Promise.all([
+      getDb(),
+      this.get()
+    ]);
 
     if (current.id) {
       await db.execute(
