@@ -6,7 +6,7 @@ import { Button } from '../../../components/ui/Button';
 import { allNavItems } from '../../../config/navigation';
 
 export function KeyboardShortcutsSection() {
-  const [prefs, setPrefs] = useState<AppPreferences>(preferenciasService.get());
+  const [prefs, setPrefs] = useState<AppPreferences>(() => preferenciasService.get());
   const [newShortcutCombo, setNewShortcutCombo] = useState('');
   const [newShortcutPath, setNewShortcutPath] = useState(allNavItems[0].to);
   const [isRecordingCombo, setIsRecordingCombo] = useState(false);

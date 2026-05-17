@@ -57,7 +57,7 @@ export function DataTable<T extends object>({
   onPageSizeChange,
 }: DataTableProps<T>) {
   const [internalPage, setInternalPage] = useState(1);
-  const [internalPageSize, setInternalPageSize] = useState(defaultPageSize);
+  const [internalPageSize, setInternalPageSize] = useState(() => defaultPageSize);
 
   // Determinar valores actuales (locales o externos)
   const currentPage = serverSide ? (currentPageExternal ?? 1) : internalPage;

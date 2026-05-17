@@ -411,8 +411,8 @@ export function Ventas() {
                     <td className="px-4 py-2 text-right text-sm font-bold text-orange-600 dark:text-orange-400">S/ {(selectedSale.vuelto || 0).toFixed(2)}</td>
                   </tr>
                   <tr className="bg-blue-50/30 dark:bg-blue-900/10">
-                    <td colSpan={3} className="px-4 py-4 text-right font-black text-zinc-700 dark:text-zinc-200 text-sm uppercase tracking-tighter">Total Final:</td>
-                    <td className="px-4 py-4 text-right text-xl font-black text-blue-600 dark:text-blue-400">S/ {selectedSale.total.toFixed(2)}</td>
+                    <td colSpan={3} className="p-4 text-right font-black text-zinc-700 dark:text-zinc-200 text-sm uppercase tracking-tighter">Total Final:</td>
+                    <td className="p-4 text-right text-xl font-black text-blue-600 dark:text-blue-400">S/ {selectedSale.total.toFixed(2)}</td>
                   </tr>
                 </tfoot>
               </table>

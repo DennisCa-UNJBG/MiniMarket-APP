@@ -44,9 +44,10 @@ export function PurchaseDocHeader({
       <div className="flex flex-col gap-1.5">
         <label htmlFor="compra-igv-percent" className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Impuestos (IGV)</label>
         <div className="flex items-center gap-3">
-          <label htmlFor="compra-igv-checkbox" className="relative inline-flex items-center cursor-pointer shrink-0">
+          <label htmlFor="compra-igv-checkbox" aria-label="Aplicar impuestos IGV" className="relative inline-flex items-center cursor-pointer shrink-0">
             <input id="compra-igv-checkbox" type="checkbox" className="sr-only peer" checked={hasIGV} onChange={(e) => setHasIGV(e.target.checked)} />
             <div className="w-9 h-5 bg-zinc-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-zinc-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-zinc-600 peer-checked:bg-blue-600"></div>
+            <span className="sr-only">Aplicar impuestos IGV</span>
           </label>
           <div className="relative flex-1">
             <input 

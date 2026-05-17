@@ -17,7 +17,7 @@ const formatSize = (bytes: number) => {
 
 export function PreferencesSection() {
   const queryClient = useQueryClient();
-  const [prefs, setPrefs] = useState<AppPreferences>(preferenciasService.get());
+  const [prefs, setPrefs] = useState<AppPreferences>(() => preferenciasService.get());
 
   const { data: dbStats = { size: 0, path: 'Cargando...' } } = useQuery({
     queryKey: ['db-stats'],

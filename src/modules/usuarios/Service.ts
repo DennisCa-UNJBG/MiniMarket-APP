@@ -2,15 +2,6 @@ import { getDb } from '../../lib/db';
 import { authService } from '../login/Service';
 import { logService } from '../../lib/logService';
 
-export interface User {
-  id?: number;
-  username: string;
-  password_hash?: string;
-  nombre_completo: string;
-  rol_id: number;
-  sucursal_id?: string;
-  estado: string;
-}
 
 export const userService = {
   /**

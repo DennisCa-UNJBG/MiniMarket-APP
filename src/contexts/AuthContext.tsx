@@ -19,15 +19,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const savedUser = localStorage.getItem('user');
+    const savedUser = localStorage.getItem('user:v1');
     if (savedUser) {
       try {
         setUser(JSON.parse(savedUser));
       } catch (e) {
         console.error("Error al cargar usuario de localStorage", e);
-        localStorage.removeItem('user');
+        localStorage.removeItem('user:v1');
       }
     }
+    // Clean up legacy key without version to avoid pollution
+    localStorage.removeItem('user');
     setIsLoading(false);
   }, []);
 
@@ -86,7 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = (userData: UserData) => {
     setUser(userData);
-    localStorage.setItem('user', JSON.stringify(userData));
+    localStorage.setItem('user:v1', JSON.stringify(userData));
   };
 
   const logout = async () => {
@@ -104,7 +106,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
     setUser(null);
-    localStorage.removeItem('user');
+    localStorage.removeItem('user:v1');
   };
 
   return (

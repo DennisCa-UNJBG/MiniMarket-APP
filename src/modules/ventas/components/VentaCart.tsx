@@ -105,9 +105,10 @@ export function VentaCart({
           <div className="flex flex-col gap-0.5">
             <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Impuestos IGV</span>
             <div className="flex items-center gap-2">
-              <label htmlFor="checkbox-impuestos-igv" className="relative inline-flex items-center cursor-pointer scale-75 origin-left">
+              <label htmlFor="checkbox-impuestos-igv" aria-label="Aplicar impuestos IGV" className="relative inline-flex items-center cursor-pointer scale-75 origin-left">
                 <input id="checkbox-impuestos-igv" type="checkbox" className="sr-only peer" checked={hasIGV} onChange={(e) => setHasIGV(e.target.checked)} />
                 <div className="w-9 h-5 bg-zinc-200 peer-focus:outline-none rounded-full peer dark:bg-zinc-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-zinc-600 peer-checked:bg-blue-600"></div>
+                <span className="sr-only">Aplicar impuestos IGV</span>
               </label>
               <span className={`text-[10px] font-black uppercase ${hasIGV ? 'text-blue-600 dark:text-blue-400' : 'text-zinc-400'}`}>
                 {hasIGV ? 'ACTIVO' : 'NO APLICA'}

@@ -18,7 +18,7 @@ export function SedesSection({ initialData }: { initialData: SucursalConfig }) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  const [localSucursal, setLocalSucursal] = useState<SucursalConfig>(initialData);
+  const [localSucursal, setLocalSucursal] = useState<SucursalConfig>(() => initialData);
 
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle');
 

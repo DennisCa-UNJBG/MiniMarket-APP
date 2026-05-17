@@ -1,24 +1,38 @@
-import { useState, useEffect } from 'react';
+import { useReducer, useEffect } from 'react';
 import { preferenciasService } from '../../modules/configuracion/preferenciasService';
 import { Timer } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
+type TimerState = number | null;
+type TimerAction = { type: 'SET_TIME_LEFT'; payload: number | null };
+
+function timerReducer(_state: TimerState, action: TimerAction): TimerState {
+  return action.payload;
+}
+
 export function AutoLogoutTimer() {
   const { user } = useAuth();
-  const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  const [timeLeft, dispatch] = useReducer(timerReducer, null);
 
   useEffect(() => {
     if (!user) return;
     let prefs = preferenciasService.get();
 
     const check = () => {
-      if (!prefs.enableAutoLogout) return setTimeLeft(null);
+      if (!prefs.enableAutoLogout) {
+        dispatch({ type: 'SET_TIME_LEFT', payload: null });
+        return;
+      }
       // @ts-ignore
       const last = window.__lastActivityTime ||= Date.now();
-      setTimeLeft(Math.max(0, Math.floor((prefs.inactivityTimeout * 60000 - (Date.now() - last)) / 1000)));
+      const nextTimeLeft = Math.max(0, Math.floor((prefs.inactivityTimeout * 60000 - (Date.now() - last)) / 1000));
+      dispatch({ type: 'SET_TIME_LEFT', payload: nextTimeLeft });
     };
 
-    const update = () => { prefs = preferenciasService.get(); check(); };
+    const update = () => { 
+      prefs = preferenciasService.get(); 
+      check(); 
+    };
 
     const id = setInterval(check, 1000);
     window.addEventListener('preferences-updated', update);

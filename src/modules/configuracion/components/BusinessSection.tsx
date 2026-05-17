@@ -23,7 +23,7 @@ function Field({ label, value, onChange, placeholder }: { label: string; value: 
 export function BusinessSection({ initialData }: { initialData: DatosNegocio }) {
   const queryClient = useQueryClient();
 
-  const [localNegocio, setLocalNegocio] = useState<DatosNegocio>(initialData);
+  const [localNegocio, setLocalNegocio] = useState<DatosNegocio>(() => initialData);
 
   const saveNegocioMutation = useMutation({
     mutationFn: (data: DatosNegocio) => negocioService.save(data),

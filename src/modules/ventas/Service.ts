@@ -2,13 +2,13 @@ import { getDb } from '../../lib/db';
 import { sucursalService } from '../sucursales/Service';
 import { logService } from '../../lib/logService';
 
-export interface VentaItem {
+interface VentaItem {
   producto_id: number;
   cantidad: number;
   precio_unitario: number;
 }
 
-export interface VentaData {
+interface VentaData {
   usuario_id: number;
   total: number;
   igv: number;

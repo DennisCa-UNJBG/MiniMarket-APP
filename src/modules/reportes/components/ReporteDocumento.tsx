@@ -58,7 +58,7 @@ export const ReporteDocumento: React.FC<ReporteDocumentoProps> = ({ id, kpis, to
 
       {/* Gráfico de Ventas */}
       <div className="mb-10">
-        <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-widest mb-4 border-l-4 border-blue-500 pl-3">Rendimiento de Ventas Mensuales</h3>
+        <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-widest mb-4 border-l-2 border-blue-500 pl-2.5">Rendimiento de Ventas Mensuales</h3>
         <div className="h-64 w-full bg-zinc-50 rounded-2xl p-4 border border-zinc-100">
            <VentasBarChart data={monthlySales} isPrint />
         </div>
@@ -66,7 +66,7 @@ export const ReporteDocumento: React.FC<ReporteDocumentoProps> = ({ id, kpis, to
 
       {/* Ranking de Productos */}
       <div>
-        <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-widest mb-4 border-l-4 border-emerald-500 pl-3">Ranking de Productos (Top 5)</h3>
+        <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-widest mb-4 border-l-2 border-emerald-500 pl-2.5">Ranking de Productos (Top 5)</h3>
         <RankingProductos products={topProducts} isPrint />
       </div>
 

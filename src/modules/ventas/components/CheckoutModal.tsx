@@ -60,7 +60,8 @@ export function CheckoutModal({
   });
 
   const paidNumber = parseFloat(amountPaid) || 0;
-  const change = Math.max(0, paidNumber - total);
+  const roundedTotal = parseFloat(total.toFixed(2));
+  const change = Math.max(0, paidNumber - roundedTotal);
 
   if (!isOpen) return null;
 
@@ -73,7 +74,7 @@ export function CheckoutModal({
       <div className="-mx-6 -mt-5 mb-6">
         <div className="bg-blue-600 p-8 text-center text-white">
           <p className="text-blue-200 text-sm font-medium mb-1">Monto a cobrar</p>
-          <p className="text-4xl font-black">S/ {total.toFixed(2)}</p>
+          <p className="text-4xl font-black">S/ {roundedTotal.toFixed(2)}</p>
         </div>
       </div>
         
@@ -92,7 +93,7 @@ export function CheckoutModal({
             variant="secondary" 
             onClick={() => {
               setPaymentMethod('TARJETA');
-              setAmountPaid(total.toString());
+              setAmountPaid(roundedTotal.toFixed(2));
             }}
             className={`flex-col h-auto py-4 border-2 transition-all ${paymentMethod === 'TARJETA' ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400' : 'border-transparent opacity-60'}`}
             icon={<CreditCard size={24} />}
@@ -117,11 +118,11 @@ export function CheckoutModal({
 
           {/* Vuelto / Estado del Pago */}
           <div className={`p-4 rounded-xl flex justify-between items-center transition-colors ${
-            paidNumber >= total 
+            paidNumber >= roundedTotal 
               ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800' 
               : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400 border border-zinc-100 dark:border-zinc-800'
           }`}>
-            <span className="font-semibold">{paidNumber >= total ? 'Vuelto:' : 'Pendiente:'}</span>
+            <span className="font-semibold">{paidNumber >= roundedTotal ? 'Vuelto:' : 'Pendiente:'}</span>
             <span className="text-2xl font-black">S/ {Math.abs(change).toFixed(2)}</span>
           </div>
         </div>
@@ -135,17 +136,17 @@ export function CheckoutModal({
             Volver
           </Button>
           <Button 
-            disabled={paymentMethod === 'EFECTIVO' && paidNumber < total}
+            disabled={paymentMethod === 'EFECTIVO' && paidNumber < roundedTotal}
             isLoading={registrarVentaMutation.isPending}
             onClick={() => {
               const ventaData = {
                 usuario_id: user?.id || 1,
-                total,
-                igv: igvAmount,
+                total: roundedTotal,
+                igv: parseFloat(igvAmount.toFixed(2)),
                 igv_porcentaje: hasIGV ? igvPercent : 0,
                 metodo_pago: paymentMethod,
                 monto_pagado: paidNumber,
-                vuelto: change,
+                vuelto: parseFloat(change.toFixed(2)),
                 items: cart.map(i => ({
                   producto_id: i.product.id,
                   cantidad: i.quantity,

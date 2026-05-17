@@ -2,15 +2,6 @@ import { getDb } from '../../lib/db';
 import { sucursalService } from '../sucursales/Service';
 import { logService } from '../../lib/logService';
 
-export interface InventarioIngreso {
-  id?: number;
-  producto_id: number;
-  usuario_id: number;
-  cantidad: number;
-  precio_compra: number;
-  referencia?: string;
-  fecha?: string;
-}
 
 export interface CompraDetalle {
   producto_id: number;

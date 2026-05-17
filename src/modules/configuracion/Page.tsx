@@ -21,7 +21,7 @@ export function Configuracion() {
 
   if (loadingSucursal || loadingNegocio) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[450px] space-y-4 animate-in fade-in duration-300">
+      <div className="flex flex-col items-center justify-center min-h-[450px] gap-y-4 animate-in fade-in duration-300">
         <div className="relative size-12">
           <div className="absolute inset-0 border-4 border-blue-100 dark:border-blue-900/20 rounded-full" />
           <div className="absolute inset-0 border-4 border-t-blue-500 rounded-full animate-spin" />

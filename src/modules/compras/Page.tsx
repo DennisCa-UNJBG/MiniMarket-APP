@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useReducer } from 'react';
 import {
   Plus,
   Truck,
@@ -38,13 +38,50 @@ interface PurchaseRecord {
   estado: string;
 }
 
+interface ComprasState {
+  search: string;
+  page: number;
+  showModal: boolean;
+  showDetailModal: boolean;
+  selectedPurchase: PurchaseRecord | null;
+}
+
+type ComprasAction =
+  | { type: 'SET_SEARCH'; payload: string }
+  | { type: 'SET_PAGE'; payload: number }
+  | { type: 'SET_SHOW_MODAL'; payload: boolean }
+  | { type: 'SET_SHOW_DETAIL_MODAL'; payload: boolean }
+  | { type: 'SELECT_PURCHASE'; payload: PurchaseRecord | null };
+
+const initialComprasState: ComprasState = {
+  search: '',
+  page: 1,
+  showModal: false,
+  showDetailModal: false,
+  selectedPurchase: null
+};
+
+function comprasReducer(state: ComprasState, action: ComprasAction): ComprasState {
+  switch (action.type) {
+    case 'SET_SEARCH':
+      return { ...state, search: action.payload };
+    case 'SET_PAGE':
+      return { ...state, page: action.payload };
+    case 'SET_SHOW_MODAL':
+      return { ...state, showModal: action.payload };
+    case 'SET_SHOW_DETAIL_MODAL':
+      return { ...state, showDetailModal: action.payload };
+    case 'SELECT_PURCHASE':
+      return { ...state, selectedPurchase: action.payload };
+    default:
+      return state;
+  }
+}
+
 export function Compras() {
   const queryClient = useQueryClient();
-  const [search, setSearch] = useState('');
-  const [page, setPage] = useState(1);
-  const [showModal, setShowModal] = useState(false);
-  const [showDetailModal, setShowDetailModal] = useState(false);
-  const [selectedPurchase, setSelectedPurchase] = useState<PurchaseRecord | null>(null);
+  const [state, dispatch] = useReducer(comprasReducer, initialComprasState);
+  const { search, page, showModal, showDetailModal, selectedPurchase } = state;
 
   const pageSize = 10;
 
@@ -76,8 +113,8 @@ export function Compras() {
   };
 
   const handleViewDetail = (purchase: PurchaseRecord) => {
-    setSelectedPurchase(purchase);
-    setShowDetailModal(true);
+    dispatch({ type: 'SELECT_PURCHASE', payload: purchase });
+    dispatch({ type: 'SET_SHOW_DETAIL_MODAL', payload: true });
   };
 
   const totalInvertido = purchasesRes.data.reduce((acc: number, p: any) => acc + (p.estado === 'anulado' ? 0 : p.total), 0);
@@ -172,7 +209,7 @@ export function Compras() {
         action={
           <Button
             onClick={() => {
-              setShowModal(true);
+              dispatch({ type: 'SET_SHOW_MODAL', payload: true });
             }}
             icon={<Plus size={16} />}
           >
@@ -222,7 +259,7 @@ export function Compras() {
             type="text"
             placeholder="Buscar por documento o responsable..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => dispatch({ type: 'SET_SEARCH', payload: e.target.value })}
             className="w-full pl-9 pr-4 py-2 text-sm border border-zinc-200 dark:border-zinc-600 rounded-lg bg-zinc-50 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
           />
         </div>
@@ -234,13 +271,13 @@ export function Compras() {
         serverSide={true}
         totalItems={purchasesRes.total}
         currentPage={page}
-        onPageChange={(p) => setPage(p)}
+        onPageChange={(p) => dispatch({ type: 'SET_PAGE', payload: p })}
         keyExtractor={(row) => row.id}
         emptyMessage="No se encontraron registros de compras."
       />
 
-      <NewPurchaseModal isOpen={showModal} onClose={() => setShowModal(false)} />
-      <PurchaseDetailsModal isOpen={showDetailModal} onClose={() => setShowDetailModal(false)} purchase={selectedPurchase} />
+      <NewPurchaseModal isOpen={showModal} onClose={() => dispatch({ type: 'SET_SHOW_MODAL', payload: false })} />
+      <PurchaseDetailsModal isOpen={showDetailModal} onClose={() => dispatch({ type: 'SET_SHOW_DETAIL_MODAL', payload: false })} purchase={selectedPurchase} />
     </div>
   );
 }
