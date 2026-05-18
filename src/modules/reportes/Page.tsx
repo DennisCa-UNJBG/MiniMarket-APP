@@ -1,8 +1,8 @@
+import { useState } from 'react';
 import {
   TrendingUp,
   Package,
   ShoppingCart,
-  Calendar,
   Info,
   Download
 } from 'lucide-react';
@@ -19,24 +19,48 @@ import { useAuth } from '../../contexts/AuthContext';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
-const reportPeriodLabel = new Date().toLocaleDateString('es-PE', { month: 'long', year: 'numeric' }).toUpperCase();
-
 export function Reportes() {
   const { user } = useAuth();
+
+  const getFirstDayOfMonth = () => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    return `${year}-${month}-01`;
+  };
+
+  const getTodayDate = () => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const formatDateStr = (d: Date) => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const [startDate, setStartDate] = useState(getFirstDayOfMonth());
+  const [endDate, setEndDate] = useState(getTodayDate());
+
   // Queries
   const { data: topProducts = [] } = useQuery({
-    queryKey: ['report-top-products'],
-    queryFn: () => reporteService.getTopProducts()
+    queryKey: ['report-top-products', startDate, endDate],
+    queryFn: () => reporteService.getTopProducts(5, startDate, endDate)
   });
 
   const { data: monthlySales = [] } = useQuery({
-    queryKey: ['report-monthly-revenue'],
-    queryFn: () => reporteService.getMonthlyRevenue()
+    queryKey: ['report-monthly-revenue', startDate, endDate],
+    queryFn: () => reporteService.getMonthlyRevenue(startDate, endDate)
   });
 
   const { data: kpis = null, isLoading: loading } = useQuery({
-    queryKey: ['report-kpis'],
-    queryFn: () => reporteService.getKPIs()
+    queryKey: ['report-kpis', startDate, endDate],
+    queryFn: () => reporteService.getKPIs(startDate, endDate)
   });
 
   const handleExportPDF = async () => {
@@ -59,7 +83,7 @@ export function Reportes() {
       const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
       
       pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`Reporte_Rendimiento_${new Date().toISOString().split('T')[0]}.pdf`);
+      pdf.save(`Reporte_Rendimiento_${startDate}_a_${endDate}.pdf`);
       
       notificationService.success('Completado', 'Reporte descargado correctamente');
 
@@ -70,7 +94,7 @@ export function Reportes() {
           accion: 'EXPORT_PDF',
           tabla: 'reportes',
           registro_id: user.id,
-          detalles: `Exportación de Reporte de Rendimiento Mensual a PDF`
+          detalles: `Exportación de Reporte de Rendimiento (${startDate} a ${endDate}) a PDF`
         });
       }
     } catch (error) {
@@ -86,21 +110,22 @@ export function Reportes() {
   );
 
   const kpiCards = kpis ? [
-    { label: 'Ingresos del mes',   value: `S/ ${kpis.revenue.toFixed(2)}`, change: `${kpis.revenueChange >= 0 ? '+' : ''}${kpis.revenueChange.toFixed(1)}%`, up: kpis.revenueChange >= 0, icon: TrendingUp,   color: 'bg-blue-500' },
-    { label: 'Productos vendidos', value: kpis.productsSold,      change: `Mes actual`,  up: true,  icon: Package,      color: 'bg-emerald-500' },
+    { label: 'Ingresos del período',   value: `S/ ${kpis.revenue.toFixed(2)}`, change: `${kpis.revenueChange >= 0 ? '+' : ''}${kpis.revenueChange.toFixed(1)}%`, up: kpis.revenueChange >= 0, icon: TrendingUp,   color: 'bg-blue-500' },
+    { label: 'Productos vendidos', value: kpis.productsSold,      change: `Período actual`,  up: true,  icon: Package,      color: 'bg-emerald-500' },
     { label: 'N° de ventas',       value: kpis.salesCount,        change: `${kpis.salesCountChange >= 0 ? '+' : ''}${kpis.salesCountChange.toFixed(1)}%`,  up: kpis.salesCountChange >= 0,  icon: ShoppingCart, color: 'bg-sky-500' },
     { label: 'Gasto Promedio por Cliente',   value: `S/ ${kpis.salesCount > 0 ? (kpis.revenue / kpis.salesCount).toFixed(2) : '0.00'}`, change: 'Ingreso Total / N° Ventas', up: true, icon: Info, color: 'bg-amber-500' },
   ] : [];
 
   return (
     <div className="space-y-6">
+      {/* Encabezado */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-2xl font-semibold text-zinc-800 dark:text-white tracking-tight">Reportes de Rendimiento</h2>
           <p className="text-sm text-zinc-500 dark:text-zinc-400">Análisis detallado de tus ventas y productos</p>
         </div>
         <div className="flex items-center gap-2">
-          <Tooltip text="Exportar reporte del mes actual" position="bottom">
+          <Tooltip text="Exportar reporte del período filtrado" position="bottom">
             <Button 
               onClick={handleExportPDF}
               icon={<Download size={16} />}
@@ -109,9 +134,74 @@ export function Reportes() {
               Exportar PDF
             </Button>
           </Tooltip>
-          <div className="flex items-center gap-2 px-3 py-2 border border-zinc-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-xs font-bold text-zinc-600 dark:text-zinc-300">
-            <Calendar size={14} />
-            <span>{reportPeriodLabel}</span>
+        </div>
+      </div>
+
+      {/* Barra de Filtros Premium */}
+      <div className="bg-white dark:bg-zinc-800 p-4 rounded-3xl border border-zinc-100 dark:border-zinc-700 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        {/* Accesos Rápidos */}
+        <div className="flex flex-wrap gap-2">
+          {[
+            { label: 'Hoy', getDates: () => ({ start: getTodayDate(), end: getTodayDate() }) },
+            { label: 'Últimos 7 Días', getDates: () => {
+                const end = new Date();
+                const start = new Date();
+                start.setDate(end.getDate() - 6);
+                return { start: formatDateStr(start), end: formatDateStr(end) };
+              }
+            },
+            { label: 'Este Mes', getDates: () => ({ start: getFirstDayOfMonth(), end: getTodayDate() }) },
+            { label: 'Mes Anterior', getDates: () => {
+                const d = new Date();
+                d.setMonth(d.getMonth() - 1);
+                const year = d.getFullYear();
+                const month = d.getMonth();
+                const start = new Date(year, month, 1);
+                const end = new Date(year, month + 1, 0);
+                return { start: formatDateStr(start), end: formatDateStr(end) };
+              }
+            }
+          ].map((opt) => {
+            const dates = opt.getDates();
+            const isActive = startDate === dates.start && endDate === dates.end;
+            return (
+              <button
+                key={opt.label}
+                onClick={() => {
+                  setStartDate(dates.start);
+                  setEndDate(dates.end);
+                }}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
+                  isActive 
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-100 dark:shadow-none scale-105' 
+                    : 'bg-zinc-50 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-600'
+                }`}
+              >
+                {opt.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Inputs de Fecha Manual */}
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2 bg-zinc-50 dark:bg-zinc-700 px-3.5 py-1.5 rounded-xl border border-zinc-100 dark:border-zinc-600">
+            <span className="text-[9px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Desde</span>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="bg-transparent text-xs font-bold text-zinc-700 dark:text-zinc-200 outline-none cursor-pointer"
+            />
+          </div>
+          <div className="flex items-center gap-2 bg-zinc-50 dark:bg-zinc-700 px-3.5 py-1.5 rounded-xl border border-zinc-100 dark:border-zinc-600">
+            <span className="text-[9px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Hasta</span>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="bg-transparent text-xs font-bold text-zinc-700 dark:text-zinc-200 outline-none cursor-pointer"
+            />
           </div>
         </div>
       </div>
@@ -129,7 +219,7 @@ export function Reportes() {
               <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${up ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20' : 'bg-red-50 text-red-500 dark:bg-red-900/20'}`}>
                 {change}
               </span>
-              <span className="text-[10px] text-zinc-400 font-medium italic">vs. mes anterior</span>
+              <span className="text-[10px] text-zinc-400 font-medium italic">vs. período anterior</span>
             </div>
           </div>
         ))}
@@ -139,8 +229,8 @@ export function Reportes() {
         {/* Gráfico de ventas mensuales */}
         <div className="bg-white dark:bg-zinc-800 rounded-3xl border border-zinc-100 dark:border-zinc-700 shadow-sm p-6">
           <div className="flex items-center justify-between mb-8">
-            <h3 className="text-lg font-semibold text-zinc-800 dark:text-white">Ingresos Mensuales</h3>
-            <Badge label="Últimos 6 meses" variant="blue" />
+            <h3 className="text-lg font-semibold text-zinc-800 dark:text-white">Ingresos del Período</h3>
+            <Badge label="Historial" variant="blue" />
           </div>
           <div className="h-64 w-full">
             <VentasBarChart data={monthlySales} />
@@ -164,6 +254,8 @@ export function Reportes() {
           kpis={kpis}
           topProducts={topProducts}
           monthlySales={monthlySales}
+          startDate={startDate}
+          endDate={endDate}
         />
       )}
     </div>

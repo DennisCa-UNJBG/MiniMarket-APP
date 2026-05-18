@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useReducer } from 'react';
 import {
   Search,
   Filter,
@@ -7,7 +7,7 @@ import {
   Database,
   Info,
 } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { logService } from '../../lib/logService';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { DataTable, type TableColumn } from '../../components/ui/DataTable';
@@ -23,27 +23,67 @@ const formatTime = (dateStr: string) => {
   return new Date(dateStr + " UTC").toLocaleTimeString();
 };
 
+interface AuditoriaState {
+  search: string;
+  filterAccion: string;
+  page: number;
+  pageSize: number;
+}
+
+type AuditoriaAction =
+  | { type: 'SET_SEARCH'; payload: string }
+  | { type: 'SET_FILTER_ACCION'; payload: string }
+  | { type: 'SET_PAGE'; payload: number }
+  | { type: 'SET_PAGE_SIZE'; payload: number };
+
+const initialAuditoriaState: AuditoriaState = {
+  search: '',
+  filterAccion: 'TODOS',
+  page: 1,
+  pageSize: 10
+};
+
+function auditoriaReducer(state: AuditoriaState, action: AuditoriaAction): AuditoriaState {
+  switch (action.type) {
+    case 'SET_SEARCH':
+      return { ...state, search: action.payload, page: 1 }; // Reiniciar a la primera página al buscar
+    case 'SET_FILTER_ACCION':
+      return { ...state, filterAccion: action.payload, page: 1 }; // Reiniciar a la primera página al filtrar
+    case 'SET_PAGE':
+      return { ...state, page: action.payload };
+    case 'SET_PAGE_SIZE':
+      return { ...state, pageSize: action.payload };
+    default:
+      return state;
+  }
+}
+
 export function Auditoria() {
-  const [search, setSearch] = useState('');
-  const [filterAccion, setFilterAccion] = useState('TODOS');
+  const [state, dispatch] = useReducer(auditoriaReducer, initialAuditoriaState);
+  const { search, filterAccion, page, pageSize } = state;
 
-  const { data: logs = [], isLoading } = useQuery({
-    queryKey: ['logs-audit'],
-    queryFn: () => logService.getAll(200) // Traemos los últimos 200 logs
+  // Consulta reactiva y paginada del lado del servidor
+  const { data: logsRes = { data: [], total: 0 }, isLoading } = useQuery({
+    queryKey: ['logs-audit', search, filterAccion, page, pageSize],
+    queryFn: () => logService.getPaginated(page, pageSize, search, filterAccion),
+    placeholderData: keepPreviousData
   });
 
-  const accionesUnicas = ['TODOS', ...new Set(logs.map(l => l.accion))];
-
-  const filteredLogs = logs.filter(log => {
-    const matchesSearch = 
-      log.detalles?.toLowerCase().includes(search.toLowerCase()) ||
-      log.usuario_nombre.toLowerCase().includes(search.toLowerCase()) ||
-      log.accion.toLowerCase().includes(search.toLowerCase());
-    
-    const matchesAccion = filterAccion === 'TODOS' || log.accion === filterAccion;
-
-    return matchesSearch && matchesAccion;
+  // Consulta para obtener la lista de tipos de acciones registradas
+  const { data: uniqueActions = [] } = useQuery({
+    queryKey: ['logs-actions-unique'],
+    queryFn: () => logService.getAccionesUnicas()
   });
+
+  const accionesUnicas = ['TODOS', ...uniqueActions];
+
+  const handleSearchChange = (val: string) => {
+    dispatch({ type: 'SET_SEARCH', payload: val });
+  };
+
+  const handleAccionChange = (val: string) => {
+    dispatch({ type: 'SET_FILTER_ACCION', payload: val });
+  };
 
   const getActionVariant = (accion: string): any => {
     if (accion.includes('LOGIN')) return 'emerald';
@@ -126,7 +166,7 @@ export function Auditoria() {
             type="text"
             placeholder="Buscar por usuario, detalle o acción..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
             className="w-full pl-10 pr-4 py-2 text-sm border border-zinc-100 dark:border-zinc-600 rounded-xl bg-zinc-50 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-100 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
           />
         </div>
@@ -135,7 +175,7 @@ export function Auditoria() {
           <Filter size={16} className="text-zinc-400" />
           <select
             value={filterAccion}
-            onChange={(e) => setFilterAccion(e.target.value)}
+            onChange={(e) => handleAccionChange(e.target.value)}
             className="flex-1 sm:w-48 px-3 py-2 text-sm border border-zinc-100 dark:border-zinc-600 rounded-xl bg-zinc-50 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-100 outline-none focus:ring-2 focus:ring-blue-500"
           >
             {accionesUnicas.map(acc => (
@@ -149,12 +189,18 @@ export function Auditoria() {
       <div className="bg-white dark:bg-zinc-800 rounded-3xl shadow-sm border border-zinc-100 dark:border-zinc-700 overflow-hidden">
         <DataTable
           columns={columns}
-          data={filteredLogs}
+          data={logsRes.data}
           keyExtractor={(row) => row.id}
           emptyMessage={isLoading ? "Cargando registros..." : "No se han encontrado registros de auditoría."}
-          defaultPageSize={15}
+          serverSide={true}
+          totalItems={logsRes.total}
+          currentPage={page}
+          pageSize={pageSize}
+          onPageChange={(p) => dispatch({ type: 'SET_PAGE', payload: p })}
+          onPageSizeChange={(sz) => dispatch({ type: 'SET_PAGE_SIZE', payload: sz })}
         />
       </div>
     </div>
   );
 }
+

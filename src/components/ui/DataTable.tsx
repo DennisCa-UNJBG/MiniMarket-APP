@@ -28,6 +28,8 @@ interface DataTableProps<T extends object> {
   totalItems?: number;
   /** Página actual controlada externamente */
   currentPage?: number;
+  /** Tamaño de página controlado externamente */
+  pageSize?: number;
   /** Callback cuando cambia la página */
   onPageChange?: (page: number) => void;
   /** Callback cuando cambia el tamaño de página */
@@ -53,6 +55,7 @@ export function DataTable<T extends object>({
   serverSide = false,
   totalItems: totalItemsExternal,
   currentPage: currentPageExternal,
+  pageSize: pageSizeExternal,
   onPageChange,
   onPageSizeChange,
 }: DataTableProps<T>) {
@@ -61,7 +64,7 @@ export function DataTable<T extends object>({
 
   // Determinar valores actuales (locales o externos)
   const currentPage = serverSide ? (currentPageExternal ?? 1) : internalPage;
-  const pageSize = internalPageSize; // El tamaño de página lo solemos manejar localmente o sincronizar
+  const pageSize = serverSide ? (pageSizeExternal ?? internalPageSize) : internalPageSize;
   const totalItems = serverSide ? (totalItemsExternal ?? 0) : data.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
 

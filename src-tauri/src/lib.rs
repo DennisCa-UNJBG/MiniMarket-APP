@@ -312,6 +312,19 @@ pub fn run() {
             description: "add_estado_to_roles",
             sql: "ALTER TABLE roles ADD COLUMN estado TEXT DEFAULT 'activo';",
             kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 18,
+            description: "add_database_indexes",
+            sql: "CREATE INDEX IF NOT EXISTS idx_kardex_producto_fecha ON kardex (producto_id, fecha);
+                  CREATE INDEX IF NOT EXISTS idx_kardex_sucursal_fecha ON kardex (sucursal_id, fecha);
+                  CREATE INDEX IF NOT EXISTS idx_ventas_detalle_venta ON ventas_detalle (venta_id);
+                  CREATE INDEX IF NOT EXISTS idx_ventas_detalle_producto ON ventas_detalle (producto_id);
+                  CREATE INDEX IF NOT EXISTS idx_logs_usuario ON logs (usuario_id);
+                  CREATE INDEX IF NOT EXISTS idx_logs_fecha ON logs (fecha);
+                  CREATE INDEX IF NOT EXISTS idx_ventas_fecha ON ventas (fecha);
+                  CREATE INDEX IF NOT EXISTS idx_compras_fecha ON compras_ingresos (fecha);",
+            kind: MigrationKind::Up,
         }
     ];
 

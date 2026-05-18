@@ -8,9 +8,11 @@ interface ReporteDocumentoProps {
   kpis: ReportKPIs;
   topProducts: TopProduct[];
   monthlySales: MonthlyRevenue[];
+  startDate?: string;
+  endDate?: string;
 }
 
-export const ReporteDocumento: React.FC<ReporteDocumentoProps> = ({ id, kpis, topProducts, monthlySales }) => {
+export const ReporteDocumento: React.FC<ReporteDocumentoProps> = ({ id, kpis, topProducts, monthlySales, startDate, endDate }) => {
   const { data: negocio } = useQuery({
     queryKey: ['negocio'],
     queryFn: () => negocioService.get()
@@ -31,6 +33,11 @@ export const ReporteDocumento: React.FC<ReporteDocumentoProps> = ({ id, kpis, to
           <p className="text-zinc-500 font-bold">
             {negocio?.ruc ? `RUC: ${negocio.ruc}` : 'Sistema de Inventario'}
           </p>
+          {startDate && endDate && (
+            <p className="text-xs text-blue-600 font-bold mt-1">
+              PERÍODO: {new Date(startDate + 'T00:00:00').toLocaleDateString('es-PE')} al {new Date(endDate + 'T00:00:00').toLocaleDateString('es-PE')}
+            </p>
+          )}
           <p className="text-[10px] text-zinc-400 font-medium">
             {negocio?.direccion || ''} {negocio?.telefono ? `• Tel: ${negocio.telefono}` : ''}
           </p>

@@ -61,15 +61,17 @@ function inventarioReducer(state: InventarioState, action: InventarioAction): In
   }
 }
 
+const initialInventarioState: InventarioState = {
+  search: '',
+  showFilters: false,
+  statusFilter: 'all',
+  categoryFilter: 'all',
+  catSearch: '',
+  showCatList: false
+};
+
 export function Inventario() {
-  const [state, dispatch] = useReducer(inventarioReducer, {
-    search: '',
-    showFilters: false,
-    statusFilter: 'all',
-    categoryFilter: 'all',
-    catSearch: '',
-    showCatList: false
-  });
+  const [state, dispatch] = useReducer(inventarioReducer, initialInventarioState);
 
   const {
     search,

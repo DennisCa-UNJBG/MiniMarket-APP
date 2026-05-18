@@ -10,8 +10,9 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { PurchaseDocHeader } from './PurchaseDocHeader';
 import { PurchaseProductSelector } from './PurchaseProductSelector';
 import { PurchaseCartTable } from './PurchaseCartTable';
+import { dateUtils } from '../../../lib/dateUtils';
 
-const defaultDate = new Date().toISOString().split('T')[0];
+const defaultDate = dateUtils.getTodayLocal();
 
 interface CartItem extends CompraDetalle {
   nombre: string;

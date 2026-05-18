@@ -57,22 +57,24 @@ function tabUsuariosReducer(state: TabUsuariosState, action: TabUsuariosAction):
   }
 }
 
+const initialTabUsuariosState: TabUsuariosState = {
+  showModal: false,
+  searchTerm: '',
+  editingId: null,
+  formData: {
+    username: '',
+    password: '',
+    nombre_completo: '',
+    rol_id: 2,
+    sucursal_id: ''
+  }
+};
+
 export function TabUsuarios() {
   const { user: currentUser } = useAuth();
   const queryClient = useQueryClient();
   
-  const [state, dispatch] = useReducer(tabUsuariosReducer, {
-    showModal: false,
-    searchTerm: '',
-    editingId: null,
-    formData: {
-      username: '',
-      password: '',
-      nombre_completo: '',
-      rol_id: 2,
-      sucursal_id: ''
-    }
-  });
+  const [state, dispatch] = useReducer(tabUsuariosReducer, initialTabUsuariosState);
 
   const { showModal, searchTerm, editingId, formData } = state;
 

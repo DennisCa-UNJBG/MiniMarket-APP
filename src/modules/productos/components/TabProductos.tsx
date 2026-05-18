@@ -81,21 +81,23 @@ function tabProductosReducer(state: TabProductosState, action: TabProductosActio
   }
 }
 
+const initialTabProductosState: TabProductosState = {
+  showModal: false,
+  editingId: null,
+  search: '',
+  form: { code: '', name: '', categoryId: '', unitId: '', sellPrice: '', minStock: '' },
+  catSearch: '',
+  showCatList: false,
+  unitSearch: '',
+  showUnitList: false,
+  isSubmitted: false
+};
+
 export function TabProductos({ categories }: { categories: Category[] }) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   
-  const [state, dispatch] = useReducer(tabProductosReducer, {
-    showModal: false,
-    editingId: null,
-    search: '',
-    form: { code: '', name: '', categoryId: '', unitId: '', sellPrice: '', minStock: '' },
-    catSearch: '',
-    showCatList: false,
-    unitSearch: '',
-    showUnitList: false,
-    isSubmitted: false
-  });
+  const [state, dispatch] = useReducer(tabProductosReducer, initialTabProductosState);
 
   const {
     showModal,

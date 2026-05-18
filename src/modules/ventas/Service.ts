@@ -153,8 +153,8 @@ export const ventaService = {
     ]);
     const sucursalId = config?.sucursal_id || 'LOCAL';
 
-    // Si no hay fecha 'desde', usamos el inicio del día actual
-    const fechaFiltro = desde ? desde : "date('now', 'start of day')";
+    // Si no hay fecha 'desde', usamos el inicio del día actual en hora local
+    const fechaFiltro = desde ? desde : "date('now', 'localtime')";
     const isTimestamp = desde ? true : false;
 
     // Obtener ventas y gastos en paralelo

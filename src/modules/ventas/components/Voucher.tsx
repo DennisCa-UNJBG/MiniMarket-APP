@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import { useQuery } from '@tanstack/react-query';
 import { negocioService } from '../../configuracion/negocioService';
 
@@ -16,7 +17,7 @@ export function Voucher({ venta, detalles }: VoucherProps) {
   const fechaStr = new Date(venta.fecha + " UTC").toLocaleDateString();
   const horaStr = new Date(venta.fecha + " UTC").toLocaleTimeString();
 
-  return (
+  const voucherMarkup = (
     <div id="printable-voucher" className="hidden print:block font-mono text-black bg-white p-4 w-[80mm] mx-auto">
       <div className="text-center mb-4">
         <h1 className="text-lg font-semibold uppercase">
@@ -94,22 +95,34 @@ export function Voucher({ venta, detalles }: VoucherProps) {
       <style>{`
         @media print {
           @page { 
+            size: 80mm auto;
             margin: 0; 
           }
-          body * { visibility: hidden; }
-          #printable-voucher, #printable-voucher * { visibility: visible; }
-          #printable-ticket { display: none; } /* Asegurar que el ID anterior no interfiera */
+          html, body {
+            width: 80mm;
+            background: white !important;
+            margin: 0;
+            padding: 0;
+          }
+          #root {
+            display: none !important;
+          }
           #printable-voucher {
+            display: block !important;
             position: absolute;
             left: 0;
             top: 0;
             width: 80mm;
             margin: 0;
-            padding: 10mm; /* Añadimos padding interno para que el texto no pegue al borde físico */
-            background: white;
+            padding: 4mm;
+            box-sizing: border-box;
+            background: white !important;
+            color: black !important;
           }
         }
       `}</style>
     </div>
   );
+
+  return createPortal(voucherMarkup, document.body);
 }

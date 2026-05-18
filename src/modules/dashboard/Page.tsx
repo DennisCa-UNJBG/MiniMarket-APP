@@ -15,6 +15,7 @@ import { useNavigate } from 'react-router-dom';
 import { Tooltip } from '../../components/ui/Tooltip';
 import { Button } from '../../components/ui/Button';
 import { useAuth } from '../../contexts/AuthContext';
+import { dateUtils } from '../../lib/dateUtils';
 import { 
   AreaChart, 
   Area, 
@@ -24,13 +25,6 @@ import {
   Tooltip as RechartsTooltip, 
   ResponsiveContainer 
 } from 'recharts';
-
-const statsConfig = [
-  { key: 'totalProductos',  label: 'Productos en stock', icon: Package,      color: 'bg-blue-500' },
-  { key: 'ventasHoy',       label: 'Ventas de hoy',     icon: ShoppingCart, color: 'bg-emerald-500', isMoney: true },
-  { key: 'comprasHoy',      label: 'Compras del día',    icon: Truck,        color: 'bg-amber-500',   isMoney: true },
-  { key: 'ventasMes',       label: 'Ingresos del mes',   icon: TrendingUp,   color: 'bg-sky-500',     isMoney: true },
-];
 
 export function Dashboard() {
   const navigate = useNavigate();
@@ -65,15 +59,55 @@ export function Dashboard() {
     queryFn: () => negocioService.get()
   });
 
+  const cards = useMemo(() => {
+    if (!stats) return [];
+    
+    const gananciaHoy = stats.ventasHoy - stats.comprasHoy;
+    const isPositive = gananciaHoy >= 0;
+    
+    return [
+      { 
+        label: 'Productos en stock', 
+        value: stats.totalProductos.toString(), 
+        icon: Package, 
+        color: 'bg-blue-500 shadow-blue-200' 
+      },
+      { 
+        label: 'Ventas de hoy', 
+        value: `S/ ${stats.ventasHoy.toFixed(2)}`, 
+        icon: ShoppingCart, 
+        color: 'bg-emerald-500 shadow-emerald-200' 
+      },
+      { 
+        label: 'Compras del día', 
+        value: `S/ ${stats.comprasHoy.toFixed(2)}`, 
+        icon: Truck, 
+        color: 'bg-amber-500 shadow-amber-200' 
+      },
+      { 
+        label: 'Ganancia del día', 
+        value: `S/ ${gananciaHoy.toFixed(2)}`, 
+        icon: TrendingUp, 
+        color: isPositive ? 'bg-emerald-500' : 'bg-rose-500',
+        cardClass: isPositive 
+          ? 'border-emerald-100 dark:border-emerald-950 bg-emerald-50/20 dark:bg-emerald-950/10' 
+          : 'border-rose-100 dark:border-rose-950 bg-rose-50/20 dark:bg-rose-950/10',
+        badge: isPositive ? 'Positiva' : 'Pérdida',
+        badgeVariant: isPositive ? 'emerald' : 'red'
+      },
+      { 
+        label: 'Ingresos del mes', 
+        value: `S/ ${stats.ventasMes.toFixed(2)}`, 
+        icon: TrendingUp, 
+        color: 'bg-sky-500 shadow-sky-200' 
+      },
+    ];
+  }, [stats]);
+
   const chartData = useMemo(() => {
     if (!rawChart) return [];
-    // Asegurar que tenemos los últimos 7 días representados
-    const last7Days = [];
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      last7Days.push(d.toISOString().split('T')[0]);
-    }
+    // Asegurar que tenemos los últimos 7 días representados en hora local
+    const last7Days = dateUtils.getLastDaysLocal(7);
 
     return last7Days.map(day => {
       const match = rawChart.find(rc => rc.dia === day);
@@ -88,7 +122,7 @@ export function Dashboard() {
   const formattedActivity = useMemo(() => {
     return activity.map(item => ({
       ...item,
-      fechaFormateada: new Date(item.fecha + " UTC").toLocaleString()
+      fechaFormateada: dateUtils.formatUTCtoLocalString(item.fecha)
     }));
   }, [activity]);
 
@@ -147,21 +181,26 @@ export function Dashboard() {
       )}
 
       {/* Tarjetas de estadísticas */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats && statsConfig.map(({ key, label, icon: Icon, color, isMoney }) => (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+        {cards.map(({ label, value, icon: Icon, color, cardClass, badge, badgeVariant }) => (
           <div
-            key={key}
-            className="bg-white dark:bg-zinc-800 rounded-3xl p-6 shadow-sm border border-zinc-100 dark:border-zinc-700 hover:shadow-md transition-all group"
+            key={label}
+            className={`bg-white dark:bg-zinc-800 rounded-3xl p-6 shadow-sm border hover:shadow-md transition-all group ${
+              cardClass || 'border-zinc-100 dark:border-zinc-700'
+            }`}
           >
             <div className="flex justify-between items-start mb-4">
-              <div className={`${color} p-3 rounded-2xl shadow-lg shadow-${color.split('-')[1]}-200 dark:shadow-none group-hover:scale-110 transition-transform`}>
+              <div className={`${color} p-3 rounded-2xl shadow-lg group-hover:scale-110 transition-transform`}>
                 <Icon size={24} className="text-white" />
               </div>
+              {badge && (
+                <Badge label={badge} variant={badgeVariant as any} />
+              )}
             </div>
             <div>
               <p className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">{label}</p>
               <p className="text-2xl font-black text-zinc-800 dark:text-white mt-1">
-                {isMoney ? `S/ ${(stats as any)[key].toFixed(2)}` : (stats as any)[key]}
+                {value}
               </p>
             </div>
           </div>

@@ -25,15 +25,14 @@ import { notificationService } from '../../lib/notifications';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { Tooltip } from '../../components/ui/Tooltip';
 import { Button } from '../../components/ui/Button';
+import { dateUtils } from '../../lib/dateUtils';
 
 const formatDate = (dateStr: string) => {
-  if (!dateStr) return '';
-  return new Date(dateStr + " UTC").toLocaleDateString();
+  return dateUtils.formatUTCtoLocalDateString(dateStr);
 };
 
 const formatTime = (dateStr: string) => {
-  if (!dateStr) return '';
-  return new Date(dateStr + " UTC").toLocaleTimeString();
+  return dateUtils.formatUTCtoLocalTimeString(dateStr);
 };
 
 const getColumns = (onViewDetail: (sale: any) => void, onAnular: (sale: any) => void): TableColumn<any>[] => [
@@ -52,10 +51,10 @@ const getColumns = (onViewDetail: (sale: any) => void, onAnular: (sale: any) => 
     render: (row) => (
       <div className="flex flex-col">
         <span suppressHydrationWarning className="text-xs font-medium text-zinc-700 dark:text-zinc-300 flex items-center gap-1">
-          <Calendar size={10} /> {new Date(row.fecha + " UTC").toLocaleDateString()}
+          <Calendar size={10} /> {dateUtils.formatUTCtoLocalDateString(row.fecha)}
         </span>
         <span suppressHydrationWarning className="text-[10px] text-zinc-400 flex items-center gap-1">
-          <Clock size={10} /> {new Date(row.fecha + " UTC").toLocaleTimeString()}
+          <Clock size={10} /> {dateUtils.formatUTCtoLocalTimeString(row.fecha)}
         </span>
       </div>
     )
@@ -151,6 +150,14 @@ type VentasAction =
   | { type: 'SET_SELECTED_SALE'; payload: any }
   | { type: 'SET_SALE_DETAILS'; payload: any[] };
 
+const initialVentasState: VentasState = {
+  page: 1,
+  pageSize: 10,
+  search: '',
+  selectedSale: null,
+  saleDetails: []
+};
+
 function ventasReducer(state: VentasState, action: VentasAction): VentasState {
   switch (action.type) {
     case 'SET_PAGE':
@@ -172,13 +179,7 @@ export function Ventas() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   
-  const [state, dispatch] = useReducer(ventasReducer, {
-    page: 1,
-    pageSize: 10,
-    search: '',
-    selectedSale: null,
-    saleDetails: []
-  });
+  const [state, dispatch] = useReducer(ventasReducer, initialVentasState);
 
   const { page, pageSize, search, selectedSale, saleDetails } = state;
 
@@ -189,7 +190,7 @@ export function Ventas() {
   const setSaleDetails = (payload: any[]) => dispatch({ type: 'SET_SALE_DETAILS', payload });
 
   // Queries
-  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+  const yesterday = dateUtils.getYesterdayLocal();
 
   const { data: salesRes = { data: [], total: 0 } } = useQuery({
     queryKey: ['sales', page, pageSize],
@@ -315,6 +316,7 @@ export function Ventas() {
         serverSide={true}
         totalItems={salesRes.total}
         currentPage={page}
+        pageSize={pageSize}
         onPageChange={setPage}
         onPageSizeChange={setPageSize}
         emptyState={

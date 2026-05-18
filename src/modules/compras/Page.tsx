@@ -271,6 +271,7 @@ export function Compras() {
         serverSide={true}
         totalItems={purchasesRes.total}
         currentPage={page}
+        pageSize={pageSize}
         onPageChange={(p) => dispatch({ type: 'SET_PAGE', payload: p })}
         keyExtractor={(row) => row.id}
         emptyMessage="No se encontraron registros de compras."

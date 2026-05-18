@@ -9,7 +9,7 @@ import {
   Filter,
   Download
 } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { DataTable, type TableColumn } from '../../components/ui/DataTable';
 import { Card } from '../../components/ui/Card';
@@ -20,6 +20,7 @@ import { Button } from '../../components/ui/Button';
 import { notificationService } from '../../lib/notifications';
 import { inventarioService } from '../inventario/Service';
 import { productoService, type Product } from '../productos/Service';
+import { dateUtils } from '../../lib/dateUtils';
 
 const columns: TableColumn<any>[] = [
   {
@@ -29,7 +30,7 @@ const columns: TableColumn<any>[] = [
       <div className="flex items-center gap-2">
         <Calendar size={14} className="text-zinc-400" />
         <span suppressHydrationWarning className="text-sm text-zinc-600 dark:text-zinc-400">
-          {new Date(row.fecha + " UTC").toLocaleString()}
+          {dateUtils.formatUTCtoLocalString(row.fecha)}
         </span>
       </div>
     ),
@@ -138,16 +139,18 @@ function kardexReducer(state: KardexState, action: KardexAction): KardexState {
   }
 }
 
+const initialKardexState: KardexState = {
+  selectedProduct: null,
+  search: '',
+  showProductList: false,
+  dateRange: { start: '', end: '' },
+  filterType: 'today',
+  page: 1,
+  pageSize: 10
+};
+
 export function Kardex() {
-  const [state, dispatch] = useReducer(kardexReducer, {
-    selectedProduct: null,
-    search: '',
-    showProductList: false,
-    dateRange: { start: '', end: '' },
-    filterType: 'today',
-    page: 1,
-    pageSize: 10
-  });
+  const [state, dispatch] = useReducer(kardexReducer, initialKardexState);
 
   const {
     selectedProduct,
@@ -183,23 +186,27 @@ export function Kardex() {
         fechaInicio: dateRange.start,
         fechaFin: dateRange.end
       }, page, pageSize);
-    }
+    },
+    placeholderData: keepPreviousData
   });
 
   const loadTodayMovements = () => {
     setFilterType('today');
     setSelectedProduct(null);
     setDateRange({ start: '', end: '' });
+    setPage(1);
   };
 
   const loadAllMovements = () => {
     setFilterType('all');
     setSelectedProduct(null);
     setDateRange({ start: '', end: '' });
+    setPage(1);
   };
 
   const handleFilter = () => {
     setFilterType('filtered');
+    setPage(1);
   };
 
   const exportToExcel = () => {
@@ -217,7 +224,7 @@ export function Kardex() {
     // Filas de datos
     movementsRes.data.forEach((m: any) => {
       table += `<tr>`;
-      table += `<td style="padding: 5px;">${new Date(m.fecha + " UTC").toLocaleString()}</td>`;
+      table += `<td style="padding: 5px;">${dateUtils.formatUTCtoLocalString(m.fecha)}</td>`;
       table += `<td style="padding: 5px;">${m.producto_nombre}</td>`;
       table += `<td style="padding: 5px;">${m.tipo_movimiento}</td>`;
       table += `<td style="padding: 5px;">${m.referencia}</td>`;
@@ -231,7 +238,7 @@ export function Kardex() {
     const blob = new Blob(['\ufeff', table], { type: 'application/vnd.ms-excel' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    const fileName = `kardex_${new Date().toISOString().split('T')[0]}.xls`;
+    const fileName = `kardex_${dateUtils.getTodayLocal()}.xls`;
     link.setAttribute("href", url);
     link.setAttribute("download", fileName);
     document.body.appendChild(link);
@@ -250,6 +257,7 @@ export function Kardex() {
     setShowProductList(false);
     setSearch('');
     setFilterType('filtered');
+    setPage(1);
   };
 
   const filteredProducts = products.filter(p => 
@@ -410,6 +418,7 @@ export function Kardex() {
               serverSide={true}
               totalItems={movementsRes.total}
               currentPage={page}
+              pageSize={pageSize}
               onPageChange={setPage}
               onPageSizeChange={setPageSize}
               emptyMessage={
