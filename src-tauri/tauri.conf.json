@@ -14,9 +14,11 @@
       {
         "title": "minimarket-app",
         "width": 1024,
-        "height": 768
+        "height": 768,
+        "maximized": true
       }
     ],
+
     "security": {
       "csp": null
     }

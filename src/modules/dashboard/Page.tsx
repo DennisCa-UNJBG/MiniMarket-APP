@@ -88,7 +88,7 @@ export function Dashboard() {
         label: 'Ganancia del día', 
         value: `S/ ${gananciaHoy.toFixed(2)}`, 
         icon: TrendingUp, 
-        color: isPositive ? 'bg-emerald-500' : 'bg-rose-500',
+        color: isPositive ? 'bg-emerald-500 shadow-emerald-200' : 'bg-rose-500 shadow-rose-200',
         cardClass: isPositive 
           ? 'border-emerald-100 dark:border-emerald-950 bg-emerald-50/20 dark:bg-emerald-950/10' 
           : 'border-rose-100 dark:border-rose-950 bg-rose-50/20 dark:bg-rose-950/10',

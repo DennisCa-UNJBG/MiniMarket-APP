@@ -105,7 +105,6 @@ export function SecuritySection() {
           </div>
           <Button 
             type="submit"
-            variant="secondary"
             isLoading={updatePasswordMutation.isPending}
             className="w-full sm:w-auto px-6 py-2.5 font-bold rounded-2xl bg-zinc-800 dark:bg-zinc-700 hover:bg-zinc-900 text-white"
           >

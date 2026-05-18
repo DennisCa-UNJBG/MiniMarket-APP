@@ -63,7 +63,8 @@ export function Caja() {
   });
 
   const cerrarCajaMutation = useMutation({
-    mutationFn: (monto: number) => cajaService.cerrarCaja(cajaAbierta!.id, user?.id || 1, monto),
+    mutationFn: ({ monto, esperado }: { monto: number; esperado: number }) => 
+      cajaService.cerrarCaja(cajaAbierta!.id, user?.id || 1, monto, esperado),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['caja-abierta'] });
       queryClient.invalidateQueries({ queryKey: ['caja-historial'] });
@@ -82,14 +83,37 @@ export function Caja() {
     abrirCajaMutation.mutate(monto);
   };
 
-  const handleCerrar = (e: React.FormEvent) => {
+  const handleCerrar = async (e: React.FormEvent) => {
     e.preventDefault();
     const monto = parseFloat(montoFinal);
     if (isNaN(monto) || monto < 0) {
       notificationService.warning('Monto inválido', 'Por favor ingresa el monto final real en caja.');
       return;
     }
-    cerrarCajaMutation.mutate(monto);
+
+    if (!cajaAbierta) return;
+
+    // Calcular montos y diferencias en tiempo real
+    const esperado = cajaAbierta.monto_inicial + (resumenVentas?.total_efectivo || 0) - (resumenVentas?.total_gastos_efectivo || 0);
+    const diferencia = monto - esperado;
+
+    let diffText = '';
+    if (diferencia > 0.01) {
+      diffText = `⚠️ SOBRANTE DETECTADO: +S/ ${diferencia.toFixed(2)}`;
+    } else if (diferencia < -0.01) {
+      diffText = `❌ FALTANTE DETECTADO: -S/ ${Math.abs(diferencia).toFixed(2)}`;
+    } else {
+      diffText = `✅ CAJA CUADRADA CORRECTAMENTE (S/ 0.00)`;
+    }
+
+    const confirmado = await notificationService.confirm(
+      'Confirmar Cierre de Caja',
+      `¿Deseas finalizar el turno con los siguientes saldos?\n\n• Esperado en físico: S/ ${esperado.toFixed(2)}\n• Contado en caja: S/ ${monto.toFixed(2)}\n\n${diffText}\n\nNota: Una vez cerrada la caja, no podrás modificar este registro.`
+    );
+
+    if (confirmado) {
+      cerrarCajaMutation.mutate({ monto, esperado });
+    }
   };
 
   const columns: TableColumn<any>[] = [
@@ -122,23 +146,62 @@ export function Caja() {
       key: 'monto_inicial',
       header: 'Inicial',
       align: 'right',
-      render: (row) => <span className="text-sm font-medium">S/ {row.monto_inicial.toFixed(2)}</span>
+      render: (row) => <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">S/ {row.monto_inicial.toFixed(2)}</span>
+    },
+    {
+      key: 'monto_esperado',
+      header: 'Esperado',
+      align: 'right',
+      render: (row) => {
+        return <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">S/ {row.total_monto_esperado.toFixed(2)}</span>;
+      }
     },
     {
       key: 'monto_final',
-      header: 'Final',
+      header: 'Final Real',
       align: 'right',
-      render: (row) => row.monto_final ? <span className="text-sm font-bold text-blue-600 dark:text-blue-400">S/ {row.monto_final.toFixed(2)}</span> : '-'
+      render: (row) => row.monto_final ? <span className="text-xs font-bold text-zinc-700 dark:text-zinc-200">S/ {row.monto_final.toFixed(2)}</span> : '-'
+    },
+    {
+      key: 'diferencia',
+      header: 'Diferencia',
+      align: 'right',
+      render: (row) => {
+        if (row.estado !== 'cerrada' || row.monto_final === undefined || row.monto_final === null) {
+          return <span className="text-[10px] italic text-blue-500">En curso...</span>;
+        }
+        const diferencia = row.monto_final - row.total_monto_esperado;
+        
+        if (diferencia > 0.01) {
+          return (
+            <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 px-2 py-0.5 rounded-lg">
+              +S/ {diferencia.toFixed(2)} (Sobrante)
+            </span>
+          );
+        } else if (diferencia < -0.01) {
+          return (
+            <span className="text-[10px] font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/30 px-2 py-0.5 rounded-lg">
+              -S/ {Math.abs(diferencia).toFixed(2)} (Faltante)
+            </span>
+          );
+        } else {
+          return (
+            <span className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-800 px-2 py-0.5 rounded-lg">
+              S/ 0.00 (Cuadrado)
+            </span>
+          );
+        }
+      }
     },
     {
       key: 'usuario_nombre',
       header: 'Usuario',
       render: (row) => (
         <div className="flex items-center gap-2">
-          <div className="size-6 bg-zinc-100 dark:bg-zinc-700 rounded-full flex items-center justify-center text-zinc-500">
-            <User size={12} />
+          <div className="size-5 bg-zinc-100 dark:bg-zinc-700 rounded-full flex items-center justify-center text-zinc-500">
+            <User size={10} />
           </div>
-          <span className="text-xs text-zinc-600 dark:text-zinc-400">{row.usuario_nombre}</span>
+          <span className="text-xs text-zinc-500">{row.usuario_nombre}</span>
         </div>
       )
     }

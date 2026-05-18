@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Store, Sun, Moon } from 'lucide-react';
 import { getVersion } from '@tauri-apps/api/app';
 import { useSidebar } from '../../contexts/SidebarContext';
@@ -12,6 +13,23 @@ export function Sidebar() {
   const { theme, toggleTheme } = useTheme();
   const { user } = useAuth();
   const [appVersion, setAppVersion] = useState('');
+  const [showThemeTooltip, setShowThemeTooltip] = useState(false);
+  const [themeTooltipCoords, setThemeTooltipCoords] = useState({ top: 0, left: 0 });
+  const themeBtnRef = useRef<HTMLButtonElement>(null);
+
+  const handleThemeMouseEnter = () => {
+    if (!isCollapsed || !themeBtnRef.current) return;
+    const rect = themeBtnRef.current.getBoundingClientRect();
+    setThemeTooltipCoords({
+      top: rect.top + rect.height / 2,
+      left: rect.right + 12,
+    });
+    setShowThemeTooltip(true);
+  };
+
+  const handleThemeMouseLeave = () => {
+    setShowThemeTooltip(false);
+  };
 
   useEffect(() => {
     getVersion().then(v => setAppVersion(v)).catch(console.error);
@@ -111,9 +129,14 @@ export function Sidebar() {
 
         {/* Toggle tema */}
         <button
+          ref={themeBtnRef}
           id="theme-toggle"
-          onClick={toggleTheme}
-          title={isCollapsed ? (theme === 'dark' ? 'Modo claro' : 'Modo oscuro') : undefined}
+          onClick={() => {
+            toggleTheme();
+            handleThemeMouseLeave();
+          }}
+          onMouseEnter={handleThemeMouseEnter}
+          onMouseLeave={handleThemeMouseLeave}
           className={[
             'flex items-center gap-3 px-3 py-2.5 rounded-xl w-full transition-all duration-200',
             'text-zinc-500 dark:text-zinc-400',
@@ -129,6 +152,29 @@ export function Sidebar() {
           )}
         </button>
       </div>
+
+      {/* Tooltip del toggle de tema renderizado vía Portal */}
+      {isCollapsed && showThemeTooltip && createPortal(
+        <div
+          style={{
+            position: 'fixed',
+            top: `${themeTooltipCoords.top}px`,
+            left: `${themeTooltipCoords.left}px`,
+            transform: 'translateY(-50%)',
+          }}
+          className={[
+            'z-[9999] px-3 py-1.5 bg-zinc-950 dark:bg-white',
+            'text-white dark:text-zinc-950 text-xs font-semibold rounded-lg shadow-xl',
+            'whitespace-nowrap pointer-events-none flex items-center transition-all duration-150',
+            'animate-in fade-in zoom-in-95 duration-100'
+          ].join(' ')}
+        >
+          {/* Flecha apuntadora */}
+          <div className="absolute right-full top-1/2 -translate-y-1/2 border-y-[5px] border-y-transparent border-r-[5px] border-r-zinc-950 dark:border-r-white mr-[-1px]"></div>
+          {theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
+        </div>,
+        document.body
+      )}
     </aside>
   );
 }

@@ -7,6 +7,7 @@ export interface Caja {
   usuario_id: number;
   monto_inicial: number;
   monto_final?: number;
+  monto_esperado?: number;
   fecha_apertura: string;
   fecha_cierre?: string;
   estado: 'abierta' | 'cerrada';
@@ -45,24 +46,24 @@ export const cajaService = {
   },
 
   /**
-   * Cierra la caja registrando el monto final
+   * Cierra la caja registrando el monto final y el esperado
    */
-  async cerrarCaja(cajaId: number, usuarioId: number, montoFinal: number): Promise<void> {
+  async cerrarCaja(cajaId: number, usuarioId: number, montoFinal: number, montoEsperado: number): Promise<void> {
     const db = await getDb();
     
     await Promise.all([
       db.execute(
         `UPDATE cajas 
-         SET monto_final = ?, fecha_cierre = CURRENT_TIMESTAMP, estado = 'cerrada' 
+         SET monto_final = ?, monto_esperado = ?, fecha_cierre = CURRENT_TIMESTAMP, estado = 'cerrada' 
          WHERE id = ?`,
-        [montoFinal, cajaId]
+        [montoFinal, montoEsperado, cajaId]
       ),
       logService.register({
         usuario_id: usuarioId,
         accion: 'CIERRE_CAJA',
         tabla: 'cajas',
         registro_id: cajaId,
-        detalles: `Caja cerrada con monto final de S/ ${montoFinal.toFixed(2)}`
+        detalles: `Caja cerrada con monto final de S/ ${montoFinal.toFixed(2)} (Esperado: S/ ${montoEsperado.toFixed(2)})`
       })
     ]);
   },
@@ -86,12 +87,36 @@ export const cajaService = {
   },
 
   /**
-   * Obtiene el historial de cierres de caja
+   * Obtiene el historial de cierres de caja con cálculos dinámicos y persistencia de monto esperado
    */
   async getHistorial(limit = 50): Promise<any[]> {
     const db = await getDb();
     return db.select(
-      `SELECT c.*, u.nombre_completo as usuario_nombre 
+      `SELECT 
+        c.*, 
+        u.nombre_completo as usuario_nombre,
+        COALESCE(
+          NULLIF(c.monto_esperado, 0),
+          c.monto_inicial + 
+          (
+            SELECT COALESCE(SUM(v.total), 0)
+            FROM ventas v
+            WHERE v.fecha >= c.fecha_apertura 
+              AND (c.fecha_cierre IS NULL OR v.fecha <= c.fecha_cierre)
+              AND v.metodo_pago = 'EFECTIVO'
+              AND v.estado != 'anulado'
+              AND (v.sucursal_id = c.sucursal_id OR v.sucursal_id IS NULL)
+          ) - 
+          (
+            SELECT COALESCE(SUM(ci.total), 0)
+            FROM compras_ingresos ci
+            WHERE ci.fecha >= c.fecha_apertura 
+              AND (c.fecha_cierre IS NULL OR ci.fecha <= c.fecha_cierre)
+              AND ci.metodo_pago = 'EFECTIVO'
+              AND ci.estado != 'anulado'
+              AND (ci.sucursal_id = c.sucursal_id OR ci.sucursal_id IS NULL)
+          )
+        ) as total_monto_esperado
        FROM cajas c
        JOIN usuarios u ON c.usuario_id = u.id
        ORDER BY c.fecha_apertura DESC
@@ -100,3 +125,5 @@ export const cajaService = {
     );
   }
 };
+
+

@@ -141,11 +141,11 @@ export function Ayuda() {
             <div className="flex flex-wrap justify-center lg:justify-start gap-4 pt-4">
               <div className="bg-white/10 backdrop-blur-md px-6 py-3 rounded-2xl border border-white/20">
                 <p className="text-xs opacity-70">Email Oficial</p>
-                <p className="font-bold">soporte@minimarketpro.com</p>
+                <p className="font-bold">dennis.tacna@gmail.com</p>
               </div>
               <div className="bg-white/10 backdrop-blur-md px-6 py-3 rounded-2xl border border-white/20">
                 <p className="text-xs opacity-70">Soporte Técnico</p>
-                <p className="font-bold">+51 900 000 000</p>
+                <p className="font-bold">+51 925 599 814</p>
               </div>
             </div>
           </div>

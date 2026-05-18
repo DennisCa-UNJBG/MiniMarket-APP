@@ -20,7 +20,9 @@ import {
   Plus,
   CloudSync,
   UserCog,
-  PieChart
+  PieChart,
+  Wallet,
+  Building2
 } from 'lucide-react';
 
 export const flowSteps = [
@@ -67,7 +69,7 @@ export const detailedGuides = [
             <Info size={16} className="text-blue-500" />
             🗂️ Estructura del Manual
           </h4>
-          <p className="text-xs text-zinc-500 dark:text-zinc-400">El manual está dividido en 14 capítulos que cubren desde el Dashboard hasta el sistema de Sincronización y Reportes, organizados para un aprendizaje progresivo.</p>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">El manual está dividido en 18 capítulos que cubren desde el Dashboard hasta el sistema de Auditoría de Sistemas y Reportes, organizados para un aprendizaje progresivo.</p>
         </div>
 
         <div className="p-5 bg-blue-50 dark:bg-blue-900/20 rounded-3xl border border-blue-100 dark:border-blue-800 space-y-4">
@@ -465,8 +467,54 @@ export const detailedGuides = [
     )
   },
   {
+    id: 'caja_control',
+    title: '07. Control de Caja',
+    icon: <Wallet size={20} className="text-emerald-500" />,
+    content: (
+      <div className="space-y-6">
+        <p>El módulo de <strong>Control de Caja</strong> te permite supervisar el flujo de dinero en efectivo en el local, previniendo pérdidas y cuadrando los ingresos del turno.</p>
+        
+        <div className="space-y-4">
+          <h4 className="font-semibold text-zinc-800 dark:text-white flex items-center gap-2 text-sm uppercase tracking-widest border-b border-zinc-100 dark:border-zinc-700 pb-2">
+            <Wallet size={16} className="text-emerald-500" />
+            Flujo de Caja del Turno
+          </h4>
+          <div className="grid grid-cols-1 gap-4 text-xs">
+            <div className="p-4 bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl border border-zinc-100 dark:border-zinc-700">
+              <span className="font-bold text-emerald-600 block mb-1">1. Apertura de Caja:</span>
+              Al iniciar tu turno, debes ingresar el "Monto Inicial" (sencillo o base de efectivo para dar vuelto). La caja pasará al estado <strong>ABIERTA</strong>.
+            </div>
+            <div className="p-4 bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl border border-zinc-100 dark:border-zinc-700">
+              <span className="font-bold text-emerald-600 block mb-1">2. Registro de Ventas:</span>
+              Durante el turno, cada venta cobrada en efectivo incrementará automáticamente el saldo de caja esperado por el sistema.
+            </div>
+            <div className="p-4 bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl border border-zinc-100 dark:border-zinc-700">
+              <span className="font-bold text-emerald-600 block mb-1">3. Cierre de Caja:</span>
+              Al finalizar el turno, debes contar el efectivo total de la gaveta e ingresarlo. El sistema calculará diferencias entre las ventas esperadas y el monto real ingresado, reportando sobrantes o faltantes.
+            </div>
+          </div>
+        </div>
+
+        <div className="p-5 bg-emerald-50 dark:bg-emerald-900/10 rounded-3xl border border-emerald-100 dark:border-emerald-900/30 space-y-3">
+          <h4 className="font-semibold text-emerald-700 dark:text-emerald-300 flex items-center gap-2 text-sm uppercase tracking-widest">
+            <Info size={16} />
+            Historial de Cierres
+          </h4>
+          <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
+            Conserva el histórico de aperturas, montos finales, fechas/horas exactas de cierre, y cajero a cargo.
+          </p>
+        </div>
+
+        <div className="flex items-start gap-3 p-4 bg-red-50 dark:bg-red-900/10 rounded-2xl border border-red-100 dark:border-red-900/30">
+          <AlertCircle size={18} className="text-red-600 shrink-0 mt-0.5" />
+          <p className="text-xs text-red-700 dark:text-red-400"><strong>IMPORTANTE:</strong> Realiza el arqueo físico minuciosamente antes de ingresar el monto final. Una caja cerrada no puede ser reabierta.</p>
+        </div>
+      </div>
+    )
+  },
+  {
     id: 'compras',
-    title: '07. Gestión de Compras',
+    title: '08. Gestión de Compras',
     icon: <Truck size={20} className="text-orange-500" />,
     content: (
       <div className="space-y-6">
@@ -522,7 +570,7 @@ export const detailedGuides = [
   },
   {
     id: 'clientes',
-    title: '08. Clientes y Fidelización',
+    title: '09. Clientes y Fidelización',
     icon: <UsersIcon size={20} className="text-violet-500" />,
     content: (
       <div className="space-y-6">
@@ -617,7 +665,7 @@ export const detailedGuides = [
   },
   {
     id: 'configuracion',
-    title: '10. Configuración del Sistema',
+    title: '11. Configuración del Sistema',
     icon: <Settings size={20} className="text-zinc-600" />,
     content: (
       <div className="space-y-6">
@@ -661,8 +709,45 @@ export const detailedGuides = [
     )
   },
   {
+    id: 'sucursales',
+    title: '12. Gestión de Sucursales',
+    icon: <Building2 size={20} className="text-indigo-500" />,
+    content: (
+      <div className="space-y-6">
+        <p>El módulo de <strong>Sucursales</strong> permite al Administrador del sistema gestionar los locales comerciales vinculados al negocio y configurar sus datos fiscales.</p>
+        
+        <div className="space-y-4">
+          <h4 className="font-semibold text-zinc-800 dark:text-white flex items-center gap-2 text-sm uppercase tracking-widest border-b border-zinc-100 dark:border-zinc-700 pb-2">
+            <Building2 size={16} className="text-indigo-500" />
+            Configuración y Sedes
+          </h4>
+          <div className="grid grid-cols-1 gap-4 text-xs">
+            <div className="p-4 bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl border border-zinc-100 dark:border-zinc-700">
+              <span className="font-bold text-indigo-600 block mb-1">Datos Legales de la Sede:</span>
+              Permite registrar el RUC, la Razón Social, la dirección física y el teléfono de contacto oficial de la sucursal activa.
+            </div>
+            <div className="p-4 bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl border border-zinc-100 dark:border-zinc-700">
+              <span className="font-bold text-indigo-600 block mb-1">Personalización de Comprobantes:</span>
+              Sube el logo de tu empresa en formato de imagen para que aparezca automáticamente en la impresión de las boletas térmicas de 80mm.
+            </div>
+          </div>
+        </div>
+
+        <div className="p-5 bg-indigo-50 dark:bg-indigo-900/10 rounded-3xl border border-indigo-100 dark:border-indigo-900/30 space-y-3">
+          <h4 className="font-semibold text-indigo-700 dark:text-indigo-300 flex items-center gap-2 text-sm uppercase tracking-widest">
+            <Info size={16} />
+            Identidad de Sede
+          </h4>
+          <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
+            Asigna un identificador único (ej: LOCAL) que diferenciará tus existencias de stock y transacciones durante la sincronización a la central.
+          </p>
+        </div>
+      </div>
+    )
+  },
+  {
     id: 'sincronizacion',
-    title: '11. Sincronización Multi-Sede',
+    title: '13. Sincronización Multi-Sede',
     icon: <CloudSync size={20} className="text-purple-600" />,
     content: (
       <div className="space-y-6">
@@ -702,8 +787,45 @@ export const detailedGuides = [
     )
   },
   {
+    id: 'auditoria',
+    title: '14. Auditoría de Sistemas',
+    icon: <ShieldCheck size={20} className="text-red-500" />,
+    content: (
+      <div className="space-y-6">
+        <p>El módulo de <strong>Auditoría</strong> es una herramienta de seguridad avanzada para administradores que registra todas las operaciones críticas realizadas en la aplicación.</p>
+        
+        <div className="space-y-4">
+          <h4 className="font-semibold text-zinc-800 dark:text-white flex items-center gap-2 text-sm uppercase tracking-widest border-b border-zinc-100 dark:border-zinc-700 pb-2">
+            <ShieldCheck size={16} className="text-red-500" />
+            Trazabilidad Completa
+          </h4>
+          <div className="grid grid-cols-1 gap-4 text-xs">
+            <div className="p-4 bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl border border-zinc-100 dark:border-zinc-700">
+              <span className="font-bold text-red-600 block mb-1">Registro Automatizado (Logs):</span>
+              Cada vez que un cajero abre la caja, realiza un cierre, inicia sesión, agrega un producto o hace una sincronización, el sistema genera de forma transparente un registro con la fecha, hora UTC y local exacta, el id del usuario y la tabla afectada.
+            </div>
+            <div className="p-4 bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl border border-zinc-100 dark:border-zinc-700">
+              <span className="font-bold text-red-600 block mb-1">Filtros Inteligentes de Auditoría:</span>
+              Filtra por tipo de acción (APERTURA_CAJA, CIERRE_CAJA, LOGIN, INGRESO_PRODUCTO) o busca términos específicos dentro de los detalles del evento.
+            </div>
+          </div>
+        </div>
+
+        <div className="p-5 bg-red-50 dark:bg-red-900/10 rounded-3xl border border-red-100 dark:border-red-900/30 space-y-3">
+          <h4 className="font-semibold text-red-700 dark:text-red-300 flex items-center gap-2 text-sm uppercase tracking-widest">
+            <Info size={16} />
+            Paginación Eficiente
+          </h4>
+          <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
+            Utiliza paginación en el servidor con SQLite (LIMIT y OFFSET) para cargar cientos de miles de logs instantáneamente sin ralentizar la aplicación.
+          </p>
+        </div>
+      </div>
+    )
+  },
+  {
     id: 'reportes',
-    title: '12. Reportes y Analítica',
+    title: '15. Reportes y Analítica',
     icon: <PieChart size={20} className="text-pink-500" />,
     content: (
       <div className="space-y-6">
@@ -752,7 +874,7 @@ export const detailedGuides = [
   },
   {
     id: 'ayuda',
-    title: '13. Centro de Ayuda',
+    title: '16. Centro de Ayuda',
     icon: <HelpCircle size={20} className="text-zinc-500" />,
     content: (
       <div className="space-y-6">
@@ -761,7 +883,7 @@ export const detailedGuides = [
         <div className="space-y-4">
            <div className="p-4 bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl border border-zinc-100 dark:border-zinc-700">
               <h5 className="font-semibold text-xs mb-1">Explorador de Módulos:</h5>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">Descripción breve y concisa de las 14 vistas principales del sistema.</p>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">Descripción breve y concisa de las 18 vistas principales del sistema.</p>
            </div>
            <div className="p-4 bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl border border-zinc-100 dark:border-zinc-700">
               <h5 className="font-semibold text-xs mb-1">Flujo de Información:</h5>
@@ -784,7 +906,7 @@ export const detailedGuides = [
   },
   {
     id: 'login',
-    title: '14. Acceso al Sistema (Login)',
+    title: '17. Acceso al Sistema (Login)',
     icon: <LogIn size={20} className="text-blue-600" />,
     content: (
       <div className="space-y-6">

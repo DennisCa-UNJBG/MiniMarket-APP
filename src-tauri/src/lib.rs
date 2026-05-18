@@ -1,13 +1,13 @@
 mod api;
 
-use std::fs;
-use tauri::{AppHandle, Manager, State};
 use serde_json::json;
+use std::fs;
 use std::sync::Arc;
+use tauri::{AppHandle, Manager, State};
 use tokio::sync::Mutex;
 // use axum::Router; // Eliminado por ser innecesario tras la refactorización
-use tower_http::cors::CorsLayer;
 use local_ip_address::local_ip;
+use tower_http::cors::CorsLayer;
 
 // Estado para controlar el servidor
 struct ServerState {
@@ -23,7 +23,11 @@ async fn get_local_ip() -> Result<String, String> {
 }
 
 #[tauri::command]
-async fn toggle_server(app_handle: AppHandle, state: State<'_, Arc<ServerState>>, active: bool) -> Result<bool, String> {
+async fn toggle_server(
+    app_handle: AppHandle,
+    state: State<'_, Arc<ServerState>>,
+    active: bool,
+) -> Result<bool, String> {
     let mut is_running = state.is_running.lock().await;
     let mut shutdown_tx = state.shutdown_tx.lock().await;
 
@@ -34,19 +38,18 @@ async fn toggle_server(app_handle: AppHandle, state: State<'_, Arc<ServerState>>
         *is_running = true;
 
         let app_handle_clone = app_handle.clone();
-        
+
         tokio::spawn(async move {
             let app_dir = app_handle_clone.path().app_data_dir().unwrap();
             let db_path = format!("sqlite:{}", app_dir.join("inventario.db").to_string_lossy());
-            
+
             // Conexión a la DB para el servidor Axum
             let pool = sqlx::SqlitePool::connect(&db_path).await.unwrap();
 
-            let app = api::create_router(pool)
-                .layer(CorsLayer::permissive());
+            let app = api::create_router(pool).layer(CorsLayer::permissive());
 
             let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await.unwrap();
-            
+
             axum::serve(listener, app)
                 .with_graceful_shutdown(async {
                     rx.await.ok();
@@ -80,9 +83,12 @@ fn greet(name: &str) -> String {
 
 #[tauri::command]
 async fn get_db_stats(app_handle: AppHandle) -> Result<serde_json::Value, String> {
-    let app_dir = app_handle.path().app_data_dir().map_err(|e| e.to_string())?;
+    let app_dir = app_handle
+        .path()
+        .app_data_dir()
+        .map_err(|e| e.to_string())?;
     let db_path = app_dir.join("inventario.db");
-    
+
     if db_path.exists() {
         let metadata = fs::metadata(&db_path).map_err(|e| e.to_string())?;
         Ok(json!({
@@ -99,9 +105,12 @@ async fn get_db_stats(app_handle: AppHandle) -> Result<serde_json::Value, String
 
 #[tauri::command]
 async fn backup_database(app_handle: AppHandle) -> Result<String, String> {
-    let app_dir = app_handle.path().app_data_dir().map_err(|e| e.to_string())?;
+    let app_dir = app_handle
+        .path()
+        .app_data_dir()
+        .map_err(|e| e.to_string())?;
     let db_path = app_dir.join("inventario.db");
-    
+
     if !db_path.exists() {
         return Err("No hay base de datos para respaldar".to_string());
     }
@@ -113,7 +122,7 @@ async fn backup_database(app_handle: AppHandle) -> Result<String, String> {
         .duration_since(std::time::UNIX_EPOCH)
         .map_err(|e| e.to_string())?
         .as_secs();
-        
+
     let backup_path = backup_dir.join(format!("backup_inventario_{}.db", now));
     fs::copy(&db_path, &backup_path).map_err(|e| e.to_string())?;
 
@@ -325,6 +334,12 @@ pub fn run() {
                   CREATE INDEX IF NOT EXISTS idx_ventas_fecha ON ventas (fecha);
                   CREATE INDEX IF NOT EXISTS idx_compras_fecha ON compras_ingresos (fecha);",
             kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 19,
+            description: "add_monto_esperado_to_cajas",
+            sql: "ALTER TABLE cajas ADD COLUMN monto_esperado REAL DEFAULT 0;",
+            kind: MigrationKind::Up,
         }
     ];
 
@@ -341,9 +356,9 @@ pub fn run() {
                 .build(),
         )
         .invoke_handler(tauri::generate_handler![
-            greet, 
-            get_db_stats, 
-            backup_database, 
+            greet,
+            get_db_stats,
+            backup_database,
             reveal_in_explorer,
             get_local_ip,
             toggle_server,
