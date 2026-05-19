@@ -147,6 +147,74 @@ async fn reveal_in_explorer(path: String) -> Result<(), String> {
     }
 }
 
+fn get_perudevs_key(app_handle: &tauri::AppHandle) -> String {
+    // 1. Intentar variable de entorno de ejecución
+    if let Ok(key) = std::env::var("PERUDEVS_API_KEY") {
+        if !key.trim().is_empty() {
+            return key.trim().to_string();
+        }
+    }
+
+    // 2. Intentar archivo local perudevs.key en App Data Dir
+    if let Ok(app_dir) = app_handle.path().app_data_dir() {
+        let key_path = app_dir.join("perudevs.key");
+        if key_path.exists() {
+            if let Ok(key) = std::fs::read_to_string(key_path) {
+                if !key.trim().is_empty() {
+                    return key.trim().to_string();
+                }
+            }
+        }
+    }
+
+    // 3. Compile-time env var fallback
+    option_env!("PERUDEVS_API_KEY").unwrap_or("").to_string()
+}
+
+#[tauri::command]
+async fn save_perudevs_key(app_handle: tauri::AppHandle, key: String) -> Result<(), String> {
+    let app_dir = app_handle.path().app_data_dir().map_err(|e| e.to_string())?;
+    std::fs::create_dir_all(&app_dir).map_err(|e| e.to_string())?;
+    let key_path = app_dir.join("perudevs.key");
+    std::fs::write(key_path, key.trim()).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+async fn has_perudevs_key(app_handle: tauri::AppHandle) -> Result<bool, String> {
+    let key = get_perudevs_key(&app_handle);
+    Ok(!key.is_empty())
+}
+
+#[tauri::command]
+async fn query_perudevs_document(app_handle: tauri::AppHandle, document: String) -> Result<String, String> {
+    let key = get_perudevs_key(&app_handle);
+    if key.is_empty() {
+        return Err("Clave API de PeruDevs no configurada. Por favor configúrela en la sección de Ajustes.".to_string());
+    }
+
+    let url = if document.len() == 8 {
+        format!("https://api.perudevs.com/api/v1/dni/simple?document={}&key={}", document, key)
+    } else if document.len() == 11 {
+        format!("https://api.perudevs.com/api/v1/ruc?document={}&key={}", document, key)
+    } else {
+        return Err("El documento debe tener 8 dígitos (DNI) u 11 dígitos (RUC).".to_string());
+    };
+
+    let client = reqwest::Client::new();
+    let response = client.get(&url)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if !response.status().is_success() {
+        return Err(format!("Error de la API de PeruDevs: Código {}", response.status()));
+    }
+
+    let body = response.text().await.map_err(|e| e.to_string())?;
+    Ok(body)
+}
+
 use tauri_plugin_sql::{Migration, MigrationKind};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -340,6 +408,21 @@ pub fn run() {
             description: "add_monto_esperado_to_cajas",
             sql: "ALTER TABLE cajas ADD COLUMN monto_esperado REAL DEFAULT 0;",
             kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 20,
+            description: "create_clientes_table",
+            sql: "CREATE TABLE IF NOT EXISTS clientes (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    nombre TEXT NOT NULL,
+                    dni_ruc TEXT UNIQUE,
+                    telefono TEXT,
+                    email TEXT,
+                    compras INTEGER DEFAULT 0,
+                    total_gastado REAL DEFAULT 0.0,
+                    estado TEXT DEFAULT 'activo'
+                  );",
+            kind: MigrationKind::Up,
         }
     ];
 
@@ -362,7 +445,10 @@ pub fn run() {
             reveal_in_explorer,
             get_local_ip,
             toggle_server,
-            is_server_running
+            is_server_running,
+            save_perudevs_key,
+            has_perudevs_key,
+            query_perudevs_document
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

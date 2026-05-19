@@ -52,13 +52,26 @@ export const negocioService = {
           telefono = ?, 
           email = ? 
         WHERE id = ?`,
-        [datos.razon_social, datos.ruc, datos.direccion, datos.telefono, datos.email, current.id]
+        [
+          datos.razon_social,
+          datos.ruc,
+          datos.direccion,
+          datos.telefono,
+          datos.email,
+          current.id
+        ]
       );
     } else {
       await db.execute(
         `INSERT INTO negocio (razon_social, ruc, direccion, telefono, email) 
           VALUES (?, ?, ?, ?, ?)`,
-        [datos.razon_social, datos.ruc, datos.direccion, datos.telefono, datos.email]
+        [
+          datos.razon_social,
+          datos.ruc,
+          datos.direccion,
+          datos.telefono,
+          datos.email
+        ]
       );
     }
     return true;
