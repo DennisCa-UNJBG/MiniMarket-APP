@@ -73,6 +73,7 @@ export function ProductModal({
             <input 
               id="unidad-medida"
               type="text"
+              autoComplete="off"
               className={`${inputCls} ${isSubmitted && errors.unitId ? 'border-red-300 dark:border-red-500/50' : ''}`}
               placeholder="Buscar unidad..."
               value={unitSearch}
@@ -139,6 +140,7 @@ export function ProductModal({
             <input 
               id="buscar-categoria"
               type="text"
+              autoComplete="off"
               className={`${inputCls} ${isSubmitted && errors.categoryId ? 'border-red-300 dark:border-red-500/50' : ''}`}
               placeholder="Buscar o seleccionar categoría..."
               value={catSearch}
