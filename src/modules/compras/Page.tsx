@@ -17,6 +17,7 @@ import { inventarioService } from '../inventario/Service';
 import { notificationService } from '../../lib/notifications';
 import { NewPurchaseModal } from './components/NewPurchaseModal';
 import { PurchaseDetailsModal } from './components/PurchaseDetailsModal';
+import { EmptyState } from '../../components/ui/EmptyState';
 
 const formatDate = (dateStr: string) => {
   if (!dateStr) return '';
@@ -274,7 +275,22 @@ export function Compras() {
         pageSize={pageSize}
         onPageChange={(p) => dispatch({ type: 'SET_PAGE', payload: p })}
         keyExtractor={(row) => row.id}
-        emptyMessage="No se encontraron registros de compras."
+        emptyState={
+          <EmptyState
+            icon={Truck}
+            title="Sin compras registradas"
+            description={search ? `No se encontró ninguna compra para "${search}".` : "No hay compras registradas todavía. Registra una nueva compra para empezar."}
+            action={
+              !search ? (
+                <Button
+                  onClick={() => dispatch({ type: 'SET_SHOW_MODAL', payload: true })}
+                >
+                  Registrar mi primera compra
+                </Button>
+              ) : undefined
+            }
+          />
+        }
       />
 
       <NewPurchaseModal isOpen={showModal} onClose={() => dispatch({ type: 'SET_SHOW_MODAL', payload: false })} />

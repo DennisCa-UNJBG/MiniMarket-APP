@@ -38,8 +38,8 @@ export const ventaService = {
 
     // 2. Insertar Cabecera
     const resVenta = await db.execute(
-      `INSERT INTO ventas (usuario_id, total, igv, igv_porcentaje, metodo_pago, monto_pagado, vuelto, sucursal_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [venta.usuario_id, venta.total, venta.igv || 0, venta.igv_porcentaje || 0, venta.metodo_pago, venta.monto_pagado, venta.vuelto, sucursalId]
+      `INSERT INTO ventas (usuario_id, cliente_id, total, igv, igv_porcentaje, metodo_pago, monto_pagado, vuelto, sucursal_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [venta.usuario_id, venta.cliente_id || null, venta.total, venta.igv || 0, venta.igv_porcentaje || 0, venta.metodo_pago, venta.monto_pagado, venta.vuelto, sucursalId]
     );
     
     const ventaId = resVenta.lastInsertId as number;
@@ -84,6 +84,14 @@ export const ventaService = {
       );
     }));
 
+    // Si se especificó un cliente, actualizar sus estadísticas de compra
+    if (venta.cliente_id) {
+      await db.execute(
+        `UPDATE clientes SET compras = compras + 1, total_gastado = total_gastado + ? WHERE id = ?`,
+        [venta.total, venta.cliente_id]
+      );
+    }
+
     // 5. Log de Auditoría
     await logService.register({
       usuario_id: venta.usuario_id,
@@ -117,13 +125,48 @@ export const ventaService = {
         SELECT 
           v.*, 
           u.nombre_completo as usuario_nombre,
+          c.nombre as cliente_nombre,
+          c.dni_ruc as cliente_dni_ruc,
           (SELECT COUNT(*) FROM ventas_detalle WHERE venta_id = v.id) as items_count
         FROM ventas v
         JOIN usuarios u ON v.usuario_id = u.id
+        LEFT JOIN clientes c ON v.cliente_id = c.id
         WHERE v.sucursal_id = ? OR v.sucursal_id IS NULL
         ORDER BY v.fecha DESC
         LIMIT ? OFFSET ?
       `, [sucursalId, pageSize, offset])
+    ]);
+    const total = totalRes[0]?.count || 0;
+
+    return { data, total };
+  },
+
+  /**
+   * Obtiene el historial de ventas asociadas a un cliente específico
+   */
+  async getVentasPorCliente(clienteId: number, page = 1, pageSize = 10): Promise<{ data: any[], total: number }> {
+    const db = await getDb();
+    const offset = (page - 1) * pageSize;
+
+    const [totalRes, data] = await Promise.all([
+      db.select<any[]>(
+        'SELECT COUNT(*) as count FROM ventas WHERE cliente_id = ?',
+        [clienteId]
+      ),
+      db.select<any[]>(`
+        SELECT 
+          v.*, 
+          u.nombre_completo as usuario_nombre,
+          c.nombre as cliente_nombre,
+          c.dni_ruc as cliente_dni_ruc,
+          (SELECT COUNT(*) FROM ventas_detalle WHERE venta_id = v.id) as items_count
+        FROM ventas v
+        JOIN usuarios u ON v.usuario_id = u.id
+        LEFT JOIN clientes c ON v.cliente_id = c.id
+        WHERE v.cliente_id = ?
+        ORDER BY v.fecha DESC
+        LIMIT ? OFFSET ?
+      `, [clienteId, pageSize, offset])
     ]);
     const total = totalRes[0]?.count || 0;
 
@@ -226,6 +269,10 @@ export const ventaService = {
   async anularVenta(ventaId: number): Promise<void> {
     const db = await getDb();
     
+    // Obtener detalles de la venta (cliente_id, total, usuario_id) antes de anular
+    const ventaInfo = await db.select<any[]>('SELECT cliente_id, total, usuario_id FROM ventas WHERE id = ?', [ventaId]);
+    const { cliente_id, total, usuario_id } = ventaInfo[0] || { cliente_id: null, total: 0, usuario_id: 1 };
+
     // 1. Obtener detalles para revertir stock
     const items = await db.select<any[]>('SELECT producto_id, cantidad FROM ventas_detalle WHERE venta_id = ?', [ventaId]);
     
@@ -249,12 +296,20 @@ export const ventaService = {
       [ventaId]
     );
 
-    // 5. Log de auditoría
-    const session = await db.select<any[]>('SELECT usuario_id FROM ventas WHERE id = ?', [ventaId]);
-    const usuarioId = session[0]?.usuario_id || 1;
+    // Si estaba asociada a un cliente, revertir sus estadísticas
+    if (cliente_id) {
+      await db.execute(
+        `UPDATE clientes 
+         SET compras = MAX(0, compras - 1), 
+             total_gastado = MAX(0.0, total_gastado - ?) 
+         WHERE id = ?`,
+        [total, cliente_id]
+      );
+    }
 
+    // 5. Log de auditoría
     await logService.register({
-      usuario_id: usuarioId,
+      usuario_id: usuario_id,
       accion: 'ANULACION_VENTA',
       tabla: 'ventas',
       registro_id: ventaId,

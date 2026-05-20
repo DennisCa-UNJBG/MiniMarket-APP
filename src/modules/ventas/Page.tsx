@@ -372,6 +372,12 @@ export function Ventas() {
                   variant={selectedSale.estado === 'anulado' ? 'red' : 'emerald'} 
                 />
               </div>
+              <div className="col-span-2">
+                <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Cliente</p>
+                <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-200 truncate">
+                  {selectedSale.cliente_nombre ? `${selectedSale.cliente_nombre} (${selectedSale.cliente_dni_ruc || 'S/D'})` : 'Público en General'}
+                </p>
+              </div>
             </div>
 
             {/* Tabla de Items */}

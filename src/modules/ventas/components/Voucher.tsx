@@ -37,6 +37,8 @@ export function Voucher({ venta, detalles }: VoucherProps) {
         <p suppressHydrationWarning>HORA: {horaStr}</p>
         <p>CAJERO: {venta.usuario_nombre || 'Admin'}</p>
         <p>PAGO: {venta.metodo_pago}</p>
+        <p>CLIENTE: {venta.cliente_nombre || ''}</p>
+        <p>DNI/RUC: {venta.cliente_dni_ruc || ''}</p>
       </div>
 
       <div className="border-b border-dashed border-black my-2"></div>

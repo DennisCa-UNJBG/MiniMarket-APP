@@ -48,7 +48,7 @@ export const clienteService = {
   async create(
     cliente: Omit<Cliente, 'id' | 'compras' | 'total_gastado' | 'estado'>,
     usuarioId: number
-  ): Promise<void> {
+  ): Promise<number> {
     const db = await getDb();
     const result = await db.execute(
       `INSERT INTO clientes (nombre, dni_ruc, telefono, email, compras, total_gastado, estado) 
@@ -71,6 +71,8 @@ export const clienteService = {
       registro_id: clienteId,
       detalles: `Se registró el cliente: ${cliente.nombre} (DNI/RUC: ${cliente.dni_ruc || 'Sin Documento'})`
     });
+
+    return clienteId;
   },
 
   async update(
@@ -100,6 +102,27 @@ export const clienteService = {
       registro_id: id,
       detalles: `Se editó el cliente: ${cliente.nombre} (DNI/RUC: ${cliente.dni_ruc || 'Sin Documento'})`
     });
+  },
+
+  async existsDniRuc(dniRuc: string, excludeId?: number): Promise<boolean> {
+    const db = await getDb();
+    let query = "SELECT COUNT(*) as count FROM clientes WHERE dni_ruc = ? AND estado = 'activo'";
+    const params: any[] = [dniRuc.trim()];
+    if (excludeId) {
+      query += " AND id != ?";
+      params.push(excludeId);
+    }
+    const result = await db.select<any[]>(query, params);
+    return (result[0]?.count || 0) > 0;
+  },
+
+  async getByDniRuc(dniRuc: string): Promise<Cliente | null> {
+    const db = await getDb();
+    const result = await db.select<Cliente[]>(
+      "SELECT * FROM clientes WHERE dni_ruc = ? AND estado = 'activo' LIMIT 1",
+      [dniRuc.trim()]
+    );
+    return result[0] || null;
   },
 
   async queryDocument(document: string, key: string): Promise<{ nombre: string }> {

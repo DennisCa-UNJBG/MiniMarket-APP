@@ -423,6 +423,13 @@ pub fn run() {
                     estado TEXT DEFAULT 'activo'
                   );",
             kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 21,
+            description: "add_cliente_id_to_ventas",
+            sql: "ALTER TABLE ventas ADD COLUMN cliente_id INTEGER REFERENCES clientes(id);
+                  CREATE INDEX IF NOT EXISTS idx_ventas_cliente ON ventas (cliente_id);",
+            kind: MigrationKind::Up,
         }
     ];
 
