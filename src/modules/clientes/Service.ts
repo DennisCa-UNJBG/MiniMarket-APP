@@ -124,7 +124,6 @@ export const clienteService = {
     );
     return result[0] || null;
   },
-
   async queryDocument(document: string, key: string): Promise<{ nombre: string }> {
     if (!document) {
       throw new Error('El número de documento es obligatorio.');
