@@ -5,7 +5,7 @@ use axum::{
 };
 use serde_json::{json, Value};
 use sqlx::SqlitePool;
-use crate::api::dtos::{SyncPayloadDto, StockPayloadDto, KardexPayloadDto};
+use crate::api::dtos::{SyncPayloadDto, StockPayloadDto, KardexPayloadDto, ProductoCrearDto};
 
 pub async fn get_productos(
     headers: HeaderMap,
@@ -251,4 +251,139 @@ pub async fn sincronizar_kardex(
     }
 
     (StatusCode::OK, Json(json!({ "status": "ok", "procesados": procesados })))
+}
+
+pub async fn verificar_crear_producto(
+    headers: HeaderMap,
+    State(pool): State<SqlitePool>,
+    Json(payload): Json<ProductoCrearDto>,
+) -> (StatusCode, Json<Value>) {
+    let sucursal_id = headers.get("X-Sucursal-Key")
+        .and_then(|h| h.to_str().ok())
+        .unwrap_or("");
+
+    if sucursal_id.is_empty() {
+        return (StatusCode::UNAUTHORIZED, Json(json!({ "error": "Llave de sucursal requerida" })));
+    }
+
+    // Validar sucursal activa
+    let sucursal = sqlx::query("SELECT id FROM sucursales WHERE codigo = ? AND estado = 'activo'")
+        .bind(sucursal_id)
+        .fetch_optional(&pool)
+        .await
+        .unwrap();
+
+    if sucursal.is_none() {
+        return (StatusCode::FORBIDDEN, Json(json!({ "error": "Sucursal no autorizada o inactiva" })));
+    }
+
+    // Verificar si ya existe el código de barras
+    let prod_existente = sqlx::query("SELECT nombre FROM productos WHERE codigo_barras = ?")
+        .bind(&payload.codigo_barras)
+        .fetch_optional(&pool)
+        .await
+        .unwrap();
+
+    if let Some(row) = prod_existente {
+        use sqlx::Row;
+        let nombre_existente: String = row.get("nombre");
+        return (
+            StatusCode::CONFLICT,
+            Json(json!({
+                "error": "El código de barras ya está registrado en la central",
+                "producto": {
+                    "nombre": nombre_existente
+                }
+            })),
+        );
+    }
+
+    // Resolver categoría en la central
+    let mut categoria_id: Option<i32> = None;
+    if let Some(cat_nombre) = &payload.categoria_nombre {
+        if !cat_nombre.trim().is_empty() {
+            let cat_res = sqlx::query("SELECT id FROM categorias WHERE LOWER(nombre) = LOWER(?)")
+                .bind(cat_nombre)
+                .fetch_optional(&pool)
+                .await
+                .unwrap();
+
+            if let Some(cat_row) = cat_res {
+                use sqlx::Row;
+                categoria_id = Some(cat_row.get("id"));
+            } else {
+                // Crear categoría si no existe
+                let ins_cat = sqlx::query("INSERT INTO categorias (nombre, color) VALUES (?, '#6366f1')")
+                    .bind(cat_nombre)
+                    .execute(&pool)
+                    .await;
+                if let Ok(r) = ins_cat {
+                    categoria_id = Some(r.last_insert_rowid() as i32);
+                }
+            }
+        }
+    }
+
+    // Resolver unidad de medida si viene como unidad_id
+    // Nota: Aunque payload tenga unidad_id, en la central podemos guardar el nombre o abreviatura
+    let mut unidad_txt: Option<String> = None;
+    if let Some(uid) = payload.unidad_id {
+        let u_res = sqlx::query("SELECT abreviatura FROM unidades_medida WHERE id = ?")
+            .bind(uid)
+            .fetch_optional(&pool)
+            .await
+            .unwrap();
+        if let Some(u_row) = u_res {
+            use sqlx::Row;
+            unidad_txt = Some(u_row.get("abreviatura"));
+        }
+    }
+
+    // Insertar producto
+    let res = sqlx::query(
+        "INSERT INTO productos (codigo_barras, nombre, categoria_id, unidad_medida, stock_minimo, estado) 
+         VALUES (?, ?, ?, ?, ?, 'activo')"
+    )
+    .bind(&payload.codigo_barras)
+    .bind(&payload.nombre)
+    .bind(categoria_id)
+    .bind(unidad_txt)
+    .bind(payload.stock_minimo)
+    .execute(&pool)
+    .await;
+
+    match res {
+        Ok(r) => {
+            let prod_id = r.last_insert_rowid();
+
+            // Insertar precio inicial si aplica
+            if payload.precio_venta > 0.0 || payload.precio_compra > 0.0 {
+                let _ = sqlx::query(
+                    "INSERT INTO precios_historial (producto_id, precio_compra, precio_venta, activo) 
+                     VALUES (?, ?, ?, 1)"
+                )
+                .bind(prod_id)
+                .bind(payload.precio_compra)
+                .bind(payload.precio_venta)
+                .execute(&pool)
+                .await;
+            }
+
+            (
+                StatusCode::CREATED,
+                Json(json!({
+                    "status": "ok",
+                    "id": prod_id,
+                    "codigo_barras": payload.codigo_barras,
+                    "nombre": payload.nombre
+                })),
+            )
+        }
+        Err(e) => {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": format!("Error al guardar producto: {}", e) })),
+            )
+        }
+    }
 }

@@ -52,3 +52,14 @@ pub struct KardexPayloadDto {
     pub sucursal_id: String,
     pub movimientos: Vec<KardexSyncDto>,
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ProductoCrearDto {
+    pub codigo_barras: String,
+    pub nombre: String,
+    pub categoria_nombre: Option<String>,
+    pub unidad_id: Option<i32>,
+    pub stock_minimo: f64,
+    pub precio_compra: f64,
+    pub precio_venta: f64,
+}

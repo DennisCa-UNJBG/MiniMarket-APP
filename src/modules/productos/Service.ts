@@ -1,5 +1,7 @@
 import { getDb } from '../../lib/db';
 import { logService } from '../../lib/logService';
+import { sucursalService } from '../sucursales/Service';
+import { invoke } from '@tauri-apps/api/core';
 
 export interface Product {
   id: number;
@@ -45,9 +47,82 @@ export const productoService = {
 
   async create(product: Omit<Product, 'id' | 'estado'>, usuarioId: number): Promise<void> {
     const db = await getDb();
+
+    // 1. Verificar si este equipo está actuando como Sede Central
+    let isCentral = false;
+    try {
+      isCentral = await invoke<boolean>('is_server_running');
+    } catch (e) {
+      throw new Error('Error del sistema: No se pudo verificar si este equipo es la Sede Central. Reinicia la aplicación.');
+    }
+
+    if (isCentral) {
+      // --- FLUJO DE SEDE CENTRAL (Acceso directo a BD) ---
+      // Verificar si el código de barras ya existe localmente
+      const prodExistente = await db.select<any[]>(
+        'SELECT nombre FROM productos WHERE codigo_barras = ?',
+        [product.codigo_barras]
+      );
+
+      if (prodExistente.length > 0) {
+        throw new Error(`El código de barras ya está registrado en el catálogo maestro ("${prodExistente[0].nombre}").`);
+      }
+    } else {
+      // --- FLUJO DE SUCURSAL (Validación síncrona en línea) ---
+      // Obtener la configuración de la sucursal
+      const config = await sucursalService.getConfig();
+      if (!config || !config.api_url_central || !config.sucursal_id) {
+        throw new Error('Configuración de sucursal incompleta. Configure la conexión a la sede central.');
+      }
+
+      // Obtener el nombre de la categoría local para enviarla a la central
+      let categoriaNombre = "";
+      if (product.categoria_id) {
+        const catRow = await db.select<any[]>('SELECT nombre FROM categorias WHERE id = ?', [product.categoria_id]);
+        if (catRow.length > 0) {
+          categoriaNombre = catRow[0].nombre;
+        }
+      }
+
+      // Realizar la verificación y creación en línea en la central
+      let response;
+      try {
+        response = await fetch(`${config.api_url_central}/api/productos/verificar-crear`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Sucursal-Key': config.sucursal_id
+          },
+          body: JSON.stringify({
+            codigo_barras: product.codigo_barras,
+            nombre: product.nombre,
+            categoria_nombre: categoriaNombre || null,
+            unidad_id: product.unidad_id || null,
+            stock_minimo: product.stock_minimo,
+            precio_compra: product.precio_compra || 0.0,
+            precio_venta: product.precio_venta || 0.0
+          })
+        });
+      } catch (err) {
+        throw new Error('No se pudo conectar con el servidor central para validar el producto. Operación cancelada.');
+      }
+
+      if (!response.ok) {
+        if (response.status === 409) {
+          const errorData = await response.json();
+          const prodExistente = errorData.producto?.nombre ? ` ("${errorData.producto.nombre}")` : "";
+          throw new Error(`El código de barras ya está registrado en la central${prodExistente}.`);
+        } else {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || 'Error al validar el producto en el servidor central.');
+        }
+      }
+    }
+
+    // 4. Si la central responde con éxito, insertar localmente con sincronizado = 1
     const result = await db.execute(
-      `INSERT INTO productos (codigo_barras, nombre, categoria_id, unidad_id, stock_minimo, stock_actual) 
-       VALUES (?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO productos (codigo_barras, nombre, categoria_id, unidad_id, stock_minimo, stock_actual, sincronizado) 
+       VALUES (?, ?, ?, ?, ?, ?, 1)`,
       [
         product.codigo_barras,
         product.nombre,

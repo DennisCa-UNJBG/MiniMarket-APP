@@ -430,6 +430,12 @@ pub fn run() {
             sql: "ALTER TABLE ventas ADD COLUMN cliente_id INTEGER REFERENCES clientes(id);
                   CREATE INDEX IF NOT EXISTS idx_ventas_cliente ON ventas (cliente_id);",
             kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 22,
+            description: "add_sincronizado_to_productos",
+            sql: "ALTER TABLE productos ADD COLUMN sincronizado INTEGER DEFAULT 1;",
+            kind: MigrationKind::Up,
         }
     ];
 

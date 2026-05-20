@@ -15,5 +15,6 @@ pub fn create_router(pool: SqlitePool) -> Router {
         .route("/api/sincronizar", post(controllers::sincronizar_ventas))
         .route("/api/stock-update", post(controllers::update_stock))
         .route("/api/kardex-sync", post(controllers::sincronizar_kardex))
+        .route("/api/productos/verificar-crear", post(controllers::verificar_crear_producto))
         .with_state(pool)
 }
