@@ -17,6 +17,7 @@ import { Modal } from '../../components/ui/Modal';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Tooltip } from '../../components/ui/Tooltip';
 import { Button } from '../../components/ui/Button';
+import { EmptyState } from '../../components/ui/EmptyState';
 import { clienteService, type Cliente } from './Service';
 import { perudevsService } from '../configuracion/perudevsService';
 import { notificationService } from '../../lib/notifications';
@@ -122,8 +123,14 @@ export function Clientes() {
 
   const pageSizeOptions = [6, 12, 18, 24, 30];
 
+  const docTrimmed = form.dni_ruc.trim();
   const errors = {
     nombre: !form.nombre.trim() ? 'El nombre es obligatorio' : null,
+    dni_ruc: docTrimmed && !/^\d+$/.test(docTrimmed)
+      ? 'El documento debe contener solo números'
+      : docTrimmed && docTrimmed.length !== 8 && docTrimmed.length !== 11
+      ? 'El documento debe tener 8 dígitos (DNI) o 11 dígitos (RUC)'
+      : null,
   };
   const isValid = !Object.values(errors).some(Boolean);
 
@@ -139,7 +146,15 @@ export function Clientes() {
 
   // Save/Create/Edit client mutation
   const saveMutation = useMutation({
-    mutationFn: (newCliente: typeof form) => {
+    mutationFn: async (newCliente: typeof form) => {
+      const doc = newCliente.dni_ruc.trim();
+      if (doc) {
+        const exists = await clienteService.existsDniRuc(doc, editingId || undefined);
+        if (exists) {
+          throw new Error(`El DNI/RUC "${doc}" ya se encuentra registrado.`);
+        }
+      }
+
       if (editingId) {
         return clienteService.update(editingId, newCliente, user?.id || 1);
       } else {
@@ -244,8 +259,25 @@ export function Clientes() {
           <p className="text-xs text-zinc-400 dark:text-zinc-500">Cargando clientes...</p>
         </div>
       ) : clients.length === 0 ? (
-        <div className="flex flex-col items-center justify-center p-12 bg-white dark:bg-zinc-800 rounded-2xl border border-zinc-100 dark:border-zinc-700 shadow-sm">
-          <p className="text-zinc-400 dark:text-zinc-500 text-sm">No se encontraron clientes registrados.</p>
+        <div className="bg-white dark:bg-zinc-800 rounded-2xl border border-zinc-100 dark:border-zinc-700 shadow-sm">
+          <EmptyState
+            icon={User}
+            title="No se encontraron clientes registrados."
+            description={search ? `No se encontró ningún cliente con la búsqueda "${search}".` : "No hay clientes registrados en el sistema todavía. Agrega tu primer cliente para comenzar."}
+            action={
+              !search ? (
+                <Button
+                  onClick={() => {
+                    dispatch({ type: 'RESET_FORM' });
+                    setShowModal(true);
+                  }}
+                  icon={<Plus size={16} />}
+                >
+                  Crear mi primer cliente
+                </Button>
+              ) : undefined
+            }
+          />
         </div>
       ) : (
         <>
@@ -420,7 +452,7 @@ export function Clientes() {
                   value={form.dni_ruc}
                   onChange={(e) => setForm({ dni_ruc: e.target.value })}
                   disabled={!!editingId}
-                  className="flex-1 min-w-0 px-3 py-2 text-sm border border-zinc-200 dark:border-zinc-600 rounded-lg bg-zinc-50 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-400 transition disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-zinc-100 dark:disabled:bg-zinc-800" 
+                  className={`flex-1 min-w-0 px-3 py-2 text-sm border rounded-lg bg-zinc-50 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-400 transition disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-zinc-100 dark:disabled:bg-zinc-800 ${isSubmitted && errors.dni_ruc ? 'border-red-500 focus:ring-red-400' : 'border-zinc-200 dark:border-zinc-600'}`} 
                   placeholder="Número de documento..." 
                 />
                 {!editingId && (
@@ -439,6 +471,9 @@ export function Clientes() {
                   </Button>
                 )}
               </div>
+              {isSubmitted && errors.dni_ruc && (
+                <span className="text-[11px] text-red-500">{errors.dni_ruc}</span>
+              )}
             </div>
 
             {/* Nombre Completo / Razón Social */}

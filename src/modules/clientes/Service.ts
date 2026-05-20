@@ -102,6 +102,18 @@ export const clienteService = {
     });
   },
 
+  async existsDniRuc(dniRuc: string, excludeId?: number): Promise<boolean> {
+    const db = await getDb();
+    let query = "SELECT COUNT(*) as count FROM clientes WHERE dni_ruc = ? AND estado = 'activo'";
+    const params: any[] = [dniRuc.trim()];
+    if (excludeId) {
+      query += " AND id != ?";
+      params.push(excludeId);
+    }
+    const result = await db.select<any[]>(query, params);
+    return (result[0]?.count || 0) > 0;
+  },
+
   async queryDocument(document: string, key: string): Promise<{ nombre: string }> {
     if (!document) {
       throw new Error('El número de documento es obligatorio.');
