@@ -21,6 +21,7 @@ import { Tooltip } from '../../components/ui/Tooltip';
 import { Button } from '../../components/ui/Button';
 import { DataTable, type TableColumn } from '../../components/ui/DataTable';
 import { SedeModal } from './components/SedeModal';
+import { EmptyState } from '../../components/ui/EmptyState';
 
 export function Sucursales() {
   const { user } = useAuth();
@@ -36,12 +37,12 @@ export function Sucursales() {
   });
 
   const toggleStatusMutation = useMutation({
-    mutationFn: ({ id, status }: { id: number, status: 'activo' | 'inactivo' }) => 
+    mutationFn: ({ id, status }: { id: number, status: 'activo' | 'inactivo' }) =>
       sucursalService.toggleEstado(id, status, user?.id || 1),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['sedes'] });
       notificationService.success(
-        variables.status === 'activo' ? 'Sede Reactivada' : 'Sede Desactivada', 
+        variables.status === 'activo' ? 'Sede Reactivada' : 'Sede Desactivada',
         `La sucursal ahora está ${variables.status}.`
       );
     }
@@ -49,7 +50,7 @@ export function Sucursales() {
 
   const handleToggleStatus = async (id: number, currentStatus: string) => {
     const nuevoEstado = currentStatus === 'activo' ? 'inactivo' : 'activo';
-    const confirmMsg = nuevoEstado === 'inactivo' 
+    const confirmMsg = nuevoEstado === 'inactivo'
       ? '¿Estás seguro de desactivar esta sucursal? No podrá sincronizar hasta que sea reactivada.'
       : '¿Deseas reactivar esta sucursal?';
 
@@ -75,22 +76,22 @@ export function Sucursales() {
   const getStatus = (lastSync: string | null, estado: string) => {
     if (estado !== 'activo') return { label: 'DESACTIVADO', variant: 'gray' as const };
     if (!lastSync) return { label: 'NUNCA', variant: 'gray' as const };
-    
+
     const diff = new Date().getTime() - new Date(lastSync).getTime();
     if (diff < 300000) return { label: 'EN LÍNEA', variant: 'emerald' as const };
     return { label: 'DESCONECTADO', variant: 'amber' as const };
   };
 
-  const activeSedes = sedes.filter(s => 
-    s.estado === 'activo' && 
-    (s.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || 
-     s.codigo.toLowerCase().includes(searchTerm.toLowerCase()))
+  const activeSedes = sedes.filter(s =>
+    s.estado === 'activo' &&
+    (s.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      s.codigo.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  const inactiveSedes = sedes.filter(s => 
-    s.estado !== 'activo' && 
-    (s.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || 
-     s.codigo.toLowerCase().includes(searchTerm.toLowerCase()))
+  const inactiveSedes = sedes.filter(s =>
+    s.estado !== 'activo' &&
+    (s.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      s.codigo.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const getColumns = (onCopy: (s: any) => void, onEdit: (s: any) => void, onToggle: (id: number, st: string) => void): TableColumn<any>[] => [
@@ -144,7 +145,7 @@ export function Sucursales() {
       render: (row) => (
         <div className="flex items-center justify-end gap-2">
           <Tooltip text="Copiar nombre y llave" position="top-right">
-            <Button 
+            <Button
               variant="ghost"
               size="sm"
               icon={<Copy size={16} />}
@@ -154,7 +155,7 @@ export function Sucursales() {
           </Tooltip>
 
           <Tooltip text="Editar" position="top-right">
-            <Button 
+            <Button
               variant="ghost"
               size="sm"
               icon={<Pencil size={16} />}
@@ -164,15 +165,14 @@ export function Sucursales() {
           </Tooltip>
 
           <Tooltip text={row.estado === 'activo' ? 'Desactivar' : 'Reactivar'} position="top-right">
-            <Button 
+            <Button
               variant="ghost"
               size="sm"
               icon={row.estado === 'activo' ? <Power size={16} /> : <RotateCcw size={16} />}
-              className={`p-2 rounded-xl border ${
-                row.estado === 'activo' 
-                ? 'text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/30 bg-amber-50/50 dark:bg-amber-900/10 border-amber-100 dark:border-amber-800' 
+              className={`p-2 rounded-xl border ${row.estado === 'activo'
+                ? 'text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/30 bg-amber-50/50 dark:bg-amber-900/10 border-amber-100 dark:border-amber-800'
                 : 'text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 bg-emerald-50/50 dark:bg-emerald-900/10 border-emerald-100 dark:border-emerald-800'
-              }`}
+                }`}
               onClick={() => onToggle(row.id, row.estado)}
             />
           </Tooltip>
@@ -202,7 +202,7 @@ export function Sucursales() {
       render: (row) => (
         <div className="flex items-center justify-end gap-2">
           <Tooltip text="Editar" position="top-right">
-            <Button 
+            <Button
               variant="ghost"
               size="sm"
               icon={<Pencil size={16} />}
@@ -211,7 +211,7 @@ export function Sucursales() {
             />
           </Tooltip>
           <Tooltip text="Reactivar" position="top-right">
-            <Button 
+            <Button
               variant="ghost"
               size="sm"
               icon={<RotateCcw size={16} />}
@@ -236,7 +236,7 @@ export function Sucursales() {
           <h2 className="text-2xl font-semibold text-zinc-800 dark:text-white tracking-tight">Gestión de Sucursales</h2>
           <p className="text-sm text-zinc-500 dark:text-zinc-400">Registra y administra las sucursales del minimarket.</p>
         </div>
-        <Button 
+        <Button
           onClick={handleOpenCreate}
           icon={<Plus size={18} />}
           className="px-4 py-2.5 font-bold rounded-2xl"
@@ -257,11 +257,27 @@ export function Sucursales() {
         />
       </div>
 
-      <DataTable 
+      <DataTable
         columns={getColumns(handleCopy, handleOpenEdit, handleToggleStatus)}
         data={activeSedes}
         keyExtractor={(row) => row.id}
-        emptyMessage="No hay sucursales activas."
+        emptyState={
+          <EmptyState
+            icon={Building2}
+            title={!searchTerm ? "No hay sucursales registradas" : "No se encontraron sucursales"}
+            description={!searchTerm ? "Agrega tu primera sucursal para comenzar." : "Intenta ajustar los términos de tu búsqueda."}
+            action={
+              !searchTerm ? (
+                <Button
+                  onClick={handleOpenCreate}
+                  icon={<Plus size={18} />}
+                >
+                  Registrar mi primera sucursal
+                </Button>
+              ) : undefined
+            }
+          />
+        }
       />
 
       {/* Sedes Inactivas */}
@@ -276,7 +292,7 @@ export function Sucursales() {
           </div>
 
           <div className="bg-zinc-50/50 dark:bg-zinc-900/20 rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm overflow-hidden opacity-60">
-            <DataTable 
+            <DataTable
               columns={inactiveColumns}
               data={inactiveSedes}
               keyExtractor={(row) => row.id}
@@ -287,7 +303,7 @@ export function Sucursales() {
       )}
 
       {showModal && (
-        <SedeModal 
+        <SedeModal
           key={editingSede?.id || 'new'}
           isOpen={showModal}
           onClose={() => setShowModal(false)}

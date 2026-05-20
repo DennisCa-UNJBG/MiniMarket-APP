@@ -63,7 +63,7 @@ export function Caja() {
   });
 
   const cerrarCajaMutation = useMutation({
-    mutationFn: ({ monto, esperado }: { monto: number; esperado: number }) => 
+    mutationFn: ({ monto, esperado }: { monto: number; esperado: number }) =>
       cajaService.cerrarCaja(cajaAbierta!.id, user?.id || 1, monto, esperado),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['caja-abierta'] });
@@ -171,7 +171,7 @@ export function Caja() {
           return <span className="text-[10px] italic text-blue-500">En curso...</span>;
         }
         const diferencia = row.monto_final - row.total_monto_esperado;
-        
+
         if (diferencia > 0.01) {
           return (
             <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 px-2 py-0.5 rounded-lg">
@@ -211,9 +211,9 @@ export function Caja() {
 
   return (
     <div className="space-y-6">
-      <PageHeader 
-        title="Control de Caja" 
-        subtitle="Gestión de aperturas y cierres de turno" 
+      <PageHeader
+        title="Control de Caja"
+        subtitle="Gestión de aperturas y cierres de turno"
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -225,9 +225,9 @@ export function Caja() {
                 <Wallet size={20} className="text-blue-500" />
                 Estado Actual
               </h3>
-              <Badge 
-                label={cajaAbierta ? 'Caja Abierta' : 'Caja Cerrada'} 
-                variant={cajaAbierta ? 'emerald' : 'amber'} 
+              <Badge
+                label={cajaAbierta ? 'Caja Abierta' : 'Caja Cerrada'}
+                variant={cajaAbierta ? 'emerald' : 'amber'}
               />
             </div>
 
@@ -249,7 +249,7 @@ export function Caja() {
                       value={montoInicial}
                       onChange={(e) => setMontoInicial(e.target.value)}
                       placeholder="0.00"
-                      className="w-full pl-10 pr-4 py-3 bg-zinc-50 dark:bg-zinc-700 border border-zinc-100 dark:border-zinc-600 rounded-2xl text-lg font-bold text-zinc-800 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"/>
+                      className="w-full pl-10 pr-4 py-3 bg-zinc-50 dark:bg-zinc-700 border border-zinc-100 dark:border-zinc-600 rounded-2xl text-lg font-bold text-zinc-800 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all" />
                   </div>
                 </div>
                 <Tooltip text="Iniciar el monto de caja por Turno" position="top-right" className="w-full">
@@ -263,7 +263,7 @@ export function Caja() {
                     Abrir Caja
                   </Button>
                 </Tooltip>
-                
+
               </form>
             ) : (
               <form onSubmit={handleCerrar} className="space-y-6">
@@ -323,7 +323,7 @@ export function Caja() {
                   fullWidth
                   isLoading={cerrarCajaMutation.isPending}
                   icon={<Lock size={18} />}
-                  className="py-4 text-sm uppercase tracking-widest rounded-2xl bg-rose-600 hover:bg-rose-700 shadow-rose-100"
+                  className="py-4 text-sm uppercase tracking-widest rounded-2xl bg-white hover:bg-rose-200 shadow-rose-100"
                 >
                   Finalizar Turno / Cerrar Caja
                 </Button>
@@ -341,9 +341,9 @@ export function Caja() {
             </h3>
           </div>
           <div className="flex-1">
-            <DataTable 
-              columns={columns} 
-              data={historial} 
+            <DataTable
+              columns={columns}
+              data={historial}
               keyExtractor={(row) => row.id}
               emptyMessage="No hay registros de caja anteriores."
             />
