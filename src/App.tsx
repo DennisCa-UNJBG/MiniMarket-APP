@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+import { invoke } from '@tauri-apps/api/core';
 import { HashRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider, QueryCache, MutationCache } from '@tanstack/react-query';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -62,6 +64,22 @@ const queryClient = new QueryClient({
 
 function AppContent() {
   const { isAuthenticated, login, isLoading } = useAuth();
+
+  // Autoinicio del Servidor Central si la preferencia está activa
+  useEffect(() => {
+    const shouldAutoStart = localStorage.getItem('central_server_auto_start') === 'true';
+    if (shouldAutoStart) {
+      invoke<boolean>('toggle_server', { active: true })
+        .then((started) => {
+          if (started) {
+            console.log('Servidor Central autoiniciado con éxito.');
+          }
+        })
+        .catch((err) => {
+          console.error('Error al autoiniciar el Servidor Central:', err);
+        });
+    }
+  }, []);
 
   if (isLoading) {
     return (
