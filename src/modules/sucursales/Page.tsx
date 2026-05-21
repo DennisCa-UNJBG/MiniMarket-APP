@@ -10,7 +10,8 @@ import {
   Clock,
   AlertCircle,
   Power,
-  RotateCcw
+  RotateCcw,
+  Eye
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { sucursalService } from './Service';
@@ -22,6 +23,7 @@ import { Button } from '../../components/ui/Button';
 import { DataTable, type TableColumn } from '../../components/ui/DataTable';
 import { SedeModal } from './components/SedeModal';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { SucursalDetalle } from './components/SucursalDetalle';
 
 export function Sucursales() {
   const { user } = useAuth();
@@ -29,6 +31,7 @@ export function Sucursales() {
   const [showModal, setShowModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [editingSede, setEditingSede] = useState<any | null>(null);
+  const [selectedSedeForDetail, setSelectedSedeForDetail] = useState<any | null>(null);
 
   // Queries
   const { data: sedes = [] } = useQuery({
@@ -94,7 +97,12 @@ export function Sucursales() {
       s.codigo.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  const getColumns = (onCopy: (s: any) => void, onEdit: (s: any) => void, onToggle: (id: number, st: string) => void): TableColumn<any>[] => [
+  const getColumns = (
+    onCopy: (s: any) => void,
+    onEdit: (s: any) => void,
+    onToggle: (id: number, st: string) => void,
+    onViewDetail: (s: any) => void
+  ): TableColumn<any>[] => [
     {
       key: 'nombre',
       header: 'Sucursal / Código',
@@ -144,6 +152,16 @@ export function Sucursales() {
       align: 'right',
       render: (row) => (
         <div className="flex items-center justify-end gap-2">
+          <Tooltip text="Ver Detalle" position="top-right">
+            <Button
+              variant="ghost"
+              size="sm"
+              icon={<Eye size={16} />}
+              className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-xl bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800"
+              onClick={() => onViewDetail(row)}
+            />
+          </Tooltip>
+
           <Tooltip text="Copiar nombre y llave" position="top-right">
             <Button
               variant="ghost"
@@ -229,6 +247,15 @@ export function Sucursales() {
     notificationService.success('Copiado', 'Datos de sede listos para configurar.');
   };
 
+  if (selectedSedeForDetail) {
+    return (
+      <SucursalDetalle
+        sucursal={selectedSedeForDetail}
+        onBack={() => setSelectedSedeForDetail(null)}
+      />
+    );
+  }
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-10">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -258,7 +285,7 @@ export function Sucursales() {
       </div>
 
       <DataTable
-        columns={getColumns(handleCopy, handleOpenEdit, handleToggleStatus)}
+        columns={getColumns(handleCopy, handleOpenEdit, handleToggleStatus, setSelectedSedeForDetail)}
         data={activeSedes}
         keyExtractor={(row) => row.id}
         emptyState={
