@@ -5,7 +5,7 @@ use axum::{
 };
 use serde_json::{json, Value};
 use sqlx::SqlitePool;
-use crate::api::dtos::{SyncPayloadDto, StockPayloadDto, KardexPayloadDto, ProductoCrearDto, CajaPayloadDto};
+use crate::api::dtos::{SyncPayloadDto, StockPayloadDto, KardexPayloadDto, ProductoCrearDto, CajaPayloadDto, CompraPayloadDto};
 
 pub async fn get_productos(
     headers: HeaderMap,
@@ -437,6 +437,83 @@ pub async fn sincronizar_cajas(
         Json(json!({
             "status": "ok",
             "mensaje": format!("Sincronización de cajas exitosa: {} procesadas", procesadas),
+            "procesadas": procesadas
+        })),
+    )
+}
+
+pub async fn sincronizar_compras(
+    headers: HeaderMap,
+    State(pool): State<SqlitePool>,
+    Json(payload): Json<CompraPayloadDto>,
+) -> (StatusCode, Json<Value>) {
+    let auth_key = headers.get("X-Sucursal-Key")
+        .and_then(|h| h.to_str().ok())
+        .unwrap_or("");
+
+    if auth_key != payload.sucursal_id {
+        return (StatusCode::FORBIDDEN, Json(json!({ "error": "Llave no coincide con sucursal" })));
+    }
+
+    let sucursal = sqlx::query("SELECT id FROM sucursales WHERE codigo = ? AND estado = 'activo'")
+        .bind(&payload.sucursal_id)
+        .fetch_optional(&pool)
+        .await
+        .unwrap();
+
+    if sucursal.is_none() {
+        return (StatusCode::FORBIDDEN, Json(json!({ "error": "Sucursal no autorizada o inactiva" })));
+    }
+
+    let mut procesadas = 0;
+    for c in payload.compras {
+        let res = sqlx::query(
+            "INSERT INTO compras_ingresos (usuario_id, fecha, documento_referencia, total, sucursal_id, metodo_pago, estado, sincronizado) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, 1)"
+        )
+        .bind(c.usuario_id)
+        .bind(&c.fecha)
+        .bind(&c.documento_referencia)
+        .bind(c.total)
+        .bind(&payload.sucursal_id)
+        .bind(&c.metodo_pago)
+        .bind(&c.estado)
+        .execute(&pool)
+        .await;
+
+        if let Ok(r) = res {
+            let compra_id = r.last_insert_rowid();
+            for d in c.detalles {
+                let prod = sqlx::query("SELECT id FROM productos WHERE codigo_barras = ?")
+                    .bind(&d.codigo_barras)
+                    .fetch_optional(&pool)
+                    .await
+                    .unwrap();
+
+                if let Some(p_row) = prod {
+                    use sqlx::Row;
+                    let p_id: i32 = p_row.get("id");
+                    let _ = sqlx::query(
+                        "INSERT INTO compras_detalle (compra_id, producto_id, cantidad, costo_unitario, subtotal) VALUES (?, ?, ?, ?, ?)"
+                    )
+                    .bind(compra_id)
+                    .bind(p_id)
+                    .bind(d.cantidad)
+                    .bind(d.costo_unitario)
+                    .bind(d.subtotal)
+                    .execute(&pool)
+                    .await;
+                }
+            }
+            procesadas += 1;
+        }
+    }
+
+    (
+        StatusCode::OK,
+        Json(json!({
+            "status": "ok",
+            "mensaje": format!("Sincronización de compras exitosa: {} procesadas", procesadas),
             "procesadas": procesadas
         })),
     )

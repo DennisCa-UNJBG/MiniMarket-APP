@@ -343,5 +343,75 @@ export const syncService = {
     ));
 
     return { enviadas: cajasPendientes.length };
+  },
+
+  /**
+   * Envía las compras locales no sincronizadas a la sede central
+   */
+  async pushCompras() {
+    const config = await systemConfigService.getConfig();
+    if (!config || !config.api_url_central || !config.sucursal_id) {
+      throw new Error('Configuración de sucursal incompleta');
+    }
+
+    const db = await getDb();
+
+    // 1. Obtener compras pendientes
+    const comprasPendientes = await db.select<any[]>(
+      "SELECT * FROM compras_ingresos WHERE (sincronizado = 0 OR sincronizado IS NULL) AND estado != 'anulado'"
+    );
+
+    if (comprasPendientes.length === 0) return { enviadas: 0 };
+
+    const payloadCompras = await Promise.all(comprasPendientes.map(async (c) => {
+      // 2. Obtener detalles de cada compra con código de barras del producto
+      const detalles = await db.select<any[]>(
+        `SELECT cd.*, p.codigo_barras 
+         FROM compras_detalle cd 
+         JOIN productos p ON cd.producto_id = p.id 
+         WHERE cd.compra_id = ?`,
+        [c.id]
+      );
+
+      return {
+        fecha: c.fecha,
+        total: c.total,
+        usuario_id: c.usuario_id,
+        documento_referencia: c.documento_referencia,
+        metodo_pago: c.metodo_pago || 'BANCO',
+        estado: c.estado || 'completado',
+        detalles: detalles.map(d => ({
+          codigo_barras: d.codigo_barras,
+          cantidad: d.cantidad,
+          costo_unitario: d.costo_unitario,
+          subtotal: d.subtotal
+        }))
+      };
+    }));
+
+    // 3. Enviar a la central
+    const response = await fetch(`${config.api_url_central}/api/compras-sync`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Sucursal-Key': config.sucursal_id
+      },
+      body: JSON.stringify({
+        sucursal_id: config.sucursal_id,
+        compras: payloadCompras
+      })
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Error al enviar compras');
+    }
+
+    // 4. Marcar como sincronizadas localmente
+    await Promise.all(comprasPendientes.map(c =>
+      db.execute('UPDATE compras_ingresos SET sincronizado = 1 WHERE id = ?', [c.id])
+    ));
+
+    return { enviadas: comprasPendientes.length };
   }
 };

@@ -80,3 +80,28 @@ pub struct CajaPayloadDto {
     pub sucursal_id: String,
     pub cajas: Vec<CajaSyncDto>,
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CompraDetalleSyncDto {
+    pub codigo_barras: String,
+    pub cantidad: f64,
+    pub costo_unitario: f64,
+    pub subtotal: f64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CompraSyncDto {
+    pub fecha: String,
+    pub total: f64,
+    pub usuario_id: i32,
+    pub documento_referencia: Option<String>,
+    pub metodo_pago: String,
+    pub estado: String,
+    pub detalles: Vec<CompraDetalleSyncDto>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CompraPayloadDto {
+    pub sucursal_id: String,
+    pub compras: Vec<CompraSyncDto>,
+}

@@ -25,6 +25,11 @@ sequenceDiagram
     Central-->>Sucursal: 200 OK (Mensaje de éxito)
     Note over Sucursal: Marca cajas locales como sincronizadas
 
+    Sucursal->>Central: POST /api/compras-sync (Compras/Ingresos de mercadería)
+    Note right of Central: Registra compras y detalles en central
+    Central-->>Sucursal: 200 OK (Mensaje de éxito)
+    Note over Sucursal: Marca compras locales como sincronizadas
+
     Sucursal->>Central: POST /api/kardex-sync (Movimientos de inventario)
     Note right of Central: Registra transacciones en kardex central
     Central-->>Sucursal: 200 OK (Mensaje de éxito)
@@ -56,6 +61,7 @@ Las sucursales son responsables de reportar sus transacciones comerciales, movim
 | **Niveles de Stock** | `POST /api/stock-update` | - `sucursal_id`<br>- **Inventario:** lista de `{ codigo_barras, stock_actual }` | El servidor central realiza un `UPSERT` en la tabla `sucursales_stock`. |
 | **Kardex (Movimientos)** | `POST /api/kardex-sync` | - `sucursal_id`<br>- **Movimientos:** lista de `{ producto_codigo_barras, usuario_id, fecha, tipo_movimiento, cantidad, saldo_posterior, costo_unitario, referencia }` | Se actualiza el movimiento local a `sincronizado = 1`. |
 | **Control de Cajas** | `POST /api/cajas-sync` | - `sucursal_id`<br>- **Cajas:** lista de `{ id_local, usuario_id, monto_inicial, monto_final, monto_esperado, fecha_apertura, fecha_cierre }` | Se actualiza la caja local a `sincronizado = 1`. |
+| **Compras / Ingresos** | `POST /api/compras-sync` | - `sucursal_id`<br>- **Compras:** lista de `{ fecha, total, usuario_id, documento_referencia, metodo_pago, estado, detalles: [{ codigo_barras, cantidad, costo_unitario, subtotal }] }` | Se actualiza la compra local a `sincronizado = 1`. |
 
 ---
 

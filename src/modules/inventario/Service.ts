@@ -306,5 +306,16 @@ export const inventarioService = {
       registro_id: compraId,
       detalles: `Anulación de compra #${compraId}. Stock revertido.`
     });
+  },
+
+  /**
+   * Obtiene la cantidad de compras pendientes de sincronizar (no anuladas)
+   */
+  async getComprasPendientes(): Promise<number> {
+    const db = await getDb();
+    const result = await db.select<any[]>(
+      "SELECT COUNT(*) as count FROM compras_ingresos WHERE (sincronizado = 0 OR sincronizado IS NULL) AND estado != 'anulado'"
+    );
+    return result.length > 0 ? result[0].count : 0;
   }
 };
