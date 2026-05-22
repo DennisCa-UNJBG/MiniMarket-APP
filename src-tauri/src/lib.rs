@@ -173,7 +173,10 @@ fn get_perudevs_key(app_handle: &tauri::AppHandle) -> String {
 
 #[tauri::command]
 async fn save_perudevs_key(app_handle: tauri::AppHandle, key: String) -> Result<(), String> {
-    let app_dir = app_handle.path().app_data_dir().map_err(|e| e.to_string())?;
+    let app_dir = app_handle
+        .path()
+        .app_data_dir()
+        .map_err(|e| e.to_string())?;
     std::fs::create_dir_all(&app_dir).map_err(|e| e.to_string())?;
     let key_path = app_dir.join("perudevs.key");
     std::fs::write(key_path, key.trim()).map_err(|e| e.to_string())?;
@@ -187,28 +190,40 @@ async fn has_perudevs_key(app_handle: tauri::AppHandle) -> Result<bool, String> 
 }
 
 #[tauri::command]
-async fn query_perudevs_document(app_handle: tauri::AppHandle, document: String) -> Result<String, String> {
+async fn query_perudevs_document(
+    app_handle: tauri::AppHandle,
+    document: String,
+) -> Result<String, String> {
     let key = get_perudevs_key(&app_handle);
     if key.is_empty() {
-        return Err("Clave API de PeruDevs no configurada. Por favor configúrela en la sección de Ajustes.".to_string());
+        return Err(
+            "Clave API de PeruDevs no configurada. Por favor configúrela en la sección de Ajustes."
+                .to_string(),
+        );
     }
 
     let url = if document.len() == 8 {
-        format!("https://api.perudevs.com/api/v1/dni/simple?document={}&key={}", document, key)
+        format!(
+            "https://api.perudevs.com/api/v1/dni/simple?document={}&key={}",
+            document, key
+        )
     } else if document.len() == 11 {
-        format!("https://api.perudevs.com/api/v1/ruc?document={}&key={}", document, key)
+        format!(
+            "https://api.perudevs.com/api/v1/ruc?document={}&key={}",
+            document, key
+        )
     } else {
         return Err("El documento debe tener 8 dígitos (DNI) u 11 dígitos (RUC).".to_string());
     };
 
     let client = reqwest::Client::new();
-    let response = client.get(&url)
-        .send()
-        .await
-        .map_err(|e| e.to_string())?;
+    let response = client.get(&url).send().await.map_err(|e| e.to_string())?;
 
     if !response.status().is_success() {
-        return Err(format!("Error de la API de PeruDevs: Código {}", response.status()));
+        return Err(format!(
+            "Error de la API de PeruDevs: Código {}",
+            response.status()
+        ));
     }
 
     let body = response.text().await.map_err(|e| e.to_string())?;
@@ -441,12 +456,6 @@ pub fn run() {
             version: 23,
             description: "add_sincronizado_to_cajas",
             sql: "ALTER TABLE cajas ADD COLUMN sincronizado INTEGER DEFAULT 0;",
-            kind: MigrationKind::Up,
-        },
-        Migration {
-            version: 24,
-            description: "add_sincronizado_to_compras",
-            sql: "ALTER TABLE compras_ingresos ADD COLUMN sincronizado INTEGER DEFAULT 0;",
             kind: MigrationKind::Up,
         }
     ];

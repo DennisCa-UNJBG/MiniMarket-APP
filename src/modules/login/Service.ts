@@ -35,6 +35,7 @@ export const authService = {
         [username]
       );
     } catch (e) {
+      console.error("Database connection/query error during login:", e);
       throw new ConnectionError();
     }
 
