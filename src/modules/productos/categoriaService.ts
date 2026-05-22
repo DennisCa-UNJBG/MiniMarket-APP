@@ -1,4 +1,4 @@
-import { getDb } from '../../lib/db';
+import { getDb } from '../../shared/lib/db';
 
 export interface Category {
   id: number;
@@ -16,11 +16,11 @@ export const categoriaService = {
       FROM categorias c 
       LEFT JOIN productos p ON c.id = p.categoria_id AND p.estado = 'activo'
     `;
-    
+
     if (onlyActive) {
       query += " WHERE c.estado = 'activo' ";
     }
-    
+
     query += " GROUP BY c.id ORDER BY c.estado ASC, c.nombre ASC";
     const result = await db.select<Category[]>(query);
     return result;

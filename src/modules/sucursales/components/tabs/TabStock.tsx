@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Search, SlidersHorizontal, Package } from 'lucide-react';
-import { DataTable, type TableColumn } from '../../../../components/ui/DataTable';
-import { Button } from '../../../../components/ui/Button';
-import { Tooltip } from '../../../../components/ui/Tooltip';
-import { EmptyState } from '../../../../components/ui/EmptyState';
+import { DataTable, type TableColumn } from '../../../../shared/components/ui/DataTable';
+import { Button } from '../../../../shared/components/ui/Button';
+import { Tooltip } from '../../../../shared/components/ui/Tooltip';
+import { EmptyState } from '../../../../shared/components/ui/EmptyState';
 import { AjustarStockModal } from '../AjustarStockModal';
 
 interface TabStockProps {

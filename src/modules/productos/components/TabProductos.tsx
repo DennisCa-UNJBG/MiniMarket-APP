@@ -8,16 +8,16 @@ import {
   RefreshCcw,
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { DataTable, type TableColumn } from '../../../components/ui/DataTable';
-import { Badge } from '../../../components/ui/Badge';
-import { EmptyState } from '../../../components/ui/EmptyState';
-import { Tooltip } from '../../../components/ui/Tooltip';
-import { Button } from '../../../components/ui/Button';
+import { DataTable, type TableColumn } from '../../../shared/components/ui/DataTable';
+import { Badge } from '../../../shared/components/ui/Badge';
+import { EmptyState } from '../../../shared/components/ui/EmptyState';
+import { Tooltip } from '../../../shared/components/ui/Tooltip';
+import { Button } from '../../../shared/components/ui/Button';
 import { type Category } from '../categoriaService';
 import { productoService, type Product } from '../Service';
 import { unidadMedidaService } from '../unidadMedidaService';
-import { notificationService } from '../../../lib/notifications';
-import { useAuth } from '../../../contexts/AuthContext';
+import { notificationService } from '../../../shared/lib/notifications';
+import { useAuth } from '../../../shared/contexts/AuthContext';
 import { ProductModal } from './ProductModal';
 
 const generateProductCode = (lastCode: string | null) => {
@@ -96,7 +96,7 @@ const initialTabProductosState: TabProductosState = {
 export function TabProductos({ categories }: { categories: Category[] }) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  
+
   const [state, dispatch] = useReducer(tabProductosReducer, initialTabProductosState);
 
   const {
@@ -174,7 +174,7 @@ export function TabProductos({ categories }: { categories: Category[] }) {
 
   // Mutación para cambiar estado
   const statusMutation = useMutation({
-    mutationFn: ({ id, status }: { id: number, status: 'activo' | 'inactivo' }) => 
+    mutationFn: ({ id, status }: { id: number, status: 'activo' | 'inactivo' }) =>
       productoService.updateStatus(id, status, user?.id || 1),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
@@ -195,7 +195,7 @@ export function TabProductos({ categories }: { categories: Category[] }) {
       notificationService.warning('Campos incompletos', 'Por favor, corrige los errores en el formulario.');
       return;
     }
-    
+
     saveMutation.mutate({
       nombre: form.name,
       categoria_id: parseInt(form.categoryId),
@@ -225,20 +225,20 @@ export function TabProductos({ categories }: { categories: Category[] }) {
       render: (row) => (
         <div className="flex items-center gap-1 justify-end">
           <Tooltip text="Editar producto" position="top-right">
-            <Button 
+            <Button
               variant="ghost"
               size="sm"
               icon={<Edit2 size={14} />}
               className="p-1.5 text-zinc-400 dark:text-zinc-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-zinc-100 dark:hover:bg-zinc-700/50"
               onClick={() => {
                 setEditingId(row.id);
-                setForm({ 
-                  code: row.codigo_barras, 
-                  name: row.nombre, 
-                  categoryId: row.categoria_id.toString(), 
-                  unitId: (row.unidad_id || '').toString(), 
-                  sellPrice: (row.precio_venta || 0).toString(), 
-                  minStock: (row.stock_minimo || 0).toString() 
+                setForm({
+                  code: row.codigo_barras,
+                  name: row.nombre,
+                  categoryId: row.categoria_id.toString(),
+                  unitId: (row.unidad_id || '').toString(),
+                  sellPrice: (row.precio_venta || 0).toString(),
+                  minStock: (row.stock_minimo || 0).toString()
                 });
                 const cat = categories.find(c => c.id === row.categoria_id);
                 setCatSearch(cat ? cat.nombre : '');
@@ -249,12 +249,12 @@ export function TabProductos({ categories }: { categories: Category[] }) {
             />
           </Tooltip>
           <Tooltip text="Desactivar producto" position="top-right">
-            <Button 
+            <Button
               variant="ghost"
               size="sm"
               icon={<PowerOff size={14} />}
               className="p-1.5 text-zinc-400 dark:text-zinc-500 hover:text-orange-500 dark:hover:text-orange-400 hover:bg-zinc-100 dark:hover:bg-zinc-700/50"
-              onClick={() => handleDeactivate(row.id)} 
+              onClick={() => handleDeactivate(row.id)}
             />
           </Tooltip>
         </div>
@@ -268,12 +268,12 @@ export function TabProductos({ categories }: { categories: Category[] }) {
       (p.codigo_barras && p.codigo_barras.toLowerCase().includes(search.toLowerCase()))
   );
 
-  const filteredUnits = units.filter(u => 
-    u.nombre.toLowerCase().includes(unitSearch.toLowerCase()) || 
+  const filteredUnits = units.filter(u =>
+    u.nombre.toLowerCase().includes(unitSearch.toLowerCase()) ||
     u.abreviatura.toLowerCase().includes(unitSearch.toLowerCase())
   );
 
-  const filteredCategories = categories.filter(c => 
+  const filteredCategories = categories.filter(c =>
     c.nombre.toLowerCase().includes(catSearch.toLowerCase())
   );
 
@@ -344,7 +344,7 @@ export function TabProductos({ categories }: { categories: Category[] }) {
             <h3 className="text-sm font-medium text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Productos desactivados</h3>
             <div className="h-px flex-1 bg-zinc-200 dark:bg-zinc-700"></div>
           </div>
-          
+
           <div className="opacity-60 grayscale-[0.5]">
             <DataTable
               columns={[
@@ -352,7 +352,7 @@ export function TabProductos({ categories }: { categories: Category[] }) {
                 {
                   key: 'acciones', header: '', align: 'right',
                   render: (row) => (
-                    <Button 
+                    <Button
                       onClick={() => statusMutation.mutate({ id: row.id, status: 'activo' })}
                       variant="ghost"
                       size="sm"

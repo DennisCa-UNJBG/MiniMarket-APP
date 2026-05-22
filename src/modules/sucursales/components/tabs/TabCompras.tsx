@@ -2,13 +2,13 @@ import React, { useState } from 'react';
 import { Search, Calendar, Clock, User, Receipt, FileText } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import { sucursalService } from '../../Service';
-import { dateUtils } from '../../../../lib/dateUtils';
-import { DataTable, type TableColumn } from '../../../../components/ui/DataTable';
-import { Badge } from '../../../../components/ui/Badge';
-import { Button } from '../../../../components/ui/Button';
-import { Tooltip } from '../../../../components/ui/Tooltip';
-import { Modal } from '../../../../components/ui/Modal';
-import { EmptyState } from '../../../../components/ui/EmptyState';
+import { dateUtils } from '../../../../shared/lib/dateUtils';
+import { DataTable, type TableColumn } from '../../../../shared/components/ui/DataTable';
+import { Badge } from '../../../../shared/components/ui/Badge';
+import { Button } from '../../../../shared/components/ui/Button';
+import { Tooltip } from '../../../../shared/components/ui/Tooltip';
+import { Modal } from '../../../../shared/components/ui/Modal';
+import { EmptyState } from '../../../../shared/components/ui/EmptyState';
 
 interface TabComprasProps {
   compras: any[];
@@ -180,9 +180,9 @@ export const TabCompras: React.FC<TabComprasProps> = ({
               </div>
               <div>
                 <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Estado</p>
-                <Badge 
-                  label={selectedCompra.estado.toUpperCase()} 
-                  variant={selectedCompra.estado === 'anulado' ? 'red' : 'emerald'} 
+                <Badge
+                  label={selectedCompra.estado.toUpperCase()}
+                  variant={selectedCompra.estado === 'anulado' ? 'red' : 'emerald'}
                 />
               </div>
               <div className="col-span-3">

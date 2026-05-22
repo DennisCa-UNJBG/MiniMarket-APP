@@ -2,12 +2,12 @@ import { useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { Server, RefreshCw, Save } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useAuth } from '../../../contexts/AuthContext';
-import { sucursalService, type SucursalConfig } from '../../sucursales/Service';
+import { useAuth } from '../../../shared/contexts/AuthContext';
+import { systemConfigService, type SucursalConfig } from '../systemConfigService';
 import { syncService } from '../../sincronizacion/Service';
-import { notificationService } from '../../../lib/notifications';
-import { Tooltip } from '../../../components/ui/Tooltip';
-import { Button } from '../../../components/ui/Button';
+import { notificationService } from '../../../shared/lib/notifications';
+import { Tooltip } from '../../../shared/components/ui/Tooltip';
+import { Button } from '../../../shared/components/ui/Button';
 
 const formatDateTimeLocal = (dateStr: string) => {
   if (!dateStr) return '';
@@ -30,7 +30,7 @@ export function SedesSection({ initialData }: { initialData: SucursalConfig | nu
   });
 
   const saveSucursalMutation = useMutation({
-    mutationFn: (data: SucursalConfig) => sucursalService.saveConfig(data, user?.id || 1),
+    mutationFn: (data: SucursalConfig) => systemConfigService.saveConfig(data, user?.id || 1),
     onSuccess: () => {
       notificationService.success('Configuración Guardada', 'La identidad de la sede se actualizó correctamente.');
       queryClient.invalidateQueries({ queryKey: ['sucursal-config'] });
@@ -38,7 +38,7 @@ export function SedesSection({ initialData }: { initialData: SucursalConfig | nu
   });
 
   const testConnectionMutation = useMutation({
-    mutationFn: () => sucursalService.testConnection(localSucursal.api_url_central, localSucursal.sucursal_id),
+    mutationFn: () => systemConfigService.testConnection(localSucursal.api_url_central, localSucursal.sucursal_id),
     onSuccess: () => {
       notificationService.success('Conexión Exitosa', 'La sede central está disponible y lista.');
       setConnectionStatus('success');
@@ -70,7 +70,7 @@ export function SedesSection({ initialData }: { initialData: SucursalConfig | nu
     },
     onSuccess: (data) => {
       notificationService.success(
-        'Sincronización Completa', 
+        'Sincronización Completa',
         `Enviado: ${data.vEnviadas} ventas y ${data.kEnviadas} mov. Catálogo: +${data.pCreados}/~${data.pActualizados}. Usuarios: +${data.uCreados}/~${data.uActualizados}.`
       );
       queryClient.invalidateQueries({ queryKey: ['products'] });
@@ -122,7 +122,7 @@ export function SedesSection({ initialData }: { initialData: SucursalConfig | nu
                 value={localSucursal.sucursal_id}
                 onChange={(e) => {
                   const val = e.target.value;
-                  setLocalSucursal(prev => ({...prev, sucursal_id: val}));
+                  setLocalSucursal(prev => ({ ...prev, sucursal_id: val }));
                 }}
                 placeholder="Ej: SEDE-01"
                 className="w-full px-4 py-2.5 text-sm font-medium border border-zinc-100 dark:border-zinc-700 rounded-2xl bg-zinc-50/50 dark:bg-zinc-900/50 text-zinc-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
@@ -136,7 +136,7 @@ export function SedesSection({ initialData }: { initialData: SucursalConfig | nu
                 value={localSucursal.nombre_sucursal}
                 onChange={(e) => {
                   const val = e.target.value;
-                  setLocalSucursal(prev => ({...prev, nombre_sucursal: val}));
+                  setLocalSucursal(prev => ({ ...prev, nombre_sucursal: val }));
                 }}
                 placeholder="Ej: Sucursal Centro"
                 className="w-full px-4 py-2.5 text-sm font-medium border border-zinc-100 dark:border-zinc-700 rounded-2xl bg-zinc-50/50 dark:bg-zinc-900/50 text-zinc-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
@@ -153,7 +153,7 @@ export function SedesSection({ initialData }: { initialData: SucursalConfig | nu
                       value={localSucursal.api_url_central}
                       onChange={(e) => {
                         const val = e.target.value;
-                        setLocalSucursal(prev => ({...prev, api_url_central: val}));
+                        setLocalSucursal(prev => ({ ...prev, api_url_central: val }));
                         setConnectionStatus('idle');
                       }}
                       placeholder="https://central.tu-negocio.com/api"
@@ -165,19 +165,18 @@ export function SedesSection({ initialData }: { initialData: SucursalConfig | nu
                     </div>
                   </div>
                   <Tooltip text="Probar Conexión" position="top">
-                    <Button 
+                    <Button
                       type="button"
                       variant="ghost"
                       onClick={handleTestConnection}
                       isLoading={testConnectionMutation.isPending}
                       disabled={isCentral}
-                      className={`px-4 py-2.5 rounded-2xl h-full ${
-                        connectionStatus === 'success' 
+                      className={`px-4 py-2.5 rounded-2xl h-full ${connectionStatus === 'success'
                           ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-800'
                           : connectionStatus === 'error'
-                          ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-100 dark:border-red-800'
-                          : 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-100 dark:border-blue-800'
-                      }`}
+                            ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-100 dark:border-red-800'
+                            : 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-100 dark:border-blue-800'
+                        }`}
                       icon={<RefreshCw size={18} className={testConnectionMutation.isPending ? 'animate-spin' : ''} />}
                     />
                   </Tooltip>
@@ -187,7 +186,7 @@ export function SedesSection({ initialData }: { initialData: SucursalConfig | nu
 
             {!isCentral && (
               <div className="sm:col-span-2">
-                <Button 
+                <Button
                   type="button"
                   variant="ghost"
                   onClick={handleSync}
@@ -206,7 +205,7 @@ export function SedesSection({ initialData }: { initialData: SucursalConfig | nu
               </div>
             )}
           </div>
-          <Button 
+          <Button
             type="submit"
             isLoading={saveSucursalMutation.isPending}
             className="w-full sm:w-auto px-6 py-2.5 font-bold rounded-2xl"

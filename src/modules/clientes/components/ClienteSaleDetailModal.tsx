@@ -1,8 +1,8 @@
 import { Printer } from 'lucide-react';
-import { Modal } from '../../../components/ui/Modal';
-import { Button } from '../../../components/ui/Button';
-import { Badge } from '../../../components/ui/Badge';
-import { dateUtils } from '../../../lib/dateUtils';
+import { Modal } from '../../../shared/components/ui/Modal';
+import { Button } from '../../../shared/components/ui/Button';
+import { Badge } from '../../../shared/components/ui/Badge';
+import { dateUtils } from '../../../shared/lib/dateUtils';
 
 interface ClienteSaleDetailModalProps {
   selectedSale: any | null;
@@ -46,9 +46,9 @@ export function ClienteSaleDetailModal({
           </div>
           <div>
             <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Estado</p>
-            <Badge 
-              label={selectedSale.estado === 'anulado' ? 'ANULADO' : 'COMPLETADO'} 
-              variant={selectedSale.estado === 'anulado' ? 'red' : 'emerald'} 
+            <Badge
+              label={selectedSale.estado === 'anulado' ? 'ANULADO' : 'COMPLETADO'}
+              variant={selectedSale.estado === 'anulado' ? 'red' : 'emerald'}
             />
           </div>
           <div className="col-span-2">

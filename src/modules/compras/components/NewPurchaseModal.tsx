@@ -1,16 +1,16 @@
 import { useRef, useReducer } from 'react';
 import { ArrowUpRight } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Modal } from '../../../components/ui/Modal';
-import { Button } from '../../../components/ui/Button';
+import { Modal } from '../../../shared/components/ui/Modal';
+import { Button } from '../../../shared/components/ui/Button';
 import { inventarioService, type CompraDetalle } from '../../inventario/Service';
 import { productoService, type Product } from '../../productos/Service';
-import { notificationService } from '../../../lib/notifications';
-import { useAuth } from '../../../contexts/AuthContext';
+import { notificationService } from '../../../shared/lib/notifications';
+import { useAuth } from '../../../shared/contexts/AuthContext';
 import { PurchaseDocHeader } from './PurchaseDocHeader';
 import { PurchaseProductSelector } from './PurchaseProductSelector';
 import { PurchaseCartTable } from './PurchaseCartTable';
-import { dateUtils } from '../../../lib/dateUtils';
+import { dateUtils } from '../../../shared/lib/dateUtils';
 
 const defaultDate = dateUtils.getTodayLocal();
 
@@ -186,7 +186,7 @@ export function NewPurchaseModal({ isOpen, onClose }: NewPurchaseModalProps) {
     } else {
       setCart(prev => [...prev, newItem]);
     }
-    
+
     setSelectedProd(null);
     setProdSearch('');
     setQty('');
@@ -236,8 +236,8 @@ export function NewPurchaseModal({ isOpen, onClose }: NewPurchaseModalProps) {
     savePurchaseMutation.mutate(purchaseData);
   };
 
-  const filteredProducts = products.filter(p => 
-    p.nombre.toLowerCase().includes(prodSearch.toLowerCase()) || 
+  const filteredProducts = products.filter(p =>
+    p.nombre.toLowerCase().includes(prodSearch.toLowerCase()) ||
     (p.codigo_barras && p.codigo_barras.toLowerCase().includes(prodSearch.toLowerCase()))
   );
 
@@ -292,14 +292,14 @@ export function NewPurchaseModal({ isOpen, onClose }: NewPurchaseModalProps) {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <Button 
+            <Button
               variant="secondary"
               onClick={onClose}
               className="px-6 py-2.5 font-bold"
             >
               Cancelar
             </Button>
-            <Button 
+            <Button
               onClick={handleConfirmarCompra}
               isLoading={savePurchaseMutation.isPending}
               className="px-8 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-lg shadow-blue-200 dark:shadow-none transition-all active:scale-95 border-none"

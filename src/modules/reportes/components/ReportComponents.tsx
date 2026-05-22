@@ -3,7 +3,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LabelList
 } from 'recharts';
 import { type TopProduct, type MonthlyRevenue } from '../Service';
-import { useTheme } from '../../../contexts/ThemeContext';
+import { useTheme } from '../../../shared/contexts/ThemeContext';
 
 interface ChartProps {
   data: MonthlyRevenue[];

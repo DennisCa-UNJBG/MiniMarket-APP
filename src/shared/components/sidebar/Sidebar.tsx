@@ -6,7 +6,7 @@ import { useSidebar } from '../../contexts/SidebarContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { SidebarItem } from './SidebarItem';
-import { mainNavItems, bottomNavItems } from '../../config/navigation';
+import { mainNavItems, bottomNavItems } from '../../../config/navigation';
 
 export function Sidebar() {
   const { isCollapsed, toggleSidebar } = useSidebar();
@@ -40,10 +40,10 @@ export function Sidebar() {
     return items.filter(item => {
       if (!item.requiredPermission) return true; // Visible para todos si no hay restricciones
       if (!user || !user.permisos) return false;
-      
+
       // El permiso '*' otorga acceso total (usado por Administradores)
       if (user.permisos.includes('*')) return true;
-      
+
       // Verificar si tiene el permiso específico
       return user.permisos.includes(item.requiredPermission);
     });

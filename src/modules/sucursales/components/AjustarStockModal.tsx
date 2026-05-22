@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { X, AlertTriangle } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import { sucursalService } from '../Service';
-import { useAuth } from '../../../contexts/AuthContext';
-import { notificationService } from '../../../lib/notifications';
-import { Button } from '../../../components/ui/Button';
+import { useAuth } from '../../../shared/contexts/AuthContext';
+import { notificationService } from '../../../shared/lib/notifications';
+import { Button } from '../../../shared/components/ui/Button';
 
 interface AjustarStockModalProps {
   isOpen: boolean;

@@ -1,5 +1,5 @@
-import { getDb } from '../../lib/db';
-import { logService } from '../../lib/logService';
+import { getDb } from '../../shared/lib/db';
+import { logService } from '../../shared/lib/logService';
 
 export interface Rol {
   id: number;

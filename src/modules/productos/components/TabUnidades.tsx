@@ -6,12 +6,12 @@ import {
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { unidadMedidaService, type UnidadMedida } from '../unidadMedidaService';
-import { notificationService } from '../../../lib/notifications';
-import { Badge } from '../../../components/ui/Badge';
-import { Tooltip } from '../../../components/ui/Tooltip';
-import { Button } from '../../../components/ui/Button';
-import { Modal } from '../../../components/ui/Modal';
-import { DataTable, type TableColumn } from '../../../components/ui/DataTable';
+import { notificationService } from '../../../shared/lib/notifications';
+import { Badge } from '../../../shared/components/ui/Badge';
+import { Tooltip } from '../../../shared/components/ui/Tooltip';
+import { Button } from '../../../shared/components/ui/Button';
+import { Modal } from '../../../shared/components/ui/Modal';
+import { DataTable, type TableColumn } from '../../../shared/components/ui/DataTable';
 
 export function TabUnidades() {
   const queryClient = useQueryClient();
@@ -43,7 +43,7 @@ export function TabUnidades() {
   });
 
   const statusMutation = useMutation({
-    mutationFn: ({ id, status }: { id: number, status: 'activo' | 'inactivo' }) => 
+    mutationFn: ({ id, status }: { id: number, status: 'activo' | 'inactivo' }) =>
       unidadMedidaService.updateStatus(id, status),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['units'] });
@@ -62,7 +62,7 @@ export function TabUnidades() {
       render: (row) => (
         <div className="flex items-center gap-1 justify-end">
           <Tooltip text="Editar unidad" position="top-right">
-            <Button 
+            <Button
               variant="ghost"
               size="sm"
               icon={<Edit2 size={14} />}
@@ -75,7 +75,7 @@ export function TabUnidades() {
             />
           </Tooltip>
           <Tooltip text="Desactivar unidad" position="top-right">
-            <Button 
+            <Button
               variant="ghost"
               size="sm"
               icon={<PowerOff size={14} />}
@@ -108,7 +108,7 @@ export function TabUnidades() {
       {inactiveUnits.length > 0 && (
         <div className="mt-8 opacity-60">
           <h4 className="text-xs font-semibold text-zinc-400 uppercase mb-4 tracking-widest">Unidades inactivas</h4>
-          <DataTable 
+          <DataTable
             columns={[
               ...columns.filter(c => c.key !== 'acciones'),
               {
@@ -119,9 +119,9 @@ export function TabUnidades() {
                   </button>
                 )
               }
-            ]} 
-            data={inactiveUnits} 
-            keyExtractor={(u) => u.id} 
+            ]}
+            data={inactiveUnits}
+            keyExtractor={(u) => u.id}
           />
         </div>
       )}
@@ -131,20 +131,20 @@ export function TabUnidades() {
           <div className="space-y-4">
             <div className="flex flex-col gap-1.5">
               <label htmlFor="nombre-unidad" className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Nombre (ej. Kilogramos)</label>
-              <input 
+              <input
                 id="nombre-unidad"
-                className="w-full px-3 py-2 text-sm border border-zinc-200 dark:border-zinc-600 rounded-lg bg-zinc-50 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-400 transition" 
-                value={form.nombre} 
-                onChange={(e) => setForm(prev => ({ ...prev, nombre: e.target.value }))} 
+                className="w-full px-3 py-2 text-sm border border-zinc-200 dark:border-zinc-600 rounded-lg bg-zinc-50 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
+                value={form.nombre}
+                onChange={(e) => setForm(prev => ({ ...prev, nombre: e.target.value }))}
               />
             </div>
             <div className="flex flex-col gap-1.5">
               <label htmlFor="abreviatura-unidad" className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Abreviatura (ej. KG)</label>
-              <input 
+              <input
                 id="abreviatura-unidad"
-                className="w-full px-3 py-2 text-sm border border-zinc-200 dark:border-zinc-600 rounded-lg bg-zinc-50 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-400 transition uppercase" 
-                value={form.abreviatura} 
-                onChange={(e) => setForm(prev => ({ ...prev, abreviatura: e.target.value.toUpperCase() }))} 
+                className="w-full px-3 py-2 text-sm border border-zinc-200 dark:border-zinc-600 rounded-lg bg-zinc-50 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-400 transition uppercase"
+                value={form.abreviatura}
+                onChange={(e) => setForm(prev => ({ ...prev, abreviatura: e.target.value.toUpperCase() }))}
               />
             </div>
           </div>

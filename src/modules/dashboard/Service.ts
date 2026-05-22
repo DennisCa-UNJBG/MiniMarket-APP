@@ -1,5 +1,5 @@
-import { getDb } from '../../lib/db';
-import { sucursalService } from '../sucursales/Service';
+import { getDb } from '../../shared/lib/db';
+import { systemConfigService } from '../configuracion/systemConfigService';
 
 export interface DashboardStats {
   totalProductos: number;
@@ -29,10 +29,10 @@ export const dashboardService = {
   async getStats(): Promise<DashboardStats> {
     const [db, config] = await Promise.all([
       getDb(),
-      sucursalService.getConfig()
+      systemConfigService.getConfig()
     ]);
     const sucursalId = config?.sucursal_id || 'LOCAL';
-    
+
     // Obtener estadísticas de dashboard en paralelo
     const [stockData, todaySales, todayPurchases, monthSales] = await Promise.all([
       db.select<any[]>('SELECT COUNT(*) as total FROM productos WHERE stock_actual > 0'),
@@ -71,7 +71,7 @@ export const dashboardService = {
   async getRecentActivity(): Promise<RecentActivity[]> {
     const [db, config] = await Promise.all([
       getDb(),
-      sucursalService.getConfig()
+      systemConfigService.getConfig()
     ]);
     const sucursalId = config?.sucursal_id || 'LOCAL';
 
@@ -95,7 +95,7 @@ export const dashboardService = {
   async getSalesChartData(): Promise<ChartData[]> {
     const [db, config] = await Promise.all([
       getDb(),
-      sucursalService.getConfig()
+      systemConfigService.getConfig()
     ]);
     const sucursalId = config?.sucursal_id || 'LOCAL';
 

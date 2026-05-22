@@ -1,13 +1,13 @@
 import { useReducer } from 'react';
 import { ArrowLeft, Receipt } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { Button } from '../../components/ui/Button';
+import { Button } from '../../shared/components/ui/Button';
 import { ProductCatalog } from './components/ProductCatalog';
 import { VentaCart } from './components/VentaCart';
 import { CheckoutModal } from './components/CheckoutModal';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../shared/contexts/AuthContext';
 import { type Product } from '../productos/Service';
-import { notificationService } from '../../lib/notifications';
+import { notificationService } from '../../shared/lib/notifications';
 
 interface CartItem {
   product: Product;
@@ -63,7 +63,7 @@ function nuevaVentaReducer(state: NuevaVentaState, action: NuevaVentaAction): Nu
 export function NuevaVenta() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  
+
   const [state, dispatch] = useReducer(nuevaVentaReducer, {
     search: '',
     activeCategory: 'Todos',
@@ -103,9 +103,9 @@ export function NuevaVenta() {
     setCart(prev => {
       const existing = prev.find(item => item.product.id === product.id);
       if (existing) {
-        return prev.map(item => 
-          item.product.id === product.id 
-            ? { ...item, quantity: item.quantity + 1 } 
+        return prev.map(item =>
+          item.product.id === product.id
+            ? { ...item, quantity: item.quantity + 1 }
             : item
         );
       }
@@ -125,7 +125,7 @@ export function NuevaVenta() {
     }
 
     if (newQuantity > 0) {
-      setCart(prev => prev.map(i => 
+      setCart(prev => prev.map(i =>
         i.product.id === id ? { ...i, quantity: newQuantity } : i
       ));
     }
@@ -144,8 +144,8 @@ export function NuevaVenta() {
       {/* ── Encabezado POS ─────────────────────────────────────────────────── */}
       <div className="bg-white dark:bg-zinc-800 border-b border-zinc-100 dark:border-zinc-700 p-4 flex items-center justify-between z-10 shrink-0">
         <div className="flex items-center gap-3">
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             size="sm"
             onClick={() => navigate('/ventas')}
             className="p-2"
@@ -162,7 +162,7 @@ export function NuevaVenta() {
             <p className="text-xs text-zinc-500 dark:text-zinc-400">Total acumulado</p>
             <p className="text-lg font-bold text-blue-600 dark:text-blue-400">S/ {total.toFixed(2)}</p>
           </div>
-          <Button 
+          <Button
             disabled={cart.length === 0}
             onClick={() => setShowCheckout(true)}
             icon={<Receipt size={18} />}
@@ -174,15 +174,15 @@ export function NuevaVenta() {
 
       {/* ── Área Principal (Dos columnas) ──────────────────────────────────── */}
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden bg-transparent">
-        <ProductCatalog 
+        <ProductCatalog
           search={search}
           setSearch={setSearch}
           activeCategory={activeCategory}
           setActiveCategory={setActiveCategory}
           addToCart={addToCart}
         />
-        
-        <VentaCart 
+
+        <VentaCart
           cart={cart}
           updateQuantity={updateQuantity}
           removeFromCart={removeFromCart}
@@ -198,7 +198,7 @@ export function NuevaVenta() {
       </div>
 
       {showCheckout && (
-        <CheckoutModal 
+        <CheckoutModal
           isOpen={showCheckout}
           onClose={() => setShowCheckout(false)}
           total={total}

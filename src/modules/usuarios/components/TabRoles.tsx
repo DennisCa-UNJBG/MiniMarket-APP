@@ -7,12 +7,12 @@ import {
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { rolService } from '../RolService';
-import { useAuth } from '../../../contexts/AuthContext';
-import { notificationService } from '../../../lib/notifications';
-import { Badge } from '../../../components/ui/Badge';
-import { Tooltip } from '../../../components/ui/Tooltip';
-import { Button } from '../../../components/ui/Button';
-import { DataTable, type TableColumn } from '../../../components/ui/DataTable';
+import { useAuth } from '../../../shared/contexts/AuthContext';
+import { notificationService } from '../../../shared/lib/notifications';
+import { Badge } from '../../../shared/components/ui/Badge';
+import { Tooltip } from '../../../shared/components/ui/Tooltip';
+import { Button } from '../../../shared/components/ui/Button';
+import { DataTable, type TableColumn } from '../../../shared/components/ui/DataTable';
 
 const AVAILABLE_PERMISSIONS = [
   { id: 'pos', label: 'Caja / POS' },
@@ -64,7 +64,7 @@ export function TabRoles() {
   });
 
   const toggleStatusMutation = useMutation({
-    mutationFn: ({ id, current }: { id: number, current: string }) => 
+    mutationFn: ({ id, current }: { id: number, current: string }) =>
       rolService.toggleEstado(id, current, currentUser?.id || 1),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['roles'] });
@@ -97,7 +97,7 @@ export function TabRoles() {
       if (permisoId === '*') {
         return { ...prev, permisos: prev.permisos.includes('*') ? [] : ['*'] };
       }
-      
+
       const newPermisos = prev.permisos.filter(p => p !== '*'); // Quitar acceso total si seleccionan otro
       if (newPermisos.includes(permisoId)) {
         return { ...prev, permisos: newPermisos.filter(p => p !== permisoId) };
@@ -162,7 +162,7 @@ export function TabRoles() {
       render: (r) => (
         <div className="flex items-center justify-end gap-1">
           <Tooltip text="Editar Rol" position="top-right">
-            <Button 
+            <Button
               onClick={() => handleOpenEdit(r)}
               variant="ghost"
               size="sm"
@@ -171,7 +171,7 @@ export function TabRoles() {
             />
           </Tooltip>
           <Tooltip text="Desactivar Rol" position="top-right">
-            <Button 
+            <Button
               variant="ghost"
               size="sm"
               icon={<PowerOff size={14} />}
@@ -187,7 +187,7 @@ export function TabRoles() {
   return (
     <div className="space-y-4 animate-in fade-in duration-500">
       <div className="flex justify-end mb-4">
-        <Button 
+        <Button
           onClick={handleOpenCreate}
           icon={<Plus size={18} />}
           className="font-bold rounded-xl"
@@ -196,7 +196,7 @@ export function TabRoles() {
         </Button>
       </div>
 
-      <DataTable 
+      <DataTable
         columns={columns}
         data={activeRoles}
         keyExtractor={(r) => r.id}
@@ -206,7 +206,7 @@ export function TabRoles() {
       {inactiveRoles.length > 0 && (
         <div className="mt-8 opacity-60">
           <h4 className="text-xs font-semibold text-zinc-400 uppercase mb-4 tracking-widest">Roles Inactivos</h4>
-          <DataTable 
+          <DataTable
             columns={[
               ...columns.filter(c => c.key !== 'acciones'),
               {
@@ -217,9 +217,9 @@ export function TabRoles() {
                   </button>
                 )
               }
-            ]} 
-            data={inactiveRoles} 
-            keyExtractor={(u) => u.id} 
+            ]}
+            data={inactiveRoles}
+            keyExtractor={(u) => u.id}
           />
         </div>
       )}
@@ -231,10 +231,10 @@ export function TabRoles() {
               <h3 className="text-lg font-semibold text-zinc-800 dark:text-white">
                 {editingId ? 'Editar Rol' : 'Crear Nuevo Rol'}
               </h3>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => setShowModal(false)} 
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowModal(false)}
                 className="text-zinc-400 hover:text-zinc-600 dark:hover:text-white p-1"
                 icon={<Plus className="rotate-45" size={24} />}
               />
@@ -249,7 +249,7 @@ export function TabRoles() {
                     type="text"
                     placeholder="ej: Cajero Principal"
                     value={formData.nombre}
-                    onChange={(e) => setFormData(prev => ({...prev, nombre: e.target.value}))}
+                    onChange={(e) => setFormData(prev => ({ ...prev, nombre: e.target.value }))}
                     className="w-full px-4 py-2.5 text-sm font-medium border border-zinc-100 dark:border-zinc-700 rounded-xl bg-zinc-50/50 dark:bg-zinc-900/50 text-zinc-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
                   />
                 </div>
@@ -260,7 +260,7 @@ export function TabRoles() {
                     type="text"
                     placeholder="Breve descripción del rol"
                     value={formData.descripcion}
-                    onChange={(e) => setFormData(prev => ({...prev, descripcion: e.target.value}))}
+                    onChange={(e) => setFormData(prev => ({ ...prev, descripcion: e.target.value }))}
                     className="w-full px-4 py-2.5 text-sm font-medium border border-zinc-100 dark:border-zinc-700 rounded-xl bg-zinc-50/50 dark:bg-zinc-900/50 text-zinc-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
                   />
                 </div>
@@ -273,13 +273,13 @@ export function TabRoles() {
                     {AVAILABLE_PERMISSIONS.map(p => {
                       const isSelected = formData.permisos.includes(p.id);
                       return (
-                        <label 
-                          key={p.id} 
+                        <label
+                          key={p.id}
                           className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-all ${isSelected ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800' : 'bg-white dark:bg-zinc-800 border-zinc-100 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600'}`}
                         >
-                          <input 
-                            type="checkbox" 
-                            className="hidden" 
+                          <input
+                            type="checkbox"
+                            className="hidden"
                             checked={isSelected}
                             onChange={() => handleTogglePermiso(p.id)}
                           />
@@ -296,7 +296,7 @@ export function TabRoles() {
                 </div>
               </div>
               <div className="p-6 border-t border-zinc-50 dark:border-zinc-700/50 bg-zinc-50/30 dark:bg-zinc-800/30 shrink-0">
-                <Button 
+                <Button
                   type="submit"
                   fullWidth
                   isLoading={saveMutation.isPending}

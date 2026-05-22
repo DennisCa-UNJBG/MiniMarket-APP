@@ -1,8 +1,8 @@
 import React from 'react';
 import { Search, History } from 'lucide-react';
-import { DataTable, type TableColumn } from '../../../../components/ui/DataTable';
-import { Badge } from '../../../../components/ui/Badge';
-import { EmptyState } from '../../../../components/ui/EmptyState';
+import { DataTable, type TableColumn } from '../../../../shared/components/ui/DataTable';
+import { Badge } from '../../../../shared/components/ui/Badge';
+import { EmptyState } from '../../../../shared/components/ui/EmptyState';
 
 interface TabKardexProps {
   filteredKardex: any[];

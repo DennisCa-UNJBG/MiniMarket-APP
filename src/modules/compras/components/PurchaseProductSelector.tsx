@@ -1,6 +1,6 @@
 import { ShoppingBag, Plus, Check } from 'lucide-react';
-import { Button } from '../../../components/ui/Button';
-import { Tooltip } from '../../../components/ui/Tooltip';
+import { Button } from '../../../shared/components/ui/Button';
+import { Tooltip } from '../../../shared/components/ui/Tooltip';
 import type { RefObject } from 'react';
 
 interface PurchaseProductSelectorProps {
@@ -44,11 +44,11 @@ export function PurchaseProductSelector({
       <div className="grid grid-cols-12 gap-3 items-end">
         <div className="col-span-6 relative">
           <label htmlFor="compra-buscar-producto" className="text-[10px] font-medium text-zinc-400 mb-1 block">PRODUCTO</label>
-          <input 
+          <input
             id="compra-buscar-producto"
-            type="text" 
-            className={`${inputCls} uppercase`} 
-            placeholder="Buscar producto..." 
+            type="text"
+            className={`${inputCls} uppercase`}
+            placeholder="Buscar producto..."
             value={prodSearch}
             onFocus={() => setShowProductList(true)}
             onChange={(e) => {
@@ -100,7 +100,7 @@ export function PurchaseProductSelector({
         </div>
         <div className="col-span-2">
           <Tooltip text="Agregar al detalle de la compra" position="top-right">
-            <Button 
+            <Button
               onClick={addToCart}
               variant={editingCartIndex !== null ? 'warning' : 'primary'}
               className={`w-full h-[38px] ${editingCartIndex !== null ? 'shadow-amber-200' : 'shadow-blue-200 dark:shadow-none'} p-0`}

@@ -1,4 +1,4 @@
-import { getDb } from '../../lib/db';
+import { getDb } from '../../shared/lib/db';
 
 export interface StockAlerta {
   id: number;

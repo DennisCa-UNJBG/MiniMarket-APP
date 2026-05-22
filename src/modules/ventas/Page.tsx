@@ -15,17 +15,17 @@ import {
   CircleSlash2,
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { DataTable, type TableColumn } from '../../components/ui/DataTable';
-import { PageHeader } from '../../components/ui/PageHeader';
-import { Badge } from '../../components/ui/Badge';
-import { Modal } from '../../components/ui/Modal';
+import { DataTable, type TableColumn } from '../../shared/components/ui/DataTable';
+import { PageHeader } from '../../shared/components/ui/PageHeader';
+import { Badge } from '../../shared/components/ui/Badge';
+import { Modal } from '../../shared/components/ui/Modal';
 import { ventaService } from './Service';
 import { Voucher } from './components/Voucher';
-import { notificationService } from '../../lib/notifications';
-import { EmptyState } from '../../components/ui/EmptyState';
-import { Tooltip } from '../../components/ui/Tooltip';
-import { Button } from '../../components/ui/Button';
-import { dateUtils } from '../../lib/dateUtils';
+import { notificationService } from '../../shared/lib/notifications';
+import { EmptyState } from '../../shared/components/ui/EmptyState';
+import { Tooltip } from '../../shared/components/ui/Tooltip';
+import { Button } from '../../shared/components/ui/Button';
+import { dateUtils } from '../../shared/lib/dateUtils';
 
 const formatDate = (dateStr: string) => {
   return dateUtils.formatUTCtoLocalDateString(dateStr);
@@ -45,8 +45,8 @@ const getColumns = (onViewDetail: (sale: any) => void, onAnular: (sale: any) => 
       </span>
     ),
   },
-  { 
-    key: 'fecha',    
+  {
+    key: 'fecha',
     header: 'Fecha / Hora',
     render: (row) => (
       <div className="flex flex-col">
@@ -59,8 +59,8 @@ const getColumns = (onViewDetail: (sale: any) => void, onAnular: (sale: any) => 
       </div>
     )
   },
-  { 
-    key: 'usuario_nombre', 
+  {
+    key: 'usuario_nombre',
     header: 'Cajero',
     render: (row) => (
       <span className="text-xs text-zinc-600 dark:text-zinc-400 flex items-center gap-1">
@@ -78,9 +78,9 @@ const getColumns = (onViewDetail: (sale: any) => void, onAnular: (sale: any) => 
       </div>
     )
   },
-  { 
-    key: 'items_count',   
-    header: 'Ítems', 
+  {
+    key: 'items_count',
+    header: 'Ítems',
     align: 'center',
     render: (row) => <Badge label={row.items_count} variant="blue" />
   },
@@ -96,9 +96,9 @@ const getColumns = (onViewDetail: (sale: any) => void, onAnular: (sale: any) => 
     key: 'estado',
     header: 'Estado',
     render: (row) => (
-      <Badge 
-        label={row.estado === 'anulado' ? 'ANULADO' : 'COMPLETADO'} 
-        variant={row.estado === 'anulado' ? 'red' : 'emerald'} 
+      <Badge
+        label={row.estado === 'anulado' ? 'ANULADO' : 'COMPLETADO'}
+        variant={row.estado === 'anulado' ? 'red' : 'emerald'}
       />
     )
   },
@@ -110,7 +110,7 @@ const getColumns = (onViewDetail: (sale: any) => void, onAnular: (sale: any) => 
       <div className="flex items-center justify-end gap-2">
         {row.estado !== 'anulado' && (
           <Tooltip text="Anular Venta" position="top-right">
-            <Button 
+            <Button
               onClick={() => onAnular(row)}
               variant="ghost"
               size="sm"
@@ -120,7 +120,7 @@ const getColumns = (onViewDetail: (sale: any) => void, onAnular: (sale: any) => 
           </Tooltip>
         )}
         <Tooltip text="Ver Boleta" position="top-right">
-          <Button 
+          <Button
             onClick={() => onViewDetail(row)}
             variant="ghost"
             size="sm"
@@ -178,7 +178,7 @@ function ventasReducer(state: VentasState, action: VentasAction): VentasState {
 export function Ventas() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  
+
   const [state, dispatch] = useReducer(ventasReducer, initialVentasState);
 
   const { page, pageSize, search, selectedSale, saleDetails } = state;
@@ -236,7 +236,7 @@ export function Ventas() {
       '¿Anular venta?',
       `¿Estás seguro de anular la venta #${sale.id}? Esta acción revertirá el stock de los productos y anulará el registro del Kardex.`
     );
-    
+
     if (ok) {
       annulVentaMutation.mutate(sale.id);
     }
@@ -247,7 +247,7 @@ export function Ventas() {
     window.print();
   };
 
-  const filtered = salesRes.data.filter((s: any) => 
+  const filtered = salesRes.data.filter((s: any) =>
     s.id.toString().includes(search.toLowerCase()) ||
     (s.estado || '').toLowerCase().includes(search.toLowerCase())
   );
@@ -260,7 +260,7 @@ export function Ventas() {
   const crecimientoPositivo = crecimientoValor >= 0;
 
   const summaryCards = [
-    { label: 'Ventas de hoy',   value: `S/ ${resumen.total.toFixed(2)}`, sub: `${resumen.count} transacciones`,   icon: ShoppingCart, color: 'bg-blue-500', up: true },
+    { label: 'Ventas de hoy', value: `S/ ${resumen.total.toFixed(2)}`, sub: `${resumen.count} transacciones`, icon: ShoppingCart, color: 'bg-blue-500', up: true },
     { label: 'Crecimiento vs Ayer', value: crecimientoLabel, sub: `Ayer: S/ ${resumenAyer.total.toFixed(2)}`, icon: TrendingUp, color: crecimientoPositivo ? 'bg-emerald-500' : 'bg-rose-500', up: crecimientoPositivo },
     { label: 'Promedio Ticket', value: `S/ ${(resumen.total / (resumen.count || 1)).toFixed(2)}`, sub: 'por venta', icon: DollarSign, color: 'bg-amber-500', up: true },
   ];
@@ -367,9 +367,9 @@ export function Ventas() {
               </div>
               <div>
                 <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Estado</p>
-                <Badge 
-                  label={selectedSale.estado === 'anulado' ? 'ANULADO' : 'COMPLETADO'} 
-                  variant={selectedSale.estado === 'anulado' ? 'red' : 'emerald'} 
+                <Badge
+                  label={selectedSale.estado === 'anulado' ? 'ANULADO' : 'COMPLETADO'}
+                  variant={selectedSale.estado === 'anulado' ? 'red' : 'emerald'}
                 />
               </div>
               <div className="col-span-2">

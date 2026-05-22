@@ -1,5 +1,5 @@
-import { getDb } from '../../lib/db';
-import { sucursalService } from '../sucursales/Service';
+import { getDb } from '../../shared/lib/db';
+import { systemConfigService } from '../configuracion/systemConfigService';
 
 export interface TopProduct {
   name: string;
@@ -27,7 +27,7 @@ export const reporteService = {
   async getTopProducts(limit = 5, startDate?: string, endDate?: string): Promise<TopProduct[]> {
     const [db, config] = await Promise.all([
       getDb(),
-      sucursalService.getConfig()
+      systemConfigService.getConfig()
     ]);
     const sucursalId = config?.sucursal_id || 'LOCAL';
 
@@ -65,7 +65,7 @@ export const reporteService = {
   async getMonthlyRevenue(startDate?: string, endDate?: string): Promise<MonthlyRevenue[]> {
     const [db, config] = await Promise.all([
       getDb(),
-      sucursalService.getConfig()
+      systemConfigService.getConfig()
     ]);
     const sucursalId = config?.sucursal_id || 'LOCAL';
 
@@ -154,7 +154,7 @@ export const reporteService = {
   async getKPIs(startDate?: string, endDate?: string): Promise<ReportKPIs> {
     const [db, config] = await Promise.all([
       getDb(),
-      sucursalService.getConfig()
+      systemConfigService.getConfig()
     ]);
     const sucursalId = config?.sucursal_id || 'LOCAL';
 
@@ -169,7 +169,7 @@ export const reporteService = {
       const start = new Date(currentStart + 'T00:00:00');
       const end = new Date(currentEnd + 'T00:00:00');
       const durationMs = end.getTime() - start.getTime();
-      
+
       const pStart = new Date(start.getTime() - durationMs - (1000 * 60 * 60 * 24));
       const pEnd = new Date(start.getTime() - (1000 * 60 * 60 * 24));
 
@@ -179,7 +179,7 @@ export const reporteService = {
         const day = String(d.getDate()).padStart(2, '0');
         return `${year}-${month}-${day}`;
       };
-      
+
       prevStart = formatDateStr(pStart);
       prevEnd = formatDateStr(pEnd);
     }

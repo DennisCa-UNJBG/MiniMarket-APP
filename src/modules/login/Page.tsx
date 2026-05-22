@@ -8,13 +8,13 @@ import {
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { getVersion } from '@tauri-apps/api/app';
 import { authService, type UserData } from './Service';
-import { notificationService } from '../../lib/notifications';
-import { AuthError, ConnectionError } from '../../lib/errors';
+import { notificationService } from '../../shared/lib/notifications';
+import { AuthError, ConnectionError } from '../../shared/lib/errors';
 
-import { Input } from '../../components/ui/Input';
-import { Button } from '../../components/ui/Button';
+import { Input } from '../../shared/components/ui/Input';
+import { Button } from '../../shared/components/ui/Button';
 
-import { ThemeToggle } from '../../components/ui/ThemeToggle';
+import { ThemeToggle } from '../../shared/components/ui/ThemeToggle';
 
 interface LoginProps {
   onLogin: (user: UserData) => void;
@@ -51,7 +51,7 @@ export function Login({ onLogin }: LoginProps) {
     if (inputRef.current) {
       inputRef.current.focus();
     }
-    
+
     // Obtener la versión real de la app
     getVersion().then(version => setAppVersion(version)).catch(console.error);
   }, []);
@@ -69,11 +69,11 @@ export function Login({ onLogin }: LoginProps) {
 
       {/* ── Contenedor Principal ────────────────────────────────────────────── */}
       <div className="relative w-full max-w-5xl h-[600px] bg-white/80 dark:bg-zinc-800/80 backdrop-blur-xl rounded-3xl shadow-2xl overflow-hidden border border-white/20 dark:border-zinc-700/50 flex z-10 m-4">
-        
+
         {/* Lado Izquierdo: Branding y Decoración (Oculto en móviles) */}
         <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-600 to-violet-700 p-12 flex-col justify-between relative overflow-hidden text-white">
           <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1553413077-190dd305871c?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80')] opacity-10 bg-cover bg-center mix-blend-overlay"></div>
-          
+
           <div className="relative z-10 flex items-center gap-3">
             <div className="bg-white/20 p-2.5 rounded-xl backdrop-blur-md border border-white/20">
               <Package2 size={28} className="text-white" />
@@ -100,7 +100,7 @@ export function Login({ onLogin }: LoginProps) {
         {/* Lado Derecho: Formulario de Login */}
         <div className="w-full lg:w-1/2 p-8 sm:p-12 md:p-16 flex flex-col justify-center">
           <div className="max-w-md w-full mx-auto space-y-8">
-            
+
             {/* Cabecera Móvil */}
             <div className="flex items-center justify-between mb-8">
               {/* Logo visible solo en móvil (en escritorio ya está a la izquierda) */}
@@ -110,7 +110,7 @@ export function Login({ onLogin }: LoginProps) {
                 </div>
                 <span className="text-xl font-bold text-zinc-900 dark:text-white">MiniMarket Pro</span>
               </div>
-              
+
               {/* Espaciador para escritorio */}
               <div className="hidden lg:block"></div>
 
@@ -125,7 +125,7 @@ export function Login({ onLogin }: LoginProps) {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">
-              
+
               <Input
                 label="Cuenta"
                 placeholder="Usuario de personal"
@@ -162,7 +162,7 @@ export function Login({ onLogin }: LoginProps) {
             <div className="mt-8 text-center text-sm text-zinc-500 dark:text-zinc-400">
               <p>Solo personal autorizado.</p>
             </div>
-            
+
           </div>
         </div>
 

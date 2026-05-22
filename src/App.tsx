@@ -2,17 +2,17 @@ import { useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { HashRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider, QueryCache, MutationCache } from '@tanstack/react-query';
-import { ThemeProvider } from './contexts/ThemeContext';
-import { SidebarProvider } from './contexts/SidebarContext';
+import { ThemeProvider } from './shared/contexts/ThemeContext';
+import { SidebarProvider } from './shared/contexts/SidebarContext';
 import { allNavItems } from './config/navigation';
-import { ProtectedRoute } from './components/auth/ProtectedRoute';
-import { MainLayout } from './layouts/MainLayout';
+import { ProtectedRoute } from './shared/components/auth/ProtectedRoute';
+import { MainLayout } from './shared/layouts/MainLayout';
 import { Login } from './modules/login/Page';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { notificationService } from './lib/notifications';
-import { ConnectionError } from './lib/errors';
-import { useGlobalShortcuts } from './hooks/useGlobalShortcuts';
-import { GlobalBrightnessOverlay } from './hooks/useGlobalBrightnessOverlay';
+import { AuthProvider, useAuth } from './shared/contexts/AuthContext';
+import { notificationService } from './shared/lib/notifications';
+import { ConnectionError } from './shared/lib/errors';
+import { useGlobalShortcuts } from './shared/hooks/useGlobalShortcuts';
+import { GlobalBrightnessOverlay } from './shared/hooks/useGlobalBrightnessOverlay';
 
 function GlobalShortcutsHandler() {
   useGlobalShortcuts();
@@ -98,14 +98,14 @@ function AppContent() {
         <MainLayout>
           <Routes>
             {allNavItems.map((item) => (
-              <Route 
-                key={item.to} 
-                path={item.to} 
+              <Route
+                key={item.to}
+                path={item.to}
                 element={
                   <ProtectedRoute requiredPermission={item.requiredPermission}>
                     <item.component />
                   </ProtectedRoute>
-                } 
+                }
               />
             ))}
           </Routes>

@@ -1,7 +1,7 @@
-import { getDb } from '../../lib/db';
-import { AuthError, ConnectionError } from '../../lib/errors';
+import { getDb } from '../../shared/lib/db';
+import { AuthError, ConnectionError } from '../../shared/lib/errors';
 import bcrypt from 'bcryptjs';
-import { logService } from '../../lib/logService';
+import { logService } from '../../shared/lib/logService';
 
 export interface UserData {
   id: number;
@@ -40,22 +40,22 @@ export const authService = {
 
     if (result && result.length > 0) {
       const user = result[0];
-      
+
       // Comparamos la contraseña ingresada con el hash de la base de datos
       const isPasswordValid = await bcrypt.compare(passwordPlain, user.password_hash);
-      
+
       if (!isPasswordValid) {
         throw new AuthError();
       }
 
       let parsedPermisos: string[] = [];
-      
+
       try {
         parsedPermisos = typeof user.permisos === 'string' ? JSON.parse(user.permisos) : user.permisos;
       } catch (e) {
         console.error("Error al analizar permisos del usuario:", e);
       }
-      
+
       const userData = {
         id: user.id,
         username: user.username,

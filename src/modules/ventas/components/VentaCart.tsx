@@ -1,7 +1,7 @@
 import { Trash2, Minus, Plus, Receipt, ArrowLeft } from 'lucide-react';
-import { Button } from '../../../components/ui/Button';
-import { Badge } from '../../../components/ui/Badge';
-import { Tooltip } from '../../../components/ui/Tooltip';
+import { Button } from '../../../shared/components/ui/Button';
+import { Badge } from '../../../shared/components/ui/Badge';
+import { Tooltip } from '../../../shared/components/ui/Tooltip';
 import { type Product } from '../../productos/Service';
 
 interface CartItem {
@@ -41,9 +41,9 @@ export function VentaCart({
       <div className="p-4 border-b border-zinc-100 dark:border-zinc-700 bg-zinc-50/50 dark:bg-zinc-800">
         <h2 className="font-semibold text-zinc-800 dark:text-white flex items-center justify-between">
           <span>Ticket Actual</span>
-          <Badge 
-            label={`${cart.reduce((sum, item) => sum + item.quantity, 0)} ítems`} 
-            variant="blue" 
+          <Badge
+            label={`${cart.reduce((sum, item) => sum + item.quantity, 0)} ítems`}
+            variant="blue"
           />
         </h2>
       </div>
@@ -65,10 +65,10 @@ export function VentaCart({
                 </div>
                 <div className="flex items-center justify-between">
                   <p className="text-xs text-zinc-500 dark:text-zinc-400">S/ {(item.product.precio_venta || 0).toFixed(2)} c/u</p>
-                  
+
                   <div className="flex items-center gap-1.5 bg-zinc-100 dark:bg-zinc-900/50 p-1 rounded-lg border border-zinc-200/50 dark:border-zinc-700">
                     <Tooltip text={item.quantity === 1 ? "Eliminar" : "Disminuir"} position="top-right">
-                      <Button 
+                      <Button
                         variant="secondary"
                         size="sm"
                         onClick={() => item.quantity === 1 ? removeFromCart(item.product.id) : updateQuantity(item.product.id, -1)}
@@ -81,7 +81,7 @@ export function VentaCart({
                       {item.quantity}
                     </span>
                     <Tooltip text="Aumentar" position="top-right">
-                      <Button 
+                      <Button
                         variant="secondary"
                         size="sm"
                         onClick={() => updateQuantity(item.product.id, 1)}
@@ -118,8 +118,8 @@ export function VentaCart({
 
           {hasIGV && (
             <div className="relative w-16">
-              <input 
-                type="number" 
+              <input
+                type="number"
                 className="w-full pl-2 pr-5 py-1 text-xs font-bold bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-600 rounded-lg text-blue-600 dark:text-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
                 value={igvPercent}
                 onChange={(e) => setIgvPercent(parseFloat(e.target.value) || 0)}
@@ -145,8 +145,8 @@ export function VentaCart({
             <span className="text-2xl font-black text-blue-600 dark:text-blue-400">S/ {total.toFixed(2)}</span>
           </div>
         </div>
-        
-        <Button 
+
+        <Button
           disabled={cart.length === 0}
           onClick={onCobrar}
           fullWidth

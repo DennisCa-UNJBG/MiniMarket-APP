@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { preferenciasService } from '../modules/configuracion/preferenciasService';
+import { preferenciasService } from '../../modules/configuracion/preferenciasService';
 
 export function GlobalBrightnessOverlay() {
   const [brightness, setBrightness] = useState(100);
@@ -21,7 +21,7 @@ export function GlobalBrightnessOverlay() {
   const opacity = 1 - (brightness / 100);
 
   return (
-    <div 
+    <div
       style={{
         position: 'fixed',
         inset: 0,

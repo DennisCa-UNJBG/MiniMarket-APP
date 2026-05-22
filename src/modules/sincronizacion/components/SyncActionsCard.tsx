@@ -3,8 +3,8 @@ import { invoke } from '@tauri-apps/api/core';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ventaService } from '../../ventas/Service';
 import { syncService } from '../Service';
-import { notificationService } from '../../../lib/notifications';
-import { Button } from '../../../components/ui/Button';
+import { notificationService } from '../../../shared/lib/notifications';
+import { Button } from '../../../shared/components/ui/Button';
 
 export function SyncActionsCard() {
   const queryClient = useQueryClient();
@@ -23,7 +23,7 @@ export function SyncActionsCard() {
   const syncMutation = useMutation({
     mutationFn: async () => {
       notificationService.info('Sincronizando', 'Enviando ventas y descargando catálogo actualizado...');
-      
+
       const [
         { enviadas },
         { enviadas: kEnviadas },
@@ -42,7 +42,7 @@ export function SyncActionsCard() {
     },
     onSuccess: (data) => {
       notificationService.success(
-        'Sincronización Completa', 
+        'Sincronización Completa',
         `Enviados: ${data.enviadas} ventas y ${data.kEnviadas} movimientos. Stock OK. Catálogo: +${data.pCreados}/~${data.pActualizados}. Usuarios: +${data.uCreados}/~${data.uActualizados}.`
       );
       refetchPending();
@@ -64,17 +64,17 @@ export function SyncActionsCard() {
       {/* Sidebar de sincronización local */}
       <div className="lg:col-span-2 p-8 bg-white dark:bg-zinc-800 rounded-[2.5rem] border border-zinc-100 dark:border-zinc-700 shadow-sm relative overflow-hidden group">
         <div className="absolute top-0 right-0 size-32 bg-blue-500/5 rounded-full -mr-16 -mt-16 transition-transform group-hover:scale-110" />
-        
+
         <div className="relative">
           <div className="size-12 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-2xl flex items-center justify-center mb-6">
             <CloudSync size={24} />
           </div>
-          
+
           <h4 className="text-xl font-semibold text-zinc-800 dark:text-white mb-4">Sincronización Local</h4>
           <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-6 leading-relaxed">
             Envía tus ventas realizadas y descarga los últimos productos y personal autorizado desde la Sede Central.
           </p>
-          
+
           <div className="space-y-4">
             <div className="flex items-center justify-between text-xs font-bold border-b border-zinc-50 dark:border-zinc-700 pb-2">
               <span className="text-zinc-400 uppercase tracking-wider">Ventas pendientes</span>
@@ -82,8 +82,8 @@ export function SyncActionsCard() {
                 {pendingSales} registros
               </span>
             </div>
-            
-            <Button 
+
+            <Button
               onClick={handlePushData}
               isLoading={syncMutation.isPending}
               fullWidth

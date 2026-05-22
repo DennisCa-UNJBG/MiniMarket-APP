@@ -1,6 +1,6 @@
 import { Edit2, Trash2 } from 'lucide-react';
-import { Button } from '../../../components/ui/Button';
-import { Tooltip } from '../../../components/ui/Tooltip';
+import { Button } from '../../../shared/components/ui/Button';
+import { Tooltip } from '../../../shared/components/ui/Tooltip';
 
 interface CartItem {
   producto_id: number;
@@ -47,7 +47,7 @@ export function PurchaseCartTable({
                 <td className="px-4 py-3 text-right font-bold text-zinc-900 dark:text-white">S/ {(item.cantidad * item.costo_unitario).toFixed(2)}</td>
                 <td className="px-4 py-3 text-right flex items-center justify-end gap-1">
                   <Tooltip text="Editar item" position="top-right">
-                    <Button 
+                    <Button
                       variant="ghost"
                       size="sm"
                       icon={<Edit2 size={14} />}
@@ -56,11 +56,11 @@ export function PurchaseCartTable({
                     />
                   </Tooltip>
                   <Tooltip text="Eliminar item" position="top-right">
-                    <Button 
+                    <Button
                       variant="ghost"
                       size="sm"
                       icon={<Trash2 size={14} />}
-                      onClick={() => removeFromCart(idx)} 
+                      onClick={() => removeFromCart(idx)}
                       className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
                     />
                   </Tooltip>

@@ -1,6 +1,6 @@
 import { User, Pencil, Phone, Mail } from 'lucide-react';
-import { Tooltip } from '../../../components/ui/Tooltip';
-import { Button } from '../../../components/ui/Button';
+import { Tooltip } from '../../../shared/components/ui/Tooltip';
+import { Button } from '../../../shared/components/ui/Button';
 import type { Cliente } from '../Service';
 
 interface ClienteCardProps {
@@ -23,7 +23,7 @@ export function ClienteCard({ cliente, onEdit, onViewHistory }: ClienteCardProps
             <p className="text-xs text-zinc-400 dark:text-zinc-500">DNI/RUC: {cliente.dni_ruc || 'Sin Documento'}</p>
           </div>
         </div>
-        
+
         <Tooltip text="Editar cliente" position="top-right">
           <button
             onClick={() => onEdit(cliente)}
@@ -56,7 +56,7 @@ export function ClienteCard({ cliente, onEdit, onViewHistory }: ClienteCardProps
           <p className="text-sm font-bold text-blue-600 dark:text-blue-400">S/ {(cliente.total_gastado || 0).toFixed(2)}</p>
         </div>
         <Tooltip text="Ver historial del cliente" position="top-right">
-          <Button 
+          <Button
             variant="ghost"
             size="sm"
             className="text-xs text-blue-600 dark:text-blue-400 hover:underline px-2 py-1"

@@ -1,13 +1,13 @@
 import { useReducer } from 'react';
 import { CreditCard, Banknote, Loader2 } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Modal } from '../../../components/ui/Modal';
-import { Button } from '../../../components/ui/Button';
-import { Input } from '../../../components/ui/Input';
+import { Modal } from '../../../shared/components/ui/Modal';
+import { Button } from '../../../shared/components/ui/Button';
+import { Input } from '../../../shared/components/ui/Input';
 import { ventaService } from '../Service';
 import { clienteService } from '../../clientes/Service';
 import { perudevsService } from '../../configuracion/perudevsService';
-import { notificationService } from '../../../lib/notifications';
+import { notificationService } from '../../../shared/lib/notifications';
 import { type Product } from '../../productos/Service';
 
 interface CartItem {
@@ -106,7 +106,7 @@ export function CheckoutModal({
 }: CheckoutModalProps) {
   const queryClient = useQueryClient();
   const [state, dispatch] = useReducer(checkoutReducer, initialCheckoutState);
-  
+
   const {
     paymentMethod,
     amountPaid,
@@ -123,7 +123,7 @@ export function CheckoutModal({
     onSuccess: async (data) => {
       onClose();
       await notificationService.successWithConfirm('¡Venta completada!', `Vuelto: S/ ${data.vuelto.toFixed(2)}`);
-      
+
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['sales'] });
       queryClient.invalidateQueries({ queryKey: ['sales-summary'] });
@@ -133,10 +133,10 @@ export function CheckoutModal({
       queryClient.invalidateQueries({ queryKey: ['low-stock'] });
       queryClient.invalidateQueries({ queryKey: ['movements'] });
       queryClient.invalidateQueries({ queryKey: ['clientes'] });
-      
+
       // Limpiar estados locales de cliente al tener éxito
       dispatch({ type: 'RESET' });
-      
+
       onSuccess();
     }
   });
@@ -205,8 +205,8 @@ export function CheckoutModal({
   if (!isOpen) return null;
 
   return (
-    <Modal 
-      title="Completar Venta" 
+    <Modal
+      title="Completar Venta"
       onClose={onClose}
       maxWidth="md"
     >
@@ -216,7 +216,7 @@ export function CheckoutModal({
           <p className="text-4xl font-black">S/ {roundedTotal.toFixed(2)}</p>
         </div>
       </div>
-        
+
       <div className="space-y-6">
         {/* Cliente / Documento (Opcional) */}
         <div className="bg-zinc-50 dark:bg-zinc-800/40 p-4 rounded-2xl border border-zinc-150 dark:border-zinc-700/60 space-y-4">
@@ -293,16 +293,16 @@ export function CheckoutModal({
 
         {/* Métodos de pago */}
         <div className="grid grid-cols-2 gap-3">
-          <Button 
-            variant="secondary" 
+          <Button
+            variant="secondary"
             onClick={() => dispatch({ type: 'SET_PAYMENT_METHOD', payload: 'EFECTIVO' })}
             className={`flex-col h-auto py-4 border-2 transition-all ${paymentMethod === 'EFECTIVO' ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400' : 'border-transparent opacity-60'}`}
             icon={<Banknote size={24} />}
           >
             <span>Efectivo</span>
           </Button>
-          <Button 
-            variant="secondary" 
+          <Button
+            variant="secondary"
             onClick={() => {
               dispatch({ type: 'SET_PAYMENT_METHOD', payload: 'TARJETA' });
               dispatch({ type: 'SET_AMOUNT_PAID', payload: roundedTotal.toFixed(2) });
@@ -329,25 +329,24 @@ export function CheckoutModal({
           />
 
           {/* Vuelto / Estado del Pago */}
-          <div className={`p-4 rounded-xl flex justify-between items-center transition-colors ${
-            paidNumber >= roundedTotal 
-              ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800' 
+          <div className={`p-4 rounded-xl flex justify-between items-center transition-colors ${paidNumber >= roundedTotal
+              ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
               : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400 border border-zinc-100 dark:border-zinc-800'
-          }`}>
+            }`}>
             <span className="font-semibold">{paidNumber >= roundedTotal ? 'Vuelto:' : 'Pendiente:'}</span>
             <span className="text-2xl font-black">S/ {Math.abs(change).toFixed(2)}</span>
           </div>
         </div>
 
         <div className="flex gap-3 pt-2">
-          <Button 
-            variant="secondary" 
+          <Button
+            variant="secondary"
             onClick={onClose}
             className="w-full"
           >
             Volver
           </Button>
-          <Button 
+          <Button
             disabled={paymentMethod === 'EFECTIVO' && paidNumber < roundedTotal}
             isLoading={registrarVentaMutation.isPending}
             onClick={async () => {

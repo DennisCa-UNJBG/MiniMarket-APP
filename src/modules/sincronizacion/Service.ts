@@ -1,12 +1,12 @@
-import { sucursalService } from '../sucursales/Service';
-import { getDb } from '../../lib/db';
+import { systemConfigService } from '../configuracion/systemConfigService';
+import { getDb } from '../../shared/lib/db';
 
 export const syncService = {
   /**
    * Descarga productos desde la sede central y los sincroniza localmente
    */
   async pullProducts() {
-    const config = await sucursalService.getConfig();
+    const config = await systemConfigService.getConfig();
     if (!config || !config.api_url_central || !config.sucursal_id) {
       throw new Error('Configuración de sucursal incompleta');
     }
@@ -34,7 +34,7 @@ export const syncService = {
 
     // 1. Obtener categorías únicas de los productos de la central
     const uniqueCats = Array.from(new Set(productosCentral.flatMap((p: any) => p.categoria ? [p.categoria] : []))) as string[];
-    
+
     // 2. Pre-cargar todas las categorías existentes
     const catList = await db.select<any[]>('SELECT id, nombre FROM categorias');
     const catMap = new Map<string, number>(catList.map(c => [c.nombre.toLowerCase(), c.id]));
@@ -57,7 +57,7 @@ export const syncService = {
 
       // Upsert Producto
       const prodRes = await db.select<any[]>('SELECT id FROM productos WHERE codigo_barras = ?', [p.codigo_barras]);
-      
+
       let productoId: number;
       if (prodRes.length > 0) {
         productoId = prodRes[0].id;
@@ -94,7 +94,7 @@ export const syncService = {
    * Descarga usuarios desde la sede central
    */
   async pullUsers() {
-    const config = await sucursalService.getConfig();
+    const config = await systemConfigService.getConfig();
     if (!config || !config.api_url_central || !config.sucursal_id) {
       throw new Error('Configuración de sucursal incompleta');
     }
@@ -119,7 +119,7 @@ export const syncService = {
 
     await Promise.all(usuariosCentral.map(async (u: any) => {
       const userRes = await db.select<any[]>('SELECT id FROM usuarios WHERE username = ?', [u.username]);
-      
+
       if (userRes.length > 0) {
         await db.execute(
           'UPDATE usuarios SET password_hash = ?, nombre_completo = ?, rol_id = ?, estado = ? WHERE username = ?',
@@ -142,13 +142,13 @@ export const syncService = {
    * Envía las ventas locales no sincronizadas a la sede central
    */
   async pushSales() {
-    const config = await sucursalService.getConfig();
+    const config = await systemConfigService.getConfig();
     if (!config || !config.api_url_central || !config.sucursal_id) {
       throw new Error('Configuración de sucursal incompleta');
     }
 
     const db = await getDb();
-    
+
     // 1. Obtener ventas pendientes
     const ventasPendientes = await db.select<any[]>(
       'SELECT * FROM ventas WHERE sincronizado = 0'
@@ -183,9 +183,9 @@ export const syncService = {
     // 3. Enviar a la central
     const response = await fetch(`${config.api_url_central}/api/sincronizar`, {
       method: 'POST',
-      headers: { 
+      headers: {
         'Content-Type': 'application/json',
-        'X-Sucursal-Key': config.sucursal_id 
+        'X-Sucursal-Key': config.sucursal_id
       },
       body: JSON.stringify({
         sucursal_id: config.sucursal_id,
@@ -210,7 +210,7 @@ export const syncService = {
    * Envía los niveles de stock actual de todos los productos a la central
    */
   async pushStockLevels() {
-    const config = await sucursalService.getConfig();
+    const config = await systemConfigService.getConfig();
     if (!config || !config.api_url_central || !config.sucursal_id) {
       throw new Error('Configuración de sucursal incompleta');
     }
@@ -222,9 +222,9 @@ export const syncService = {
 
     const response = await fetch(`${config.api_url_central}/api/stock-update`, {
       method: 'POST',
-      headers: { 
+      headers: {
         'Content-Type': 'application/json',
-        'X-Sucursal-Key': config.sucursal_id 
+        'X-Sucursal-Key': config.sucursal_id
       },
       body: JSON.stringify({
         sucursal_id: config.sucursal_id,
@@ -247,7 +247,7 @@ export const syncService = {
    * Envía los movimientos de kardex locales no sincronizados a la central
    */
   async pushKardex() {
-    const config = await sucursalService.getConfig();
+    const config = await systemConfigService.getConfig();
     if (!config || !config.api_url_central || !config.sucursal_id) {
       throw new Error('Configuración de sucursal incompleta');
     }
@@ -264,9 +264,9 @@ export const syncService = {
 
     const response = await fetch(`${config.api_url_central}/api/kardex-sync`, {
       method: 'POST',
-      headers: { 
+      headers: {
         'Content-Type': 'application/json',
-        'X-Sucursal-Key': config.sucursal_id 
+        'X-Sucursal-Key': config.sucursal_id
       },
       body: JSON.stringify({
         sucursal_id: config.sucursal_id,

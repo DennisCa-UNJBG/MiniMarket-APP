@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
-import { getDb } from '../../lib/db';
+import { getDb } from '../../shared/lib/db';
 
 export const databaseService = {
   /**

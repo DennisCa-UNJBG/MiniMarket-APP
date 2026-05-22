@@ -10,15 +10,15 @@ import {
   Loader2
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { PageHeader } from '../../components/ui/PageHeader';
-import { Button } from '../../components/ui/Button';
-import { EmptyState } from '../../components/ui/EmptyState';
+import { PageHeader } from '../../shared/components/ui/PageHeader';
+import { Button } from '../../shared/components/ui/Button';
+import { EmptyState } from '../../shared/components/ui/EmptyState';
 import { clienteService, type Cliente } from './Service';
 import { perudevsService } from '../configuracion/perudevsService';
 import { ventaService } from '../ventas/Service';
 import { Voucher } from '../ventas/components/Voucher';
-import { notificationService } from '../../lib/notifications';
-import { useAuth } from '../../contexts/AuthContext';
+import { notificationService } from '../../shared/lib/notifications';
+import { useAuth } from '../../shared/contexts/AuthContext';
 
 // Componentes secundarios modularizados
 import { ClienteCard } from './components/ClienteCard';

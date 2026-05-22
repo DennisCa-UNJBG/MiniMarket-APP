@@ -8,10 +8,10 @@ import {
   Info,
 } from 'lucide-react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
-import { logService } from '../../lib/logService';
-import { PageHeader } from '../../components/ui/PageHeader';
-import { DataTable, type TableColumn } from '../../components/ui/DataTable';
-import { Badge } from '../../components/ui/Badge';
+import { logService } from '../../shared/lib/logService';
+import { PageHeader } from '../../shared/components/ui/PageHeader';
+import { DataTable, type TableColumn } from '../../shared/components/ui/DataTable';
+import { Badge } from '../../shared/components/ui/Badge';
 
 const formatDate = (dateStr: string) => {
   if (!dateStr) return '';
@@ -153,9 +153,9 @@ export function Auditoria() {
 
   return (
     <div className="space-y-6">
-      <PageHeader 
-        title="Historial de Auditoría" 
-        subtitle="Registro de actividades y cambios sensibles en el sistema" 
+      <PageHeader
+        title="Historial de Auditoría"
+        subtitle="Registro de actividades y cambios sensibles en el sistema"
       />
 
       {/* Filtros */}
@@ -170,7 +170,7 @@ export function Auditoria() {
             className="w-full pl-10 pr-4 py-2 text-sm border border-zinc-100 dark:border-zinc-600 rounded-xl bg-zinc-50 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-100 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
           />
         </div>
-        
+
         <div className="flex items-center gap-2 w-full sm:w-auto">
           <Filter size={16} className="text-zinc-400" />
           <select

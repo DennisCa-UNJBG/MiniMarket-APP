@@ -1,12 +1,12 @@
 import { Search, ShoppingBag } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { Button } from '../../../components/ui/Button';
-import { Card } from '../../../components/ui/Card';
-import { Input } from '../../../components/ui/Input';
-import { Badge } from '../../../components/ui/Badge';
+import { Button } from '../../../shared/components/ui/Button';
+import { Card } from '../../../shared/components/ui/Card';
+import { Input } from '../../../shared/components/ui/Input';
+import { Badge } from '../../../shared/components/ui/Badge';
 import { productoService, type Product } from '../../productos/Service';
 import { categoriaService } from '../../productos/categoriaService';
-import { notificationService } from '../../../lib/notifications';
+import { notificationService } from '../../../shared/lib/notifications';
 
 interface ProductCatalogProps {
   search: string;
@@ -34,8 +34,8 @@ export function ProductCatalog({
   });
 
   const filteredCatalog = products.filter(p => {
-    const matchesSearch = p.nombre.toLowerCase().includes(search.toLowerCase()) || 
-                         (p.codigo_barras && p.codigo_barras.toLowerCase().includes(search.toLowerCase()));
+    const matchesSearch = p.nombre.toLowerCase().includes(search.toLowerCase()) ||
+      (p.codigo_barras && p.codigo_barras.toLowerCase().includes(search.toLowerCase()));
     const matchesCategory = activeCategory === 'Todos' || p.categoria_id === activeCategory;
     return matchesSearch && matchesCategory;
   });
@@ -50,18 +50,17 @@ export function ProductCatalog({
           onChange={(e) => setSearch(e.target.value)}
           icon={<Search size={18} />}
         />
-        
+
         {/* Scroll horizontal de categorías */}
         <div className="flex overflow-x-auto pb-1 gap-2 no-scrollbar">
           <Button
             variant={activeCategory === 'Todos' ? 'primary' : 'secondary'}
             size="sm"
             onClick={() => setActiveCategory('Todos')}
-            className={`px-4 py-1.5 rounded-full whitespace-nowrap border-none ${
-              activeCategory === 'Todos' 
-                ? 'bg-zinc-800 text-white dark:bg-zinc-100 dark:text-zinc-900' 
+            className={`px-4 py-1.5 rounded-full whitespace-nowrap border-none ${activeCategory === 'Todos'
+                ? 'bg-zinc-800 text-white dark:bg-zinc-100 dark:text-zinc-900'
                 : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-600'
-            }`}
+              }`}
           >
             Todos
           </Button>
@@ -71,11 +70,10 @@ export function ProductCatalog({
               variant={activeCategory === cat.id ? 'primary' : 'secondary'}
               size="sm"
               onClick={() => setActiveCategory(cat.id)}
-              className={`px-4 py-1.5 rounded-full whitespace-nowrap border-none ${
-                activeCategory === cat.id 
-                  ? 'bg-zinc-800 text-white dark:bg-zinc-100 dark:text-zinc-900' 
+              className={`px-4 py-1.5 rounded-full whitespace-nowrap border-none ${activeCategory === cat.id
+                  ? 'bg-zinc-800 text-white dark:bg-zinc-100 dark:text-zinc-900'
                   : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-600'
-              }`}
+                }`}
             >
               {cat.nombre}
             </Button>

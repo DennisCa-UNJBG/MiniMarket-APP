@@ -12,12 +12,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { userService } from '../Service';
 import { rolService } from '../RolService';
 import { sucursalService } from '../../sucursales/Service';
-import { useAuth } from '../../../contexts/AuthContext';
-import { notificationService } from '../../../lib/notifications';
-import { Badge } from '../../../components/ui/Badge';
-import { Tooltip } from '../../../components/ui/Tooltip';
-import { Button } from '../../../components/ui/Button';
-import { DataTable, type TableColumn } from '../../../components/ui/DataTable';
+import { useAuth } from '../../../shared/contexts/AuthContext';
+import { notificationService } from '../../../shared/lib/notifications';
+import { Badge } from '../../../shared/components/ui/Badge';
+import { Tooltip } from '../../../shared/components/ui/Tooltip';
+import { Button } from '../../../shared/components/ui/Button';
+import { DataTable, type TableColumn } from '../../../shared/components/ui/DataTable';
 import { UserModal } from './UserModal';
 
 interface TabUsuariosState {
@@ -73,7 +73,7 @@ const initialTabUsuariosState: TabUsuariosState = {
 export function TabUsuarios() {
   const { user: currentUser } = useAuth();
   const queryClient = useQueryClient();
-  
+
   const [state, dispatch] = useReducer(tabUsuariosReducer, initialTabUsuariosState);
 
   const { showModal, searchTerm, editingId, formData } = state;
@@ -119,7 +119,7 @@ export function TabUsuarios() {
   });
 
   const toggleStatusMutation = useMutation({
-    mutationFn: ({ id, current }: { id: number, current: string }) => 
+    mutationFn: ({ id, current }: { id: number, current: string }) =>
       userService.toggleEstado(id, current, currentUser?.id || 1),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
@@ -165,8 +165,8 @@ export function TabUsuarios() {
     toggleStatusMutation.mutate({ id, current });
   };
 
-  const filteredUsers = usuarios.filter(u => 
-    u.nombre_completo.toLowerCase().includes(searchTerm.toLowerCase()) || 
+  const filteredUsers = usuarios.filter(u =>
+    u.nombre_completo.toLowerCase().includes(searchTerm.toLowerCase()) ||
     u.username.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -212,15 +212,15 @@ export function TabUsuarios() {
       align: 'center',
       render: (u) => (
         u.id === 1 || u.id === currentUser?.id ? (
-          <Badge 
-            label={u.estado === 'activo' ? 'ACTIVO' : 'INACTIVO'} 
-            variant={u.estado === 'activo' ? 'emerald' : 'gray'} 
+          <Badge
+            label={u.estado === 'activo' ? 'ACTIVO' : 'INACTIVO'}
+            variant={u.estado === 'activo' ? 'emerald' : 'gray'}
           />
         ) : (
           <button onClick={() => handleToggleEstado(u.id, u.estado)} className="hover:scale-105 transition-transform">
-            <Badge 
-              label={u.estado === 'activo' ? 'ACTIVO' : 'INACTIVO'} 
-              variant={u.estado === 'activo' ? 'emerald' : 'gray'} 
+            <Badge
+              label={u.estado === 'activo' ? 'ACTIVO' : 'INACTIVO'}
+              variant={u.estado === 'activo' ? 'emerald' : 'gray'}
             />
           </button>
         )
@@ -233,7 +233,7 @@ export function TabUsuarios() {
       render: (u) => (
         <div className="flex items-center justify-end gap-2">
           <Tooltip text="Editar Usuario" position="top-right">
-            <Button 
+            <Button
               onClick={() => handleOpenEdit(u)}
               variant="ghost"
               size="sm"
@@ -243,16 +243,15 @@ export function TabUsuarios() {
           </Tooltip>
           {u.id !== 1 && u.id !== currentUser?.id && (
             <Tooltip text={u.estado === 'activo' ? "Desactivar Usuario" : "Activar Usuario"} position="top-right">
-              <Button 
+              <Button
                 onClick={() => handleToggleEstado(u.id, u.estado)}
                 variant="ghost"
                 size="sm"
                 icon={u.estado === 'activo' ? <PowerOff size={16} /> : <RefreshCcw size={16} />}
-                className={`p-2 rounded-xl border ${
-                  u.estado === 'activo'
+                className={`p-2 rounded-xl border ${u.estado === 'activo'
                     ? "text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 bg-red-50/50 dark:bg-red-900/10 border-red-100 dark:border-red-800"
                     : "text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 bg-green-50/50 dark:bg-green-900/10 border-green-100 dark:border-green-800"
-                }`}
+                  }`}
               />
             </Tooltip>
           )}
@@ -275,7 +274,7 @@ export function TabUsuarios() {
             className="w-full pl-11 pr-4 py-2.5 bg-white dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all shadow-sm"
           />
         </div>
-        <Button 
+        <Button
           onClick={handleOpenCreate}
           icon={<Plus size={18} />}
           className="font-bold rounded-xl"
@@ -284,7 +283,7 @@ export function TabUsuarios() {
         </Button>
       </div>
 
-      <DataTable 
+      <DataTable
         columns={columns}
         data={filteredUsers}
         keyExtractor={(u) => u.id}

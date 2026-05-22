@@ -1,6 +1,6 @@
-import { getDb } from '../../lib/db';
-import { logService } from '../../lib/logService';
-import { sucursalService } from '../sucursales/Service';
+import { getDb } from '../../shared/lib/db';
+import { logService } from '../../shared/lib/logService';
+import { systemConfigService } from '../configuracion/systemConfigService';
 import { invoke } from '@tauri-apps/api/core';
 
 export interface Product {
@@ -40,7 +40,7 @@ export const productoService = {
     }
 
     query += " ORDER BY p.estado ASC, p.nombre ASC";
-    
+
     const result = await db.select<Product[]>(query);
     return result;
   },
@@ -70,7 +70,7 @@ export const productoService = {
     } else {
       // --- FLUJO DE SUCURSAL (Validación síncrona en línea) ---
       // Obtener la configuración de la sucursal
-      const config = await sucursalService.getConfig();
+      const config = await systemConfigService.getConfig();
       if (!config || !config.api_url_central || !config.sucursal_id) {
         throw new Error('Configuración de sucursal incompleta. Configure la conexión a la sede central.');
       }
@@ -156,7 +156,7 @@ export const productoService = {
 
   async updateStatus(id: number, estado: 'activo' | 'inactivo', usuarioId: number): Promise<void> {
     const db = await getDb();
-    
+
     // Obtener nombre para el detalle
     const pData = await db.select<any[]>('SELECT nombre FROM productos WHERE id = ?', [id]);
     const nombre = pData[0]?.nombre || 'Desconocido';
@@ -178,7 +178,7 @@ export const productoService = {
 
   async update(id: number, product: Omit<Product, 'id' | 'estado' | 'stock_actual'>, usuarioId: number): Promise<void> {
     const db = await getDb();
-    
+
     // Obtener precio anterior para el log
     const oldPriceData = await db.select<any[]>(
       'SELECT precio_venta, precio_compra FROM precios_historial WHERE producto_id = ? AND activo = 1',

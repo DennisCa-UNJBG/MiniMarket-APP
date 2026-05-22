@@ -1,6 +1,6 @@
-import { getDb } from '../../lib/db';
+import { getDb } from '../../shared/lib/db';
 import { authService } from '../login/Service';
-import { logService } from '../../lib/logService';
+import { logService } from '../../shared/lib/logService';
 
 
 export const userService = {
@@ -35,7 +35,7 @@ export const userService = {
       getDb(),
       authService.hashPassword(user.password)
     ]);
-    
+
     const result = await db.execute(
       'INSERT INTO usuarios (username, password_hash, nombre_completo, rol_id, sucursal_id, estado) VALUES (?, ?, ?, ?, ?, ?)',
       [user.username, passwordHash, user.nombre_completo, user.rol_id, user.sucursal_id || null, 'activo']
@@ -66,7 +66,7 @@ export const userService = {
     }
     const db = await getDb();
     const nuevoEstado = currentEstado === 'activo' ? 'inactivo' : 'activo';
-    
+
     // Obtener nombre del usuario afectado
     const uData = await db.select<any[]>('SELECT username FROM usuarios WHERE id = ?', [id]);
     const username = uData[0]?.username || 'ID:' + id;
@@ -89,7 +89,7 @@ export const userService = {
    */
   async update(id: number, user: any, adminId: number) {
     const db = await getDb();
-    
+
     // Si hay contraseña nueva, la hasheamos, si no, mantenemos la anterior
     if (user.password && user.password.trim() !== '') {
       const passwordHash = await authService.hashPassword(user.password);

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Eye, EyeOff, Plus } from 'lucide-react';
-import { Button } from '../../../components/ui/Button';
+import { Button } from '../../../shared/components/ui/Button';
 
 interface UserModalProps {
   isOpen: boolean;
@@ -42,10 +42,10 @@ export function UserModal({
           <h3 className="text-lg font-semibold text-zinc-800 dark:text-white">
             {editingId ? 'Editar Usuario' : 'Registrar Nuevo Usuario'}
           </h3>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={onClose} 
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClose}
             className="text-zinc-400 hover:text-zinc-600 dark:hover:text-white p-1"
             icon={<Plus className="rotate-45" size={24} />}
           />
@@ -61,7 +61,7 @@ export function UserModal({
                 type="text"
                 placeholder="ej: jsmith"
                 value={formData.username}
-                onChange={(e) => setFormData((prev: any) => ({...prev, username: e.target.value.toLowerCase()}))}
+                onChange={(e) => setFormData((prev: any) => ({ ...prev, username: e.target.value.toLowerCase() }))}
                 className={`w-full px-4 py-2.5 text-sm font-medium border border-zinc-100 dark:border-zinc-700 rounded-xl bg-zinc-50/50 dark:bg-zinc-900/50 text-zinc-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all ${editingId ? 'opacity-50 cursor-not-allowed' : ''}`}
               />
             </div>
@@ -76,7 +76,7 @@ export function UserModal({
                   type={showPassword ? 'text' : 'password'}
                   placeholder={editingId ? '••••••••' : 'Password'}
                   value={formData.password || ''}
-                  onChange={(e) => setFormData((prev: any) => ({...prev, password: e.target.value}))}
+                  onChange={(e) => setFormData((prev: any) => ({ ...prev, password: e.target.value }))}
                   className="w-full px-4 py-2.5 pr-11 text-sm font-medium border border-zinc-100 dark:border-zinc-700 rounded-xl bg-zinc-50/50 dark:bg-zinc-900/50 text-zinc-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
                 />
                 <Button
@@ -99,7 +99,7 @@ export function UserModal({
               type="text"
               placeholder="Ej: John Smith Doe"
               value={formData.nombre_completo}
-              onChange={(e) => setFormData((prev: any) => ({...prev, nombre_completo: e.target.value}))}
+              onChange={(e) => setFormData((prev: any) => ({ ...prev, nombre_completo: e.target.value }))}
               className="w-full px-4 py-2.5 text-sm font-medium border border-zinc-100 dark:border-zinc-700 rounded-xl bg-zinc-50/50 dark:bg-zinc-900/50 text-zinc-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
             />
           </div>
@@ -107,10 +107,10 @@ export function UserModal({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <label htmlFor="usuario-rol" className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Rol</label>
-              <select 
+              <select
                 id="usuario-rol"
                 value={formData.rol_id}
-                onChange={(e) => setFormData((prev: any) => ({...prev, rol_id: parseInt(e.target.value)}))}
+                onChange={(e) => setFormData((prev: any) => ({ ...prev, rol_id: parseInt(e.target.value) }))}
                 className="w-full px-4 py-2.5 text-sm font-medium border border-zinc-100 dark:border-zinc-700 rounded-xl bg-zinc-50/50 dark:bg-zinc-900/50 text-zinc-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
               >
                 {roles.flatMap((r: any) => r.estado === 'activo' ? [
@@ -120,10 +120,10 @@ export function UserModal({
             </div>
             <div className="space-y-1.5">
               <label htmlFor="usuario-sede" className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Sede de Trabajo</label>
-              <select 
+              <select
                 id="usuario-sede"
                 value={formData.sucursal_id}
-                onChange={(e) => setFormData((prev: any) => ({...prev, sucursal_id: e.target.value}))}
+                onChange={(e) => setFormData((prev: any) => ({ ...prev, sucursal_id: e.target.value }))}
                 className="w-full px-4 py-2.5 text-sm font-medium border border-zinc-100 dark:border-zinc-700 rounded-xl bg-zinc-50/50 dark:bg-zinc-900/50 text-zinc-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
               >
                 <option value="">Todas (Central)</option>
@@ -134,7 +134,7 @@ export function UserModal({
             </div>
           </div>
 
-          <Button 
+          <Button
             type="submit"
             fullWidth
             isLoading={isPending}

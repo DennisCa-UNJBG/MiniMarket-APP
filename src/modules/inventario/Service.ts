@@ -1,6 +1,6 @@
-import { getDb } from '../../lib/db';
-import { sucursalService } from '../sucursales/Service';
-import { logService } from '../../lib/logService';
+import { getDb } from '../../shared/lib/db';
+import { systemConfigService } from '../configuracion/systemConfigService';
+import { logService } from '../../shared/lib/logService';
 
 
 export interface CompraDetalle {
@@ -23,10 +23,10 @@ export const inventarioService = {
   async registrarCompraCompleta(compra: CompraCabecera): Promise<{ compraId: number, alertas: string[] }> {
     const db = await getDb();
     const alertas: string[] = [];
-    
+
     const totalCompra = compra.items.reduce((acc, item) => acc + (item.cantidad * item.costo_unitario), 0);
 
-    const config = await sucursalService.getConfig();
+    const config = await systemConfigService.getConfig();
     const sucursalId = config?.sucursal_id || 'LOCAL';
 
     // 1. Insertar Cabecera de Compra
@@ -35,7 +35,7 @@ export const inventarioService = {
        VALUES (?, ?, ?, ?, ?)`,
       [compra.usuario_id, compra.documento_referencia, totalCompra, sucursalId, compra.metodo_pago || 'BANCO']
     );
-    
+
     const compraId = resCabecera.lastInsertId as number;
 
     // 2. Procesar cada producto del lote
@@ -98,7 +98,7 @@ export const inventarioService = {
   async getMovimientos(limit = 50): Promise<any[]> {
     const [db, config] = await Promise.all([
       getDb(),
-      sucursalService.getConfig()
+      systemConfigService.getConfig()
     ]);
     const sucursalId = config?.sucursal_id || 'LOCAL';
 
@@ -119,7 +119,7 @@ export const inventarioService = {
   async getMovimientosPorProducto(productoId: number, page = 1, pageSize = 10): Promise<{ data: any[], total: number }> {
     const [db, config] = await Promise.all([
       getDb(),
-      sucursalService.getConfig()
+      systemConfigService.getConfig()
     ]);
     const sucursalId = config?.sucursal_id || 'LOCAL';
     const offset = (page - 1) * pageSize;
@@ -151,7 +151,7 @@ export const inventarioService = {
   async getMovimientosDia(page = 1, pageSize = 10): Promise<{ data: any[], total: number }> {
     const [db, config] = await Promise.all([
       getDb(),
-      sucursalService.getConfig()
+      systemConfigService.getConfig()
     ]);
     const sucursalId = config?.sucursal_id || 'LOCAL';
     const offset = (page - 1) * pageSize;
@@ -227,7 +227,7 @@ export const inventarioService = {
   async getCompras(page = 1, pageSize = 10): Promise<{ data: any[], total: number }> {
     const [db, config] = await Promise.all([
       getDb(),
-      sucursalService.getConfig()
+      systemConfigService.getConfig()
     ]);
     const sucursalId = config?.sucursal_id || 'LOCAL';
     const offset = (page - 1) * pageSize;
@@ -270,10 +270,10 @@ export const inventarioService = {
    */
   async anularCompra(compraId: number): Promise<void> {
     const db = await getDb();
-    
+
     // 1. Obtener detalles de la compra para revertir stock
     const items = await db.select<any[]>('SELECT producto_id, cantidad FROM compras_detalle WHERE compra_id = ?', [compraId]);
-    
+
     // 2. Revertir stock de cada producto
     await Promise.all(items.map(item =>
       db.execute(

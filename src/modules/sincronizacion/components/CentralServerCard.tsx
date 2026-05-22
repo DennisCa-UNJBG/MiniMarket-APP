@@ -2,9 +2,9 @@ import { useMemo, useState } from 'react';
 import { Server, Wifi, Globe, Copy, Building2, Database, ShieldCheck } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { notificationService } from '../../../lib/notifications';
-import { Badge } from '../../../components/ui/Badge';
-import { Button } from '../../../components/ui/Button';
+import { notificationService } from '../../../shared/lib/notifications';
+import { Badge } from '../../../shared/components/ui/Badge';
+import { Button } from '../../../shared/components/ui/Button';
 import { sucursalService } from '../../sucursales/Service';
 
 export function CentralServerCard() {

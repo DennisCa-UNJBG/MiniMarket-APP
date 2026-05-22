@@ -8,16 +8,16 @@ import {
   CircleSlash2,
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { DataTable, type TableColumn } from '../../components/ui/DataTable';
-import { Badge } from '../../components/ui/Badge';
-import { PageHeader } from '../../components/ui/PageHeader';
-import { Tooltip } from '../../components/ui/Tooltip';
-import { Button } from '../../components/ui/Button';
+import { DataTable, type TableColumn } from '../../shared/components/ui/DataTable';
+import { Badge } from '../../shared/components/ui/Badge';
+import { PageHeader } from '../../shared/components/ui/PageHeader';
+import { Tooltip } from '../../shared/components/ui/Tooltip';
+import { Button } from '../../shared/components/ui/Button';
 import { inventarioService } from '../inventario/Service';
-import { notificationService } from '../../lib/notifications';
+import { notificationService } from '../../shared/lib/notifications';
 import { NewPurchaseModal } from './components/NewPurchaseModal';
 import { PurchaseDetailsModal } from './components/PurchaseDetailsModal';
-import { EmptyState } from '../../components/ui/EmptyState';
+import { EmptyState } from '../../shared/components/ui/EmptyState';
 
 const formatDate = (dateStr: string) => {
   if (!dateStr) return '';
@@ -107,7 +107,7 @@ export function Compras() {
       '¿Anular compra?',
       `¿Estás seguro de anular la compra #${purchase.id}? Esta acción revertirá el stock y anulará el registro del Kardex.`
     );
-    
+
     if (ok) {
       annulPurchaseMutation.mutate(purchase.id);
     }
@@ -119,8 +119,8 @@ export function Compras() {
   };
 
   const totalInvertido = purchasesRes.data.reduce((acc: number, p: any) => acc + (p.estado === 'anulado' ? 0 : p.total), 0);
-  
-  const filtered = purchasesRes.data.filter((p: any) => 
+
+  const filtered = purchasesRes.data.filter((p: any) =>
     (p.documento_referencia || '').toLowerCase().includes(search.toLowerCase()) ||
     p.id.toString().includes(search.toLowerCase()) ||
     p.usuario_nombre.toLowerCase().includes(search.toLowerCase())
@@ -132,8 +132,8 @@ export function Compras() {
       header: 'N° Compra',
       render: (row) => <span className="font-mono text-xs font-semibold text-blue-600 dark:text-blue-400">#{row.id.toString().padStart(4, '0')}</span>,
     },
-    { 
-      key: 'fecha', 
+    {
+      key: 'fecha',
       header: 'Fecha',
       render: (row) => (
         <div className="flex flex-col">
@@ -142,13 +142,13 @@ export function Compras() {
         </div>
       )
     },
-    { 
-      key: 'documento_referencia', 
+    {
+      key: 'documento_referencia',
       header: 'Documento',
       render: (row) => <Badge label={row.documento_referencia || 'Sin ref.'} variant="blue" />
     },
-    { 
-      key: 'usuario_nombre', 
+    {
+      key: 'usuario_nombre',
       header: 'Responsable',
       render: (row) => <span className="text-sm text-zinc-600 dark:text-zinc-400">{row.usuario_nombre}</span>
     },
@@ -156,9 +156,9 @@ export function Compras() {
       key: 'estado',
       header: 'Estado',
       render: (row) => (
-        <Badge 
-          label={row.estado === 'anulado' ? 'ANULADO' : 'COMPLETADO'} 
-          variant={row.estado === 'anulado' ? 'red' : 'emerald'} 
+        <Badge
+          label={row.estado === 'anulado' ? 'ANULADO' : 'COMPLETADO'}
+          variant={row.estado === 'anulado' ? 'red' : 'emerald'}
         />
       )
     },
@@ -177,7 +177,7 @@ export function Compras() {
       render: (row) => (
         <div className="flex items-center gap-3 justify-end">
           <Tooltip text="Ver detalle de la compra" position="top-right">
-            <Button 
+            <Button
               variant="ghost"
               size="sm"
               onClick={() => handleViewDetail(row)}
@@ -188,7 +188,7 @@ export function Compras() {
           </Tooltip>
           {row.estado !== 'anulado' && (
             <Tooltip text="Anular compra" position="top-right">
-              <Button 
+              <Button
                 variant="ghost"
                 size="sm"
                 icon={<CircleSlash2 size={14} />}

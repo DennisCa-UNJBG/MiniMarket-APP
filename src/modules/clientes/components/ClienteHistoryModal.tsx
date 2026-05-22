@@ -1,9 +1,9 @@
 import { Loader2, ShoppingCart, Banknote, CreditCard } from 'lucide-react';
-import { Modal } from '../../../components/ui/Modal';
-import { Button } from '../../../components/ui/Button';
-import { Badge } from '../../../components/ui/Badge';
-import { EmptyState } from '../../../components/ui/EmptyState';
-import { dateUtils } from '../../../lib/dateUtils';
+import { Modal } from '../../../shared/components/ui/Modal';
+import { Button } from '../../../shared/components/ui/Button';
+import { Badge } from '../../../shared/components/ui/Badge';
+import { EmptyState } from '../../../shared/components/ui/EmptyState';
+import { dateUtils } from '../../../shared/lib/dateUtils';
 import type { Cliente } from '../Service';
 
 interface ClienteHistoryModalProps {
@@ -101,9 +101,9 @@ export function ClienteHistoryModal({
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <Badge 
-                          label={sale.estado === 'anulado' ? 'ANULADO' : 'COMPLETADO'} 
-                          variant={sale.estado === 'anulado' ? 'red' : 'emerald'} 
+                        <Badge
+                          label={sale.estado === 'anulado' ? 'ANULADO' : 'COMPLETADO'}
+                          variant={sale.estado === 'anulado' ? 'red' : 'emerald'}
                         />
                       </td>
                       <td className="px-4 py-3 text-right font-bold text-zinc-900 dark:text-zinc-100">

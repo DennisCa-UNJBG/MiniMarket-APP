@@ -1,6 +1,6 @@
-import { getDb } from '../../lib/db';
-import { logService } from '../../lib/logService';
-import { sucursalService } from '../sucursales/Service';
+import { getDb } from '../../shared/lib/db';
+import { logService } from '../../shared/lib/logService';
+import { systemConfigService } from '../configuracion/systemConfigService';
 
 export interface Caja {
   id: number;
@@ -21,7 +21,7 @@ export const cajaService = {
   async abrirCaja(usuarioId: number, montoInicial: number): Promise<number> {
     const [db, config] = await Promise.all([
       getDb(),
-      sucursalService.getConfig()
+      systemConfigService.getConfig()
     ]);
     const sucursalId = config?.sucursal_id || 'LOCAL';
 
@@ -50,7 +50,7 @@ export const cajaService = {
    */
   async cerrarCaja(cajaId: number, usuarioId: number, montoFinal: number, montoEsperado: number): Promise<void> {
     const db = await getDb();
-    
+
     await Promise.all([
       db.execute(
         `UPDATE cajas 
@@ -74,7 +74,7 @@ export const cajaService = {
   async getCajaAbierta(): Promise<Caja | null> {
     const [db, config] = await Promise.all([
       getDb(),
-      sucursalService.getConfig()
+      systemConfigService.getConfig()
     ]);
     const sucursalId = config?.sucursal_id || 'LOCAL';
 

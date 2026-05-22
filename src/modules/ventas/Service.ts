@@ -1,6 +1,6 @@
-import { getDb } from '../../lib/db';
-import { sucursalService } from '../sucursales/Service';
-import { logService } from '../../lib/logService';
+import { getDb } from '../../shared/lib/db';
+import { systemConfigService } from '../configuracion/systemConfigService';
+import { logService } from '../../shared/lib/logService';
 
 interface VentaItem {
   producto_id: number;
@@ -31,9 +31,9 @@ export const ventaService = {
   async registrarVenta(venta: VentaData): Promise<{ ventaId: number, alertas: string[], vuelto: number }> {
     const db = await getDb();
     const alertas: string[] = [];
-    
+
     // 1. Obtener ID de sucursal local
-    const config = await sucursalService.getConfig();
+    const config = await systemConfigService.getConfig();
     const sucursalId = config?.sucursal_id || 'LOCAL';
 
     // 2. Insertar Cabecera
@@ -41,12 +41,12 @@ export const ventaService = {
       `INSERT INTO ventas (usuario_id, cliente_id, total, igv, igv_porcentaje, metodo_pago, monto_pagado, vuelto, sucursal_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [venta.usuario_id, venta.cliente_id || null, venta.total, venta.igv || 0, venta.igv_porcentaje || 0, venta.metodo_pago, venta.monto_pagado, venta.vuelto, sucursalId]
     );
-    
+
     const ventaId = resVenta.lastInsertId as number;
 
     await Promise.all(venta.items.map(async (item) => {
       const subtotal = item.cantidad * item.precio_unitario;
-      
+
       // 2. Insertar Detalle
       await db.execute(
         `INSERT INTO ventas_detalle (venta_id, producto_id, cantidad, precio_unitario, subtotal) 
@@ -57,7 +57,7 @@ export const ventaService = {
       // 3. Actualizar Stock y Obtener stock posterior
       const pData = await db.select<any[]>('SELECT stock_actual, stock_minimo, nombre FROM productos WHERE id = ?', [item.producto_id]);
       if (pData.length === 0) throw new Error(`Producto ${item.producto_id} no encontrado`);
-      
+
       const { stock_actual, stock_minimo, nombre } = pData[0];
       const nuevoStock = stock_actual - item.cantidad;
 
@@ -73,11 +73,11 @@ export const ventaService = {
         `INSERT INTO kardex (producto_id, usuario_id, tipo_movimiento, cantidad, saldo_posterior, costo_unitario, referencia, sucursal_id) 
          VALUES (?, ?, 'SALIDA', ?, ?, ?, ?, ?)`,
         [
-          item.producto_id, 
-          venta.usuario_id, 
-          item.cantidad, 
-          nuevoStock, 
-          item.precio_unitario, 
+          item.producto_id,
+          venta.usuario_id,
+          item.cantidad,
+          nuevoStock,
+          item.precio_unitario,
           `VENTA #${ventaId} (${venta.metodo_pago})`,
           sucursalId
         ]
@@ -110,7 +110,7 @@ export const ventaService = {
   async getVentas(page = 1, pageSize = 10): Promise<{ data: any[], total: number }> {
     const [db, config] = await Promise.all([
       getDb(),
-      sucursalService.getConfig()
+      systemConfigService.getConfig()
     ]);
     const sucursalId = config?.sucursal_id || 'LOCAL';
     const offset = (page - 1) * pageSize;
@@ -192,7 +192,7 @@ export const ventaService = {
   async getResumenHoy(desde?: string): Promise<{ total: number, total_efectivo: number, total_digital: number, total_gastos_efectivo: number, count: number }> {
     const [db, config] = await Promise.all([
       getDb(),
-      sucursalService.getConfig()
+      systemConfigService.getConfig()
     ]);
     const sucursalId = config?.sucursal_id || 'LOCAL';
 
@@ -236,7 +236,7 @@ export const ventaService = {
   async getResumenRango(fechaInicio: string, fechaFin: string): Promise<{ total: number, count: number }> {
     const [db, config] = await Promise.all([
       getDb(),
-      sucursalService.getConfig()
+      systemConfigService.getConfig()
     ]);
     const sucursalId = config?.sucursal_id || 'LOCAL';
 
@@ -268,14 +268,14 @@ export const ventaService = {
    */
   async anularVenta(ventaId: number): Promise<void> {
     const db = await getDb();
-    
+
     // Obtener detalles de la venta (cliente_id, total, usuario_id) antes de anular
     const ventaInfo = await db.select<any[]>('SELECT cliente_id, total, usuario_id FROM ventas WHERE id = ?', [ventaId]);
     const { cliente_id, total, usuario_id } = ventaInfo[0] || { cliente_id: null, total: 0, usuario_id: 1 };
 
     // 1. Obtener detalles para revertir stock
     const items = await db.select<any[]>('SELECT producto_id, cantidad FROM ventas_detalle WHERE venta_id = ?', [ventaId]);
-    
+
     // 2. Revertir stock de cada producto
     await Promise.all(items.map(item =>
       db.execute(

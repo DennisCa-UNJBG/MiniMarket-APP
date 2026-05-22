@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
-import { Modal } from '../../../components/ui/Modal';
-import { Badge } from '../../../components/ui/Badge';
-import { Button } from '../../../components/ui/Button';
+import { Modal } from '../../../shared/components/ui/Modal';
+import { Badge } from '../../../shared/components/ui/Badge';
+import { Button } from '../../../shared/components/ui/Button';
 import { inventarioService } from '../../inventario/Service';
 
 interface PurchaseRecord {
@@ -52,9 +52,9 @@ export function PurchaseDetailsModal({ isOpen, onClose, purchase }: PurchaseDeta
           </div>
           <div className="text-right">
             <p className="text-xs text-zinc-400 uppercase font-bold tracking-wider">Estado</p>
-            <Badge 
-              label={purchase.estado === 'anulado' ? 'ANULADO' : 'COMPLETADO'} 
-              variant={purchase.estado === 'anulado' ? 'red' : 'emerald'} 
+            <Badge
+              label={purchase.estado === 'anulado' ? 'ANULADO' : 'COMPLETADO'}
+              variant={purchase.estado === 'anulado' ? 'red' : 'emerald'}
             />
           </div>
           <div className="text-right col-span-2">
@@ -90,7 +90,7 @@ export function PurchaseDetailsModal({ isOpen, onClose, purchase }: PurchaseDeta
         </div>
 
         <div className="flex justify-end pt-2">
-          <Button 
+          <Button
             variant="secondary"
             onClick={onClose}
             className="px-6 font-bold"

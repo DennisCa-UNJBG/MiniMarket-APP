@@ -1,6 +1,6 @@
 import React from 'react';
 import { TrendingUp, Package, ShoppingCart, Info } from 'lucide-react';
-import { useTheme } from '../../../../contexts/ThemeContext';
+import { useTheme } from '../../../../shared/contexts/ThemeContext';
 import {
   BarChart,
   Bar,

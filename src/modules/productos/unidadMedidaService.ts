@@ -1,4 +1,4 @@
-import { getDb } from '../../lib/db';
+import { getDb } from '../../shared/lib/db';
 
 export interface UnidadMedida {
   id: number;
@@ -10,7 +10,7 @@ export interface UnidadMedida {
 export const unidadMedidaService = {
   async getAll(onlyActive = true): Promise<UnidadMedida[]> {
     const db = await getDb();
-    const query = onlyActive 
+    const query = onlyActive
       ? "SELECT * FROM unidades_medida WHERE estado = 'activo' ORDER BY nombre ASC"
       : "SELECT * FROM unidades_medida ORDER BY nombre ASC";
     return await db.select<UnidadMedida[]>(query);

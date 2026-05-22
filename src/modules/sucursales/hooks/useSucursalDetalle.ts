@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { sucursalService } from '../Service';
-import { dateUtils } from '../../../lib/dateUtils';
+import { dateUtils } from '../../../shared/lib/dateUtils';
 
 interface UseSucursalDetalleProps {
   sucursalCodigo: string;

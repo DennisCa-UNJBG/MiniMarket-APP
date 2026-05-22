@@ -1,7 +1,7 @@
 import { RefreshCw } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import { useQuery } from '@tanstack/react-query';
-import { Badge } from '../../components/ui/Badge';
+import { Badge } from '../../shared/components/ui/Badge';
 import { CentralServerCard } from './components/CentralServerCard';
 import { SyncActionsCard } from './components/SyncActionsCard';
 
@@ -32,9 +32,9 @@ export function Sincronizacion() {
           <p className="text-zinc-500 dark:text-zinc-400">Control maestro de la red y el servidor de datos central.</p>
         </div>
         <div className="flex items-center gap-2">
-          <Badge 
-            label={isCentral ? 'MODO CENTRAL ACTIVO' : 'MODO LOCAL'} 
-            variant={isCentral ? 'emerald' : 'gray'} 
+          <Badge
+            label={isCentral ? 'MODO CENTRAL ACTIVO' : 'MODO LOCAL'}
+            variant={isCentral ? 'emerald' : 'gray'}
           />
         </div>
       </div>
@@ -46,7 +46,7 @@ export function Sincronizacion() {
 
       <div className="p-6 bg-zinc-50 dark:bg-zinc-900/30 rounded-3xl border border-zinc-100 dark:border-zinc-800">
         <p className="text-xs font-bold text-zinc-500 dark:text-zinc-400 mb-2 italic">
-          {isCentral 
+          {isCentral
             ? "El servidor utiliza el puerto 8080 por defecto. Asegúrate de permitir el tráfico en tu firewall."
             : "La sincronización requiere conexión activa a la red local o internet hacia la Sede Central."
           }

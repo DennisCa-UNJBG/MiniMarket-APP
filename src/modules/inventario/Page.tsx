@@ -5,10 +5,10 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { DataTable, type TableColumn } from '../../components/ui/DataTable';
-import { Badge } from '../../components/ui/Badge';
-import { PageHeader } from '../../components/ui/PageHeader';
-import { Button } from '../../components/ui/Button';
+import { DataTable, type TableColumn } from '../../shared/components/ui/DataTable';
+import { Badge } from '../../shared/components/ui/Badge';
+import { PageHeader } from '../../shared/components/ui/PageHeader';
+import { Button } from '../../shared/components/ui/Button';
 import { productoService, type Product } from '../productos/Service';
 
 type StockStatus = 'ok' | 'low' | 'out';
@@ -20,9 +20,9 @@ function getStatus(stock: number, minStock: number): StockStatus {
 }
 
 const statusBadge: Record<StockStatus, { label: string; variant: 'emerald' | 'amber' | 'red' }> = {
-  ok:  { label: 'En stock',   variant: 'emerald' },
-  low: { label: 'Stock bajo', variant: 'amber'   },
-  out: { label: 'Sin stock',  variant: 'red'     },
+  ok: { label: 'En stock', variant: 'emerald' },
+  low: { label: 'Stock bajo', variant: 'amber' },
+  out: { label: 'Sin stock', variant: 'red' },
 };
 
 interface InventarioState {
@@ -146,8 +146,8 @@ export function Inventario() {
 
   const filtered = products.filter((p) => {
     const matchesSearch = p.nombre.toLowerCase().includes(search.toLowerCase()) ||
-                        (p.codigo_barras && p.codigo_barras.toLowerCase().includes(search.toLowerCase()));
-    
+      (p.codigo_barras && p.codigo_barras.toLowerCase().includes(search.toLowerCase()));
+
     const status = getStatus(p.stock_actual, p.stock_minimo);
     const matchesStatus = statusFilter === 'all' || status === statusFilter;
     const matchesCategory = categoryFilter === 'all' || p.categoria_id === categoryFilter;
@@ -170,21 +170,21 @@ export function Inventario() {
       />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <button 
+        <button
           onClick={() => setStatusFilter('all')}
           className={`bg-white dark:bg-zinc-800 p-5 rounded-2xl border transition-all text-left shadow-sm ${statusFilter === 'all' ? 'border-blue-500 ring-1 ring-blue-500' : 'border-zinc-100 dark:border-zinc-700'}`}
         >
           <p className="text-xs font-medium text-zinc-400 dark:text-zinc-500 uppercase">Total Productos</p>
           <p className="text-2xl font-bold text-zinc-800 dark:text-white mt-1">{products.length}</p>
         </button>
-        <button 
+        <button
           onClick={() => setStatusFilter('low')}
           className={`bg-white dark:bg-zinc-800 p-5 rounded-2xl border transition-all text-left shadow-sm ${statusFilter === 'low' ? 'border-amber-500 ring-1 ring-amber-500' : 'border-zinc-100 dark:border-zinc-700'}`}
         >
           <p className="text-xs font-medium text-zinc-400 dark:text-zinc-500 uppercase">Stock Bajo</p>
           <p className="text-2xl font-bold text-amber-500 mt-1">{products.filter(p => getStatus(p.stock_actual, p.stock_minimo) === 'low').length}</p>
         </button>
-        <button 
+        <button
           onClick={() => setStatusFilter('out')}
           className={`bg-white dark:bg-zinc-800 p-5 rounded-2xl border transition-all text-left shadow-sm ${statusFilter === 'out' ? 'border-red-500 ring-1 ring-red-500' : 'border-zinc-100 dark:border-zinc-700'}`}
         >
@@ -206,7 +206,7 @@ export function Inventario() {
               className="w-full pl-9 pr-4 py-2 text-sm border border-zinc-200 dark:border-zinc-600 rounded-lg bg-zinc-50 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-400 transition disabled:opacity-50"
             />
           </div>
-          <Button 
+          <Button
             variant={showFilters || statusFilter !== 'all' || categoryFilter !== 'all' ? 'primary' : 'secondary'}
             size="sm"
             onClick={() => setShowFilters(!showFilters)}
@@ -282,11 +282,10 @@ export function Inventario() {
                   <button
                     key={status}
                     onClick={() => setStatusFilter(status)}
-                    className={`px-3 py-1.5 text-[10px] font-bold uppercase rounded-lg border transition-all ${
-                      statusFilter === status 
-                        ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-200 dark:shadow-none' 
+                    className={`px-3 py-1.5 text-[10px] font-bold uppercase rounded-lg border transition-all ${statusFilter === status
+                        ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-200 dark:shadow-none'
                         : 'bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-600 text-zinc-500 hover:border-blue-400'
-                    }`}
+                      }`}
                   >
                     {status === 'all' ? 'Todo' : status === 'low' ? 'Bajo' : 'Agotado'}
                   </button>

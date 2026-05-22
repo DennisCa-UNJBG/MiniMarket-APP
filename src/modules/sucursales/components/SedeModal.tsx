@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { Plus } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { sucursalService } from '../Service';
-import { useAuth } from '../../../contexts/AuthContext';
-import { notificationService } from '../../../lib/notifications';
-import { Button } from '../../../components/ui/Button';
+import { useAuth } from '../../../shared/contexts/AuthContext';
+import { notificationService } from '../../../shared/lib/notifications';
+import { Button } from '../../../shared/components/ui/Button';
 
 interface SedeModalProps {
   isOpen: boolean;
@@ -55,10 +55,10 @@ export function SedeModal({ isOpen, onClose, editingSede }: SedeModalProps) {
           <h3 className="text-lg font-semibold text-zinc-800 dark:text-white">
             {editingSede?.id ? 'Editar Sucursal' : 'Registrar Nueva Sucursal'}
           </h3>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={onClose} 
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClose}
             className="text-zinc-400 hover:text-zinc-600 dark:hover:text-white p-1"
             icon={<Plus className="rotate-45" size={24} />}
           />
@@ -73,7 +73,7 @@ export function SedeModal({ isOpen, onClose, editingSede }: SedeModalProps) {
               type="text"
               placeholder="Ej: SEDE-SUR-01"
               value={formData.codigo}
-              onChange={(e) => setFormData(prev => ({...prev, codigo: e.target.value.toUpperCase()}))}
+              onChange={(e) => setFormData(prev => ({ ...prev, codigo: e.target.value.toUpperCase() }))}
               className={`w-full px-4 py-2.5 text-sm font-medium border border-zinc-100 dark:border-zinc-700 rounded-2xl bg-zinc-50/50 dark:bg-zinc-900/50 text-zinc-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all ${editingSede?.id ? 'opacity-50 cursor-not-allowed bg-zinc-100 dark:bg-zinc-800' : ''}`}
             />
             {editingSede?.id && (
@@ -88,7 +88,7 @@ export function SedeModal({ isOpen, onClose, editingSede }: SedeModalProps) {
               type="text"
               placeholder="Ej: Sucursal Av. Ejercito"
               value={formData.nombre}
-              onChange={(e) => setFormData(prev => ({...prev, nombre: e.target.value}))}
+              onChange={(e) => setFormData(prev => ({ ...prev, nombre: e.target.value }))}
               className="w-full px-4 py-2.5 text-sm font-medium border border-zinc-100 dark:border-zinc-700 rounded-2xl bg-zinc-50/50 dark:bg-zinc-900/50 text-zinc-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
             />
           </div>
@@ -99,12 +99,12 @@ export function SedeModal({ isOpen, onClose, editingSede }: SedeModalProps) {
               type="text"
               placeholder="Av. Principal 456..."
               value={formData.direccion}
-              onChange={(e) => setFormData(prev => ({...prev, direccion: e.target.value}))}
+              onChange={(e) => setFormData(prev => ({ ...prev, direccion: e.target.value }))}
               className="w-full px-4 py-2.5 text-sm font-medium border border-zinc-100 dark:border-zinc-700 rounded-2xl bg-zinc-50/50 dark:bg-zinc-900/50 text-zinc-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
             />
           </div>
 
-          <Button 
+          <Button
             type="submit"
             fullWidth
             isLoading={saveMutation.isPending}

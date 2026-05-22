@@ -1,7 +1,7 @@
 import { Scale, Search, AlertTriangle } from 'lucide-react';
-import { Modal } from '../../../components/ui/Modal';
-import { Button } from '../../../components/ui/Button';
-import { Input } from '../../../components/ui/Input';
+import { Modal } from '../../../shared/components/ui/Modal';
+import { Button } from '../../../shared/components/ui/Button';
+import { Input } from '../../../shared/components/ui/Input';
 import { type Category } from '../categoriaService';
 
 interface ProductModalProps {
@@ -60,17 +60,17 @@ export function ProductModal({
       <div className="grid grid-cols-2 gap-4">
         <div className="flex flex-col gap-1.5">
           <label htmlFor="codigo-correlativo" className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Código correlativo</label>
-          <input 
+          <input
             id="codigo-correlativo"
-            className={`${inputCls} font-mono bg-zinc-100 dark:bg-zinc-800 cursor-not-allowed`} 
-            readOnly 
-            value={form.code} 
+            className={`${inputCls} font-mono bg-zinc-100 dark:bg-zinc-800 cursor-not-allowed`}
+            readOnly
+            value={form.code}
           />
         </div>
         <div className="flex flex-col gap-1.5 relative">
           <label htmlFor="unidad-medida" className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Unidad de medida *</label>
           <div className="relative">
-            <input 
+            <input
               id="unidad-medida"
               type="text"
               autoComplete="off"
@@ -124,12 +124,12 @@ export function ProductModal({
         </div>
 
         <div className="col-span-2 flex flex-col gap-1.5">
-          <Input 
+          <Input
             autoFocus
             label="Nombre del producto *"
-            placeholder="Ej. Arroz Costeño 1kg" 
-            value={form.name} 
-            onChange={(e) => setForm((prev: any) => ({ ...prev, name: e.target.value }))} 
+            placeholder="Ej. Arroz Costeño 1kg"
+            value={form.name}
+            onChange={(e) => setForm((prev: any) => ({ ...prev, name: e.target.value }))}
             error={(isSubmitted && errors.name) || undefined}
           />
         </div>
@@ -137,7 +137,7 @@ export function ProductModal({
         <div className="col-span-2 flex flex-col gap-1.5 relative">
           <label htmlFor="buscar-categoria" className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Categoría *</label>
           <div className="relative">
-            <input 
+            <input
               id="buscar-categoria"
               type="text"
               autoComplete="off"
@@ -156,7 +156,7 @@ export function ProductModal({
             <Search size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
           </div>
           {isSubmitted && errors.categoryId && <p className="text-xs font-medium text-red-500 mt-1">{errors.categoryId}</p>}
-          
+
           {showCatList && (
             <>
               <button
@@ -190,22 +190,22 @@ export function ProductModal({
           )}
         </div>
         <div className="flex flex-col gap-1.5">
-          <Input 
-            type="number" step="0.01" 
+          <Input
+            type="number" step="0.01"
             label="Precio de venta (S/)"
-            placeholder="0.00" 
-            value={form.sellPrice} 
-            onChange={(e) => setForm((prev: any) => ({ ...prev, sellPrice: e.target.value }))} 
+            placeholder="0.00"
+            value={form.sellPrice}
+            onChange={(e) => setForm((prev: any) => ({ ...prev, sellPrice: e.target.value }))}
             error={(isSubmitted && errors.sellPrice) || undefined}
           />
         </div>
         <div className="flex flex-col gap-1.5">
-          <Input 
-            type="number" 
+          <Input
+            type="number"
             label="Stock mínimo"
-            placeholder="0" 
-            value={form.minStock} 
-            onChange={(e) => setForm((prev: any) => ({ ...prev, minStock: e.target.value }))} 
+            placeholder="0"
+            value={form.minStock}
+            onChange={(e) => setForm((prev: any) => ({ ...prev, minStock: e.target.value }))}
             error={(isSubmitted && errors.minStock) || undefined}
           />
           {!(isSubmitted && errors.minStock) && (

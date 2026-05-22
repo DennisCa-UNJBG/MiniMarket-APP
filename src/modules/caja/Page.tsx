@@ -11,13 +11,13 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { cajaService } from './Service';
 import { ventaService } from '../ventas/Service';
-import { useAuth } from '../../contexts/AuthContext';
-import { PageHeader } from '../../components/ui/PageHeader';
-import { DataTable, type TableColumn } from '../../components/ui/DataTable';
-import { Badge } from '../../components/ui/Badge';
-import { Tooltip } from '../../components/ui/Tooltip';
-import { Button } from '../../components/ui/Button';
-import { notificationService } from '../../lib/notifications';
+import { useAuth } from '../../shared/contexts/AuthContext';
+import { PageHeader } from '../../shared/components/ui/PageHeader';
+import { DataTable, type TableColumn } from '../../shared/components/ui/DataTable';
+import { Badge } from '../../shared/components/ui/Badge';
+import { Tooltip } from '../../shared/components/ui/Tooltip';
+import { Button } from '../../shared/components/ui/Button';
+import { notificationService } from '../../shared/lib/notifications';
 
 const formatDate = (dateStr: string) => {
   if (!dateStr) return '';

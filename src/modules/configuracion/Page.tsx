@@ -1,17 +1,17 @@
 import { useQuery } from '@tanstack/react-query';
-import { Badge } from '../../components/ui/Badge';
+import { Badge } from '../../shared/components/ui/Badge';
 import { SedesSection } from './components/SedesSection';
 import { BusinessSection } from './components/BusinessSection';
 import { SecuritySection } from './components/SecuritySection';
 import { PreferencesSection } from './components/PreferencesSection';
 import { KeyboardShortcutsSection } from './components/KeyboardShortcutsSection';
-import { sucursalService } from '../sucursales/Service';
+import { systemConfigService } from './systemConfigService';
 import { negocioService } from './negocioService';
 
 export function Configuracion() {
   const { data: sucursalData, isLoading: loadingSucursal } = useQuery({
     queryKey: ['sucursal-config'],
-    queryFn: () => sucursalService.getConfig()
+    queryFn: () => systemConfigService.getConfig()
   });
 
   const { data: negocioData, isLoading: loadingNegocio } = useQuery({

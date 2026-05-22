@@ -9,9 +9,9 @@ import {
   FileText,
   BarChart3
 } from 'lucide-react';
-import { Badge } from '../../../components/ui/Badge';
-import { Card } from '../../../components/ui/Card';
-import { Button } from '../../../components/ui/Button';
+import { Badge } from '../../../shared/components/ui/Badge';
+import { Card } from '../../../shared/components/ui/Card';
+import { Button } from '../../../shared/components/ui/Button';
 import { useSucursalDetalle } from '../hooks/useSucursalDetalle';
 
 // Subcomponentes modularizados
@@ -180,66 +180,60 @@ export function SucursalDetalle({ sucursal, onBack }: SucursalDetalleProps) {
       <div className="flex border-b border-zinc-100 dark:border-zinc-800 overflow-x-auto scrollbar-none">
         <button
           onClick={() => setActiveTab('stock')}
-          className={`flex items-center gap-2 px-6 py-3 text-sm font-bold border-b-2 transition-all whitespace-nowrap ${
-            activeTab === 'stock'
+          className={`flex items-center gap-2 px-6 py-3 text-sm font-bold border-b-2 transition-all whitespace-nowrap ${activeTab === 'stock'
               ? 'border-blue-500 text-blue-600 dark:text-blue-400'
               : 'border-transparent text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300'
-          }`}
+            }`}
         >
           <Package size={16} />
           Inventario
         </button>
         <button
           onClick={() => setActiveTab('ventas')}
-          className={`flex items-center gap-2 px-6 py-3 text-sm font-bold border-b-2 transition-all whitespace-nowrap ${
-            activeTab === 'ventas'
+          className={`flex items-center gap-2 px-6 py-3 text-sm font-bold border-b-2 transition-all whitespace-nowrap ${activeTab === 'ventas'
               ? 'border-blue-500 text-blue-600 dark:text-blue-400'
               : 'border-transparent text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300'
-          }`}
+            }`}
         >
           <ShoppingCart size={16} />
           Ventas Sincronizadas
         </button>
         <button
           onClick={() => setActiveTab('kardex')}
-          className={`flex items-center gap-2 px-6 py-3 text-sm font-bold border-b-2 transition-all whitespace-nowrap ${
-            activeTab === 'kardex'
+          className={`flex items-center gap-2 px-6 py-3 text-sm font-bold border-b-2 transition-all whitespace-nowrap ${activeTab === 'kardex'
               ? 'border-blue-500 text-blue-600 dark:text-blue-400'
               : 'border-transparent text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300'
-          }`}
+            }`}
         >
           <History size={16} />
           Movimientos de Kardex
         </button>
         <button
           onClick={() => setActiveTab('compras')}
-          className={`flex items-center gap-2 px-6 py-3 text-sm font-bold border-b-2 transition-all whitespace-nowrap ${
-            activeTab === 'compras'
+          className={`flex items-center gap-2 px-6 py-3 text-sm font-bold border-b-2 transition-all whitespace-nowrap ${activeTab === 'compras'
               ? 'border-blue-500 text-blue-600 dark:text-blue-400'
               : 'border-transparent text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300'
-          }`}
+            }`}
         >
           <FileText size={16} />
           Compras
         </button>
         <button
           onClick={() => setActiveTab('cajas')}
-          className={`flex items-center gap-2 px-6 py-3 text-sm font-bold border-b-2 transition-all whitespace-nowrap ${
-            activeTab === 'cajas'
+          className={`flex items-center gap-2 px-6 py-3 text-sm font-bold border-b-2 transition-all whitespace-nowrap ${activeTab === 'cajas'
               ? 'border-blue-500 text-blue-600 dark:text-blue-400'
               : 'border-transparent text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300'
-          }`}
+            }`}
         >
           <Wallet size={16} />
           Control de Caja
         </button>
         <button
           onClick={() => setActiveTab('reportes')}
-          className={`flex items-center gap-2 px-6 py-3 text-sm font-bold border-b-2 transition-all whitespace-nowrap ${
-            activeTab === 'reportes'
+          className={`flex items-center gap-2 px-6 py-3 text-sm font-bold border-b-2 transition-all whitespace-nowrap ${activeTab === 'reportes'
               ? 'border-blue-500 text-blue-600 dark:text-blue-400'
               : 'border-transparent text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300'
-          }`}
+            }`}
         >
           <BarChart3 size={16} />
           Reportes

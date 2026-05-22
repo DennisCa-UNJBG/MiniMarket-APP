@@ -15,14 +15,14 @@ import {
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { sucursalService } from './Service';
-import { useAuth } from '../../contexts/AuthContext';
-import { notificationService } from '../../lib/notifications';
-import { Badge } from '../../components/ui/Badge';
-import { Tooltip } from '../../components/ui/Tooltip';
-import { Button } from '../../components/ui/Button';
-import { DataTable, type TableColumn } from '../../components/ui/DataTable';
+import { useAuth } from '../../shared/contexts/AuthContext';
+import { notificationService } from '../../shared/lib/notifications';
+import { Badge } from '../../shared/components/ui/Badge';
+import { Tooltip } from '../../shared/components/ui/Tooltip';
+import { Button } from '../../shared/components/ui/Button';
+import { DataTable, type TableColumn } from '../../shared/components/ui/DataTable';
 import { SedeModal } from './components/SedeModal';
-import { EmptyState } from '../../components/ui/EmptyState';
+import { EmptyState } from '../../shared/components/ui/EmptyState';
 import { SucursalDetalle } from './components/SucursalDetalle';
 
 export function Sucursales() {
@@ -103,101 +103,101 @@ export function Sucursales() {
     onToggle: (id: number, st: string) => void,
     onViewDetail: (s: any) => void
   ): TableColumn<any>[] => [
-    {
-      key: 'nombre',
-      header: 'Sucursal / Código',
-      render: (row) => (
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-xl">
-            <Building2 size={18} />
-          </div>
-          <div>
-            <p className="text-sm font-bold text-zinc-800 dark:text-white">{row.nombre}</p>
-            <div className="flex items-center gap-1 text-[10px] font-mono text-zinc-400">
-              <Key size={10} />
-              {row.codigo}
+      {
+        key: 'nombre',
+        header: 'Sucursal / Código',
+        render: (row) => (
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-xl">
+              <Building2 size={18} />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-zinc-800 dark:text-white">{row.nombre}</p>
+              <div className="flex items-center gap-1 text-[10px] font-mono text-zinc-400">
+                <Key size={10} />
+                {row.codigo}
+              </div>
             </div>
           </div>
-        </div>
-      )
-    },
-    {
-      key: 'direccion',
-      header: 'Ubicación / Sincro',
-      render: (row) => (
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
-            <MapPin size={12} />
-            {row.direccion || 'No especificada'}
+        )
+      },
+      {
+        key: 'direccion',
+        header: 'Ubicación / Sincro',
+        render: (row) => (
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
+              <MapPin size={12} />
+              {row.direccion || 'No especificada'}
+            </div>
+            <div suppressHydrationWarning className="flex items-center gap-2 text-[10px] text-zinc-400">
+              <Clock size={10} />
+              {row.ultima_sincronizacion ? new Date(row.ultima_sincronizacion).toLocaleString() : 'Sin sincronización'}
+            </div>
           </div>
-          <div suppressHydrationWarning className="flex items-center gap-2 text-[10px] text-zinc-400">
-            <Clock size={10} />
-            {row.ultima_sincronizacion ? new Date(row.ultima_sincronizacion).toLocaleString() : 'Sin sincronización'}
+        )
+      },
+      {
+        key: 'estado',
+        header: 'Estado Real',
+        align: 'center',
+        render: (row) => {
+          const { label, variant } = getStatus(row.ultima_sincronizacion, row.estado);
+          return <Badge label={label} variant={variant} />;
+        }
+      },
+      {
+        key: 'acciones',
+        header: 'Acciones',
+        align: 'right',
+        render: (row) => (
+          <div className="flex items-center justify-end gap-2">
+            <Tooltip text="Ver Detalle" position="top-right">
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={<Eye size={16} />}
+                className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-xl bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800"
+                onClick={() => onViewDetail(row)}
+              />
+            </Tooltip>
+
+            <Tooltip text="Copiar nombre y llave" position="top-right">
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={<Copy size={16} />}
+                className="p-2 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-xl bg-emerald-50/50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-800"
+                onClick={() => onCopy(row)}
+              />
+            </Tooltip>
+
+            <Tooltip text="Editar" position="top-right">
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={<Pencil size={16} />}
+                className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-xl bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800"
+                onClick={() => onEdit(row)}
+              />
+            </Tooltip>
+
+            <Tooltip text={row.estado === 'activo' ? 'Desactivar' : 'Reactivar'} position="top-right">
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={row.estado === 'activo' ? <Power size={16} /> : <RotateCcw size={16} />}
+                className={`p-2 rounded-xl border ${row.estado === 'activo'
+                  ? 'text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/30 bg-amber-50/50 dark:bg-amber-900/10 border-amber-100 dark:border-amber-800'
+                  : 'text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 bg-emerald-50/50 dark:bg-emerald-900/10 border-emerald-100 dark:border-emerald-800'
+                  }`}
+                onClick={() => onToggle(row.id, row.estado)}
+              />
+            </Tooltip>
           </div>
-        </div>
-      )
-    },
-    {
-      key: 'estado',
-      header: 'Estado Real',
-      align: 'center',
-      render: (row) => {
-        const { label, variant } = getStatus(row.ultima_sincronizacion, row.estado);
-        return <Badge label={label} variant={variant} />;
+        )
       }
-    },
-    {
-      key: 'acciones',
-      header: 'Acciones',
-      align: 'right',
-      render: (row) => (
-        <div className="flex items-center justify-end gap-2">
-          <Tooltip text="Ver Detalle" position="top-right">
-            <Button
-              variant="ghost"
-              size="sm"
-              icon={<Eye size={16} />}
-              className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-xl bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800"
-              onClick={() => onViewDetail(row)}
-            />
-          </Tooltip>
-
-          <Tooltip text="Copiar nombre y llave" position="top-right">
-            <Button
-              variant="ghost"
-              size="sm"
-              icon={<Copy size={16} />}
-              className="p-2 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-xl bg-emerald-50/50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-800"
-              onClick={() => onCopy(row)}
-            />
-          </Tooltip>
-
-          <Tooltip text="Editar" position="top-right">
-            <Button
-              variant="ghost"
-              size="sm"
-              icon={<Pencil size={16} />}
-              className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-xl bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800"
-              onClick={() => onEdit(row)}
-            />
-          </Tooltip>
-
-          <Tooltip text={row.estado === 'activo' ? 'Desactivar' : 'Reactivar'} position="top-right">
-            <Button
-              variant="ghost"
-              size="sm"
-              icon={row.estado === 'activo' ? <Power size={16} /> : <RotateCcw size={16} />}
-              className={`p-2 rounded-xl border ${row.estado === 'activo'
-                ? 'text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/30 bg-amber-50/50 dark:bg-amber-900/10 border-amber-100 dark:border-amber-800'
-                : 'text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 bg-emerald-50/50 dark:bg-emerald-900/10 border-emerald-100 dark:border-emerald-800'
-                }`}
-              onClick={() => onToggle(row.id, row.estado)}
-            />
-          </Tooltip>
-        </div>
-      )
-    }
-  ];
+    ];
 
   const inactiveColumns: TableColumn<any>[] = [
     {

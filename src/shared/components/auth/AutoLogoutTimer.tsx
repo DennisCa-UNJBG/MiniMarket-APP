@@ -1,5 +1,5 @@
 import { useReducer, useEffect } from 'react';
-import { preferenciasService } from '../../modules/configuracion/preferenciasService';
+import { preferenciasService } from '../../../modules/configuracion/preferenciasService';
 import { Timer } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -29,9 +29,9 @@ export function AutoLogoutTimer() {
       dispatch({ type: 'SET_TIME_LEFT', payload: nextTimeLeft });
     };
 
-    const update = () => { 
-      prefs = preferenciasService.get(); 
-      check(); 
+    const update = () => {
+      prefs = preferenciasService.get();
+      check();
     };
 
     const id = setInterval(check, 1000);
@@ -50,11 +50,10 @@ export function AutoLogoutTimer() {
   const format = (n: number) => n.toString().padStart(2, '0');
 
   return (
-    <div 
-      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm border ${
-        warn ? 'bg-red-50 border-red-100 text-red-600 dark:bg-red-900/20 dark:border-red-900/50 dark:text-red-400 animate-pulse' 
-             : 'bg-white border-zinc-200 text-zinc-500 dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-400'
-      }`}
+    <div
+      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm border ${warn ? 'bg-red-50 border-red-100 text-red-600 dark:bg-red-900/20 dark:border-red-900/50 dark:text-red-400 animate-pulse'
+          : 'bg-white border-zinc-200 text-zinc-500 dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-400'
+        }`}
       title="Cierre de sesión automático"
     >
       <Timer size={14} className={warn ? 'text-red-500' : 'text-zinc-400'} />

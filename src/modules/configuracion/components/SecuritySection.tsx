@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { Shield, Eye, EyeOff } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useAuth } from '../../../contexts/AuthContext';
+import { useAuth } from '../../../shared/contexts/AuthContext';
 import { authService } from '../../login/Service';
-import { notificationService } from '../../../lib/notifications';
-import { Button } from '../../../components/ui/Button';
+import { notificationService } from '../../../shared/lib/notifications';
+import { Button } from '../../../shared/components/ui/Button';
 
 function PasswordField({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (val: string) => void; placeholder?: string }) {
   const [showPassword, setShowPassword] = useState(false);
@@ -99,11 +99,11 @@ export function SecuritySection() {
               <input id="config-rol" disabled value={user?.rol_id === 1 ? 'Administrador' : 'Cajero'} className="w-full px-4 py-2.5 text-sm font-medium border border-zinc-100 dark:border-zinc-700 rounded-2xl bg-zinc-100 dark:bg-zinc-800 text-zinc-500 cursor-not-allowed" />
             </div>
             <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <PasswordField label="Nueva Contraseña" value={securityData.newPassword} onChange={val => setSecurityData(prev => ({...prev, newPassword: val}))} placeholder="Nueva clave" />
-              <PasswordField label="Confirmar Nueva" value={securityData.confirmPassword} onChange={val => setSecurityData(prev => ({...prev, confirmPassword: val}))} placeholder="Repite clave" />
+              <PasswordField label="Nueva Contraseña" value={securityData.newPassword} onChange={val => setSecurityData(prev => ({ ...prev, newPassword: val }))} placeholder="Nueva clave" />
+              <PasswordField label="Confirmar Nueva" value={securityData.confirmPassword} onChange={val => setSecurityData(prev => ({ ...prev, confirmPassword: val }))} placeholder="Repite clave" />
             </div>
           </div>
-          <Button 
+          <Button
             type="submit"
             isLoading={updatePasswordMutation.isPending}
             className="w-full sm:w-auto px-6 py-2.5 font-bold rounded-2xl bg-zinc-800 dark:bg-zinc-700 hover:bg-zinc-900 text-white"

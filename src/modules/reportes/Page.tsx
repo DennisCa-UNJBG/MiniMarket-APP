@@ -8,14 +8,14 @@ import {
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { reporteService } from './Service';
-import { Badge } from '../../components/ui/Badge';
-import { Tooltip } from '../../components/ui/Tooltip';
-import { Button } from '../../components/ui/Button';
-import { notificationService } from '../../lib/notifications';
+import { Badge } from '../../shared/components/ui/Badge';
+import { Tooltip } from '../../shared/components/ui/Tooltip';
+import { Button } from '../../shared/components/ui/Button';
+import { notificationService } from '../../shared/lib/notifications';
 import { ReporteDocumento } from './components/ReporteDocumento';
 import { VentasBarChart, RankingProductos } from './components/ReportComponents';
-import { logService } from '../../lib/logService';
-import { useAuth } from '../../contexts/AuthContext';
+import { logService } from '../../shared/lib/logService';
+import { useAuth } from '../../shared/contexts/AuthContext';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
@@ -69,22 +69,22 @@ export function Reportes() {
 
     try {
       notificationService.info('Procesando', 'Generando documento PDF...');
-      
+
       const canvas = await html2canvas(element, {
         scale: 3, // Muy alta calidad
         useCORS: true,
         logging: false,
         backgroundColor: '#ffffff'
       });
-      
+
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-      
+
       pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
       pdf.save(`Reporte_Rendimiento_${startDate}_a_${endDate}.pdf`);
-      
+
       notificationService.success('Completado', 'Reporte descargado correctamente');
 
       // Registrar Log de Auditoría
@@ -110,10 +110,10 @@ export function Reportes() {
   );
 
   const kpiCards = kpis ? [
-    { label: 'Ingresos del período',   value: `S/ ${kpis.revenue.toFixed(2)}`, change: `${kpis.revenueChange >= 0 ? '+' : ''}${kpis.revenueChange.toFixed(1)}%`, up: kpis.revenueChange >= 0, icon: TrendingUp,   color: 'bg-blue-500' },
-    { label: 'Productos vendidos', value: kpis.productsSold,      change: `Período actual`,  up: true,  icon: Package,      color: 'bg-emerald-500' },
-    { label: 'N° de ventas',       value: kpis.salesCount,        change: `${kpis.salesCountChange >= 0 ? '+' : ''}${kpis.salesCountChange.toFixed(1)}%`,  up: kpis.salesCountChange >= 0,  icon: ShoppingCart, color: 'bg-sky-500' },
-    { label: 'Gasto Promedio por Cliente',   value: `S/ ${kpis.salesCount > 0 ? (kpis.revenue / kpis.salesCount).toFixed(2) : '0.00'}`, change: 'Ingreso Total / N° Ventas', up: true, icon: Info, color: 'bg-amber-500' },
+    { label: 'Ingresos del período', value: `S/ ${kpis.revenue.toFixed(2)}`, change: `${kpis.revenueChange >= 0 ? '+' : ''}${kpis.revenueChange.toFixed(1)}%`, up: kpis.revenueChange >= 0, icon: TrendingUp, color: 'bg-blue-500' },
+    { label: 'Productos vendidos', value: kpis.productsSold, change: `Período actual`, up: true, icon: Package, color: 'bg-emerald-500' },
+    { label: 'N° de ventas', value: kpis.salesCount, change: `${kpis.salesCountChange >= 0 ? '+' : ''}${kpis.salesCountChange.toFixed(1)}%`, up: kpis.salesCountChange >= 0, icon: ShoppingCart, color: 'bg-sky-500' },
+    { label: 'Gasto Promedio por Cliente', value: `S/ ${kpis.salesCount > 0 ? (kpis.revenue / kpis.salesCount).toFixed(2) : '0.00'}`, change: 'Ingreso Total / N° Ventas', up: true, icon: Info, color: 'bg-amber-500' },
   ] : [];
 
   return (
@@ -126,7 +126,7 @@ export function Reportes() {
         </div>
         <div className="flex items-center gap-2">
           <Tooltip text="Exportar reporte del período filtrado" position="bottom">
-            <Button 
+            <Button
               onClick={handleExportPDF}
               icon={<Download size={16} />}
               className="shadow-lg shadow-blue-200 dark:shadow-none"
@@ -143,7 +143,8 @@ export function Reportes() {
         <div className="flex flex-wrap gap-2">
           {[
             { label: 'Hoy', getDates: () => ({ start: getTodayDate(), end: getTodayDate() }) },
-            { label: 'Últimos 7 Días', getDates: () => {
+            {
+              label: 'Últimos 7 Días', getDates: () => {
                 const end = new Date();
                 const start = new Date();
                 start.setDate(end.getDate() - 6);
@@ -151,7 +152,8 @@ export function Reportes() {
               }
             },
             { label: 'Este Mes', getDates: () => ({ start: getFirstDayOfMonth(), end: getTodayDate() }) },
-            { label: 'Mes Anterior', getDates: () => {
+            {
+              label: 'Mes Anterior', getDates: () => {
                 const d = new Date();
                 d.setMonth(d.getMonth() - 1);
                 const year = d.getFullYear();
@@ -171,11 +173,10 @@ export function Reportes() {
                   setStartDate(dates.start);
                   setEndDate(dates.end);
                 }}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
-                  isActive 
-                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-100 dark:shadow-none scale-105' 
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${isActive
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-100 dark:shadow-none scale-105'
                     : 'bg-zinc-50 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-600'
-                }`}
+                  }`}
               >
                 {opt.label}
               </button>
@@ -249,7 +250,7 @@ export function Reportes() {
 
       {/* Componente oculto para exportación a PDF */}
       {kpis && (
-        <ReporteDocumento 
+        <ReporteDocumento
           id="reporte-pdf-content"
           kpis={kpis}
           topProducts={topProducts}

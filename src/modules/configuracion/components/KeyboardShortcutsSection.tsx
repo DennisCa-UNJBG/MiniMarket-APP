@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Keyboard, Plus, Trash2, ArrowRight } from 'lucide-react';
 import { preferenciasService, type AppPreferences } from '../preferenciasService';
-import { notificationService } from '../../../lib/notifications';
-import { Button } from '../../../components/ui/Button';
+import { notificationService } from '../../../shared/lib/notifications';
+import { Button } from '../../../shared/components/ui/Button';
 import { allNavItems } from '../../../config/navigation';
 
 export function KeyboardShortcutsSection() {
@@ -16,7 +16,7 @@ export function KeyboardShortcutsSection() {
       notificationService.warning('Atajo incompleto', 'Debes presionar una combinación de teclas primero.');
       return;
     }
-    
+
     const current = preferenciasService.get();
     const currentShortcuts = current.shortcuts || {};
 
@@ -33,10 +33,10 @@ export function KeyboardShortcutsSection() {
 
     const updatedShortcuts = { ...currentShortcuts, [newShortcutCombo]: newShortcutPath };
     const updated = { ...current, shortcuts: updatedShortcuts };
-    
+
     preferenciasService.save(updated as AppPreferences);
     setPrefs(updated as AppPreferences);
-    
+
     setNewShortcutCombo('');
     setIsRecordingCombo(false);
     notificationService.success('Atajo Guardado', `La combinación ${newShortcutCombo} ahora abre una nueva vista.`);
@@ -47,7 +47,7 @@ export function KeyboardShortcutsSection() {
     const updatedShortcuts = { ...current.shortcuts };
     delete updatedShortcuts[combo];
     const updated = { ...current, shortcuts: updatedShortcuts };
-    
+
     preferenciasService.save(updated as AppPreferences);
     setPrefs(updated as AppPreferences);
   };
@@ -70,7 +70,7 @@ export function KeyboardShortcutsSection() {
           <div className="bg-zinc-50/50 dark:bg-zinc-900/50 rounded-2xl border border-zinc-100 dark:border-zinc-800 p-4 space-y-4">
             <div className="flex flex-col gap-1.5">
               <label htmlFor="select-vista-shortcut" className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Seleccionar Vista</label>
-              <select 
+              <select
                 id="select-vista-shortcut"
                 value={newShortcutPath}
                 onChange={(e) => setNewShortcutPath(e.target.value)}
@@ -89,7 +89,7 @@ export function KeyboardShortcutsSection() {
             <div className="flex flex-col gap-1.5">
               <label htmlFor="combo-teclas-shortcut" className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Combinación de Teclas</label>
               <div className="flex gap-2">
-                <button 
+                <button
                   id="combo-teclas-shortcut"
                   type="button"
                   onClick={() => {
@@ -99,12 +99,12 @@ export function KeyboardShortcutsSection() {
                   onKeyDown={(e) => {
                     if (!isRecordingCombo) return;
                     e.preventDefault();
-                    
+
                     const keys = [];
                     if (e.ctrlKey) keys.push('Ctrl');
                     if (e.altKey) keys.push('Alt');
                     if (e.shiftKey) keys.push('Shift');
-                    
+
                     if (e.key !== 'Control' && e.key !== 'Alt' && e.key !== 'Shift' && e.key !== 'Meta') {
                       const keyName = e.key === ' ' ? 'Space' : e.key.toUpperCase();
                       keys.push(keyName);
@@ -121,7 +121,7 @@ export function KeyboardShortcutsSection() {
                 >
                   {isRecordingCombo ? 'Presiona una combinación...' : (newShortcutCombo || 'Haz clic aquí para grabar')}
                 </button>
-                <Button 
+                <Button
                   onClick={handleAddShortcut}
                   disabled={!newShortcutCombo}
                   className="px-4 py-2.5 rounded-2xl"
@@ -146,7 +146,7 @@ export function KeyboardShortcutsSection() {
                         {viewLabel}
                       </span>
                     </div>
-                    <Button 
+                    <Button
                       variant="ghost"
                       size="sm"
                       icon={<Trash2 size={16} />}

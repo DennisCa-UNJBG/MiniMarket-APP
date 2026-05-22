@@ -10,20 +10,20 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { dashboardService } from './Service';
 import { negocioService } from '../configuracion/negocioService';
-import { Badge } from '../../components/ui/Badge';
+import { Badge } from '../../shared/components/ui/Badge';
 import { useNavigate } from 'react-router-dom';
-import { Tooltip } from '../../components/ui/Tooltip';
-import { Button } from '../../components/ui/Button';
-import { useAuth } from '../../contexts/AuthContext';
-import { dateUtils } from '../../lib/dateUtils';
-import { 
-  AreaChart, 
-  Area, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip as RechartsTooltip, 
-  ResponsiveContainer 
+import { Tooltip } from '../../shared/components/ui/Tooltip';
+import { Button } from '../../shared/components/ui/Button';
+import { useAuth } from '../../shared/contexts/AuthContext';
+import { dateUtils } from '../../shared/lib/dateUtils';
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer
 } from 'recharts';
 
 export function Dashboard() {
@@ -61,45 +61,45 @@ export function Dashboard() {
 
   const cards = useMemo(() => {
     if (!stats) return [];
-    
+
     const gananciaHoy = stats.ventasHoy - stats.comprasHoy;
     const isPositive = gananciaHoy >= 0;
-    
+
     return [
-      { 
-        label: 'Productos en stock', 
-        value: stats.totalProductos.toString(), 
-        icon: Package, 
-        color: 'bg-blue-500 shadow-blue-200' 
+      {
+        label: 'Productos en stock',
+        value: stats.totalProductos.toString(),
+        icon: Package,
+        color: 'bg-blue-500 shadow-blue-200'
       },
-      { 
-        label: 'Ventas de hoy', 
-        value: `S/ ${stats.ventasHoy.toFixed(2)}`, 
-        icon: ShoppingCart, 
-        color: 'bg-emerald-500 shadow-emerald-200' 
+      {
+        label: 'Ventas de hoy',
+        value: `S/ ${stats.ventasHoy.toFixed(2)}`,
+        icon: ShoppingCart,
+        color: 'bg-emerald-500 shadow-emerald-200'
       },
-      { 
-        label: 'Compras del día', 
-        value: `S/ ${stats.comprasHoy.toFixed(2)}`, 
-        icon: Truck, 
-        color: 'bg-amber-500 shadow-amber-200' 
+      {
+        label: 'Compras del día',
+        value: `S/ ${stats.comprasHoy.toFixed(2)}`,
+        icon: Truck,
+        color: 'bg-amber-500 shadow-amber-200'
       },
-      { 
-        label: 'Ganancia del día', 
-        value: `S/ ${gananciaHoy.toFixed(2)}`, 
-        icon: TrendingUp, 
+      {
+        label: 'Ganancia del día',
+        value: `S/ ${gananciaHoy.toFixed(2)}`,
+        icon: TrendingUp,
         color: isPositive ? 'bg-emerald-500 shadow-emerald-200' : 'bg-rose-500 shadow-rose-200',
-        cardClass: isPositive 
-          ? 'border-emerald-100 dark:border-emerald-950 bg-emerald-50/20 dark:bg-emerald-950/10' 
+        cardClass: isPositive
+          ? 'border-emerald-100 dark:border-emerald-950 bg-emerald-50/20 dark:bg-emerald-950/10'
           : 'border-rose-100 dark:border-rose-950 bg-rose-50/20 dark:bg-rose-950/10',
         badge: isPositive ? 'Positiva' : 'Pérdida',
         badgeVariant: isPositive ? 'emerald' : 'red'
       },
-      { 
-        label: 'Ingresos del mes', 
-        value: `S/ ${stats.ventasMes.toFixed(2)}`, 
-        icon: TrendingUp, 
-        color: 'bg-sky-500 shadow-sky-200' 
+      {
+        label: 'Ingresos del mes',
+        value: `S/ ${stats.ventasMes.toFixed(2)}`,
+        icon: TrendingUp,
+        color: 'bg-sky-500 shadow-sky-200'
       },
     ];
   }, [stats]);
@@ -111,8 +111,8 @@ export function Dashboard() {
 
     return last7Days.map(day => {
       const match = rawChart.find(rc => rc.dia === day);
-      return { 
-        dia: day, 
+      return {
+        dia: day,
         total: match ? match.total : 0,
         diaNombre: new Date(day + " UTC").toLocaleDateString('es-PE', { weekday: 'short' })
       };
@@ -166,7 +166,7 @@ export function Dashboard() {
             </div>
           </div>
           <Tooltip text="Completar la información básica de tu negocio" position="top-right">
-            <Button 
+            <Button
               onClick={() => navigate('/configuracion')}
               variant="warning"
               size="sm"
@@ -185,9 +185,8 @@ export function Dashboard() {
         {cards.map(({ label, value, icon: Icon, color, cardClass, badge, badgeVariant }) => (
           <div
             key={label}
-            className={`bg-white dark:bg-zinc-800 rounded-3xl p-6 shadow-sm border hover:shadow-md transition-all group ${
-              cardClass || 'border-zinc-100 dark:border-zinc-700'
-            }`}
+            className={`bg-white dark:bg-zinc-800 rounded-3xl p-6 shadow-sm border hover:shadow-md transition-all group ${cardClass || 'border-zinc-100 dark:border-zinc-700'
+              }`}
           >
             <div className="flex justify-between items-start mb-4">
               <div className={`${color} p-3 rounded-2xl shadow-lg group-hover:scale-110 transition-transform`}>
@@ -217,7 +216,7 @@ export function Dashboard() {
             </h3>
             <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Últimos 7 días</span>
           </div>
-          
+
           <div className="h-64 w-full">
             {chartData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
@@ -227,27 +226,27 @@ export function Dashboard() {
                 >
                   <defs>
                     <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                  <XAxis 
-                    dataKey="diaNombre" 
+                  <XAxis
+                    dataKey="diaNombre"
                     axisLine={false}
                     tickLine={false}
                     tick={{ fontSize: 10, fontWeight: 600, fill: '#94a3b8' }}
                     dy={10}
                   />
-                  <YAxis 
+                  <YAxis
                     axisLine={false}
                     tickLine={false}
                     tick={{ fontSize: 10, fontWeight: 600, fill: '#94a3b8' }}
                   />
-                  <RechartsTooltip 
-                    contentStyle={{ 
-                      borderRadius: '12px', 
-                      border: 'none', 
+                  <RechartsTooltip
+                    contentStyle={{
+                      borderRadius: '12px',
+                      border: 'none',
                       boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
                       fontSize: '12px',
                       fontWeight: 'bold'
@@ -255,13 +254,13 @@ export function Dashboard() {
                     formatter={(value: any) => [`S/ ${Number(value).toFixed(2)}`, 'Ventas']}
                     labelStyle={{ color: '#6366f1', marginBottom: '4px' }}
                   />
-                  <Area 
-                    type="monotone" 
-                    dataKey="total" 
-                    stroke="#6366f1" 
+                  <Area
+                    type="monotone"
+                    dataKey="total"
+                    stroke="#6366f1"
                     strokeWidth={3}
-                    fillOpacity={1} 
-                    fill="url(#colorTotal)" 
+                    fillOpacity={1}
+                    fill="url(#colorTotal)"
                     activeDot={{ r: 6, strokeWidth: 0, fill: '#6366f1' }}
                     dot={{ r: 4, strokeWidth: 2, fill: '#fff', stroke: '#6366f1' }}
                   />
@@ -309,7 +308,7 @@ export function Dashboard() {
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-semibold text-zinc-800 dark:text-white">Actividad Reciente</h3>
             <Tooltip text="Ver todos los movimientos" position="top-right">
-              <Button 
+              <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => navigate('/kardex')}

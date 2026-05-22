@@ -6,12 +6,12 @@ import {
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { categoriaService, type Category } from '../categoriaService';
-import { notificationService } from '../../../lib/notifications';
-import { Badge } from '../../../components/ui/Badge';
-import { Tooltip } from '../../../components/ui/Tooltip';
-import { Button } from '../../../components/ui/Button';
-import { Modal } from '../../../components/ui/Modal';
-import { DataTable, type TableColumn } from '../../../components/ui/DataTable';
+import { notificationService } from '../../../shared/lib/notifications';
+import { Badge } from '../../../shared/components/ui/Badge';
+import { Tooltip } from '../../../shared/components/ui/Tooltip';
+import { Button } from '../../../shared/components/ui/Button';
+import { Modal } from '../../../shared/components/ui/Modal';
+import { DataTable, type TableColumn } from '../../../shared/components/ui/DataTable';
 
 const getRandomColor = () => {
   const letters = '0123456789ABCDEF';
@@ -57,7 +57,7 @@ export function TabCategorias({ onUpdate }: { onUpdate: () => void }) {
   });
 
   const statusMutation = useMutation({
-    mutationFn: ({ id, status }: { id: number, status: 'activo' | 'inactivo' }) => 
+    mutationFn: ({ id, status }: { id: number, status: 'activo' | 'inactivo' }) =>
       categoriaService.updateStatus(id, status),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['categories'] });
@@ -82,9 +82,9 @@ export function TabCategorias({ onUpdate }: { onUpdate: () => void }) {
   };
 
   const columns: TableColumn<Category>[] = [
-    { 
-      key: 'color', header: 'Color', 
-      render: (row) => <div style={{ backgroundColor: row.color }} className="size-6 rounded-lg shadow-sm"></div> 
+    {
+      key: 'color', header: 'Color',
+      render: (row) => <div style={{ backgroundColor: row.color }} className="size-6 rounded-lg shadow-sm"></div>
     },
     { key: 'nombre', header: 'Nombre Categoría', render: (row) => <span className="font-bold text-zinc-800 dark:text-white">{row.nombre}</span> },
     { key: 'product_count', header: 'Productos', align: 'center', render: (row) => <Badge label={`${row.productCount || 0} items`} variant="gray" /> },
@@ -93,7 +93,7 @@ export function TabCategorias({ onUpdate }: { onUpdate: () => void }) {
       render: (row) => (
         <div className="flex items-center gap-1 justify-end">
           <Tooltip text="Editar categoría" position="top-right">
-            <Button 
+            <Button
               variant="ghost"
               size="sm"
               icon={<Edit2 size={14} />}
@@ -106,7 +106,7 @@ export function TabCategorias({ onUpdate }: { onUpdate: () => void }) {
             />
           </Tooltip>
           <Tooltip text="Desactivar categoría" position="top-right">
-            <Button 
+            <Button
               variant="ghost"
               size="sm"
               icon={<PowerOff size={14} />}
@@ -139,7 +139,7 @@ export function TabCategorias({ onUpdate }: { onUpdate: () => void }) {
       {inactiveCategories.length > 0 && (
         <div className="mt-8 opacity-60">
           <h4 className="text-xs font-semibold text-zinc-400 uppercase mb-4 tracking-widest">Categorías inactivas</h4>
-          <DataTable 
+          <DataTable
             columns={[
               ...columns.filter(c => c.key !== 'acciones'),
               {
@@ -150,9 +150,9 @@ export function TabCategorias({ onUpdate }: { onUpdate: () => void }) {
                   </button>
                 )
               }
-            ]} 
-            data={inactiveCategories} 
-            keyExtractor={(row) => row.id} 
+            ]}
+            data={inactiveCategories}
+            keyExtractor={(row) => row.id}
           />
         </div>
       )}

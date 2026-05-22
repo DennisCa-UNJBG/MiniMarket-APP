@@ -1,6 +1,6 @@
 import { createContext, use, useState, ReactNode, useEffect } from 'react';
-import type { UserData } from '../modules/login/Service';
-import { preferenciasService } from '../modules/configuracion/preferenciasService';
+import type { UserData } from '../../modules/login/Service';
+import { preferenciasService } from '../../modules/configuracion/preferenciasService';
 import { notificationService } from '../lib/notifications';
 import { logService } from '../lib/logService';
 
@@ -39,10 +39,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // @ts-ignore
     window.__lastActivityTime = Date.now();
-    
+
     // Eventos que reinician el temporizador
     const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
-    
+
     // Solo actualizamos el timestamp global si ha pasado al menos 1 segundo
     // para no sobrecargar el CPU con eventos como mousemove
     const updateActivity = () => {
@@ -61,11 +61,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const checkInactivity = () => {
       if (!currentPrefs.enableAutoLogout) return;
-      
+
       // @ts-ignore
       const lastActivity = window.__lastActivityTime;
       const timeoutMs = currentPrefs.inactivityTimeout * 60 * 1000;
-      
+
       if (Date.now() - lastActivity >= timeoutMs) {
         logout().catch(console.error);
         notificationService.info('Seguridad', 'Tu sesión se ha cerrado por inactividad.');
@@ -110,10 +110,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      isAuthenticated: !!user, 
-      login, 
+    <AuthContext.Provider value={{
+      user,
+      isAuthenticated: !!user,
+      login,
       logout,
       isLoading
     }}>

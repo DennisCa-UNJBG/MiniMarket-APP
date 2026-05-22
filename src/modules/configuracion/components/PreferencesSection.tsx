@@ -3,9 +3,9 @@ import { Bell, Database } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { preferenciasService, type AppPreferences } from '../preferenciasService';
 import { databaseService } from '../databaseService';
-import { notificationService } from '../../../lib/notifications';
-import { Tooltip } from '../../../components/ui/Tooltip';
-import { Button } from '../../../components/ui/Button';
+import { notificationService } from '../../../shared/lib/notifications';
+import { Tooltip } from '../../../shared/components/ui/Tooltip';
+import { Button } from '../../../shared/components/ui/Button';
 
 const formatSize = (bytes: number) => {
   if (bytes === 0) return '0 B';
@@ -27,7 +27,7 @@ export function PreferencesSection() {
   const handleToggle = (key: keyof AppPreferences) => {
     const updated = preferenciasService.toggle(key);
     setPrefs(updated as AppPreferences);
-    
+
     if (key === 'stockAlert') {
       queryClient.invalidateQueries({ queryKey: ['low-stock'] });
     }
@@ -103,7 +103,7 @@ export function PreferencesSection() {
             </div>
             <div className="flex flex-col sm:flex-row gap-3">
               <Tooltip text="Optimizar registros de la base de datos" position="top" className="w-1/2">
-                <Button 
+                <Button
                   variant="ghost"
                   onClick={handleOptimize}
                   isLoading={optimizeMutation.isPending}
@@ -113,7 +113,7 @@ export function PreferencesSection() {
                 </Button>
               </Tooltip>
               <Tooltip text="Descargar la base de datos" position="top" className="w-1/2">
-                <Button 
+                <Button
                   variant="secondary"
                   onClick={handleBackup}
                   isLoading={backupMutation.isPending}
@@ -153,7 +153,7 @@ export function PreferencesSection() {
                     <p className="text-sm font-bold text-zinc-700 dark:text-zinc-200 truncate">{label}</p>
                     <p className="text-[10px] text-zinc-400 dark:text-zinc-500">{desc}</p>
                   </div>
-                  <button 
+                  <button
                     onClick={() => handleToggle(id as keyof AppPreferences)}
                     className={`w-10 h-5 rounded-full relative transition-colors ${active ? 'bg-blue-500' : 'bg-zinc-200 dark:bg-zinc-700'}`}
                   >
@@ -170,9 +170,9 @@ export function PreferencesSection() {
                     <p className="text-xs font-bold text-blue-900 dark:text-blue-300">Tiempo de Inactividad</p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <input 
-                      type="number" 
-                      min="1" 
+                    <input
+                      type="number"
+                      min="1"
                       max="1440"
                       value={prefs.inactivityTimeout}
                       onChange={(e) => handleUpdatePref('inactivityTimeout', parseInt(e.target.value) || 1)}
@@ -191,10 +191,10 @@ export function PreferencesSection() {
                 <p className="text-[10px] text-zinc-400 dark:text-zinc-500">Ajusta la iluminación para cuidar tu vista.</p>
               </div>
               <div className="flex items-center gap-3">
-                <input 
-                  type="range" 
-                  min="30" 
-                  max="100" 
+                <input
+                  type="range"
+                  min="30"
+                  max="100"
                   value={prefs.brightness ?? 100}
                   onChange={(e) => handleUpdatePref('brightness', parseInt(e.target.value))}
                   className="w-24 accent-blue-500"

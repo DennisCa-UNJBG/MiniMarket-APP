@@ -1,8 +1,8 @@
 import React from 'react';
 import { Search, User, Wallet } from 'lucide-react';
-import { DataTable, type TableColumn } from '../../../../components/ui/DataTable';
-import { Badge } from '../../../../components/ui/Badge';
-import { EmptyState } from '../../../../components/ui/EmptyState';
+import { DataTable, type TableColumn } from '../../../../shared/components/ui/DataTable';
+import { Badge } from '../../../../shared/components/ui/Badge';
+import { EmptyState } from '../../../../shared/components/ui/EmptyState';
 
 interface TabCajasProps {
   filteredCajas: any[];
@@ -86,7 +86,7 @@ export const TabCajas: React.FC<TabCajasProps> = ({
       align: 'right',
       render: (row) => {
         if (row.monto_final === null) return <span className="text-zinc-400 text-xs">-</span>;
-        
+
         // La diferencia es Monto Final - Monto Esperado
         const dif = row.monto_final - row.monto_esperado;
         if (dif === 0) {

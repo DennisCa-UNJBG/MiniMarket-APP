@@ -1,5 +1,5 @@
-import { getDb } from '../../lib/db';
-import { logService } from '../../lib/logService';
+import { getDb } from '../../shared/lib/db';
+import { logService } from '../../shared/lib/logService';
 
 export interface Cliente {
   id: number;
@@ -158,7 +158,7 @@ export const clienteService = {
       }
 
       // Extracción robusta de nombre o razón social
-      const nombre = 
+      const nombre =
         data.resultado?.nombre_completo ||
         data.resultado?.razon_social ||
         data.resultado?.nombre_o_razon_social ||
@@ -167,10 +167,10 @@ export const clienteService = {
         data.data?.nombre_o_razon_social ||
         data.nombre_completo ||
         data.razon_social ||
-        (data.resultado?.nombres 
+        (data.resultado?.nombres
           ? `${data.resultado.nombres} ${data.resultado.apellido_paterno || ''} ${data.resultado.apellido_materno || ''}`.trim()
           : '') ||
-        (data.data?.nombres 
+        (data.data?.nombres
           ? `${data.data.nombres} ${data.data.apellido_paterno || ''} ${data.data.apellido_materno || ''}`.trim()
           : '');
 

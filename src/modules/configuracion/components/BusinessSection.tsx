@@ -3,19 +3,19 @@ import { Store, Save, Eye, EyeOff } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { negocioService, type DatosNegocio } from '../negocioService';
 import { perudevsService } from '../perudevsService';
-import { notificationService } from '../../../lib/notifications';
-import { Button } from '../../../components/ui/Button';
+import { notificationService } from '../../../shared/lib/notifications';
+import { Button } from '../../../shared/components/ui/Button';
 
-function Field({ 
-  label, 
-  value, 
-  onChange, 
+function Field({
+  label,
+  value,
+  onChange,
   placeholder,
-  type = 'text' 
-}: { 
-  label: string; 
-  value: string; 
-  onChange: (val: string) => void; 
+  type = 'text'
+}: {
+  label: string;
+  value: string;
+  onChange: (val: string) => void;
   placeholder?: string;
   type?: string;
 }) {
@@ -57,7 +57,7 @@ export function BusinessSection({ initialData }: { initialData: DatosNegocio }) 
     e.preventDefault();
     try {
       await saveNegocioMutation.mutateAsync(localNegocio);
-      
+
       if (apiKey.trim()) {
         await perudevsService.saveKey(apiKey.trim());
         setApiKey('');
@@ -85,13 +85,13 @@ export function BusinessSection({ initialData }: { initialData: DatosNegocio }) 
       <div className="p-6">
         <form onSubmit={handleNegocioSave} className="space-y-5">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="Razón Social" value={localNegocio.razon_social} onChange={val => setLocalNegocio(prev => ({...prev, razon_social: val}))} placeholder="Ej: Minimarket El Sol S.A.C." />
-            <Field label="RUC / Identificación" value={localNegocio.ruc} onChange={val => setLocalNegocio(prev => ({...prev, ruc: val}))} placeholder="Ej: 20123456789" />
+            <Field label="Razón Social" value={localNegocio.razon_social} onChange={val => setLocalNegocio(prev => ({ ...prev, razon_social: val }))} placeholder="Ej: Minimarket El Sol S.A.C." />
+            <Field label="RUC / Identificación" value={localNegocio.ruc} onChange={val => setLocalNegocio(prev => ({ ...prev, ruc: val }))} placeholder="Ej: 20123456789" />
             <div className="sm:col-span-2">
-              <Field label="Dirección Fiscal" value={localNegocio.direccion} onChange={val => setLocalNegocio(prev => ({...prev, direccion: val}))} placeholder="Av. Principal 123, Tacna" />
+              <Field label="Dirección Fiscal" value={localNegocio.direccion} onChange={val => setLocalNegocio(prev => ({ ...prev, direccion: val }))} placeholder="Av. Principal 123, Tacna" />
             </div>
-            <Field label="Teléfono de Contacto" value={localNegocio.telefono} onChange={val => setLocalNegocio(prev => ({...prev, telefono: val}))} placeholder="Ej: 052 123 456" />
-            <Field label="Correo Electrónico" value={localNegocio.email} onChange={val => setLocalNegocio(prev => ({...prev, email: val}))} placeholder="contacto@empresa.com" />
+            <Field label="Teléfono de Contacto" value={localNegocio.telefono} onChange={val => setLocalNegocio(prev => ({ ...prev, telefono: val }))} placeholder="Ej: 052 123 456" />
+            <Field label="Correo Electrónico" value={localNegocio.email} onChange={val => setLocalNegocio(prev => ({ ...prev, email: val }))} placeholder="contacto@empresa.com" />
             <div className="sm:col-span-2">
               <div className="flex flex-col gap-1.5">
                 <div className="flex items-center justify-between">
@@ -131,7 +131,7 @@ export function BusinessSection({ initialData }: { initialData: DatosNegocio }) 
               </div>
             </div>
           </div>
-          <Button 
+          <Button
             type="submit"
             isLoading={saveNegocioMutation.isPending}
             className="w-full sm:w-auto px-6 py-2.5 font-bold rounded-2xl"

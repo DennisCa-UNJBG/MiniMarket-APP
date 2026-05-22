@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { preferenciasService } from '../modules/configuracion/preferenciasService';
+import { preferenciasService } from '../../modules/configuracion/preferenciasService';
 
 export function useGlobalShortcuts() {
   const navigate = useNavigate();
@@ -41,7 +41,7 @@ export function useGlobalShortcuts() {
       if (e.ctrlKey) keys.push('Ctrl');
       if (e.altKey) keys.push('Alt');
       if (e.shiftKey) keys.push('Shift');
-      
+
       // Añadir la tecla principal si no es modificadora
       if (e.key !== 'Control' && e.key !== 'Alt' && e.key !== 'Shift' && e.key !== 'Meta') {
         const keyName = e.key === ' ' ? 'Space' : e.key.toUpperCase();

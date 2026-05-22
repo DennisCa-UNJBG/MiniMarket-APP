@@ -2,12 +2,12 @@ import { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useLocation, Link } from 'react-router-dom';
 import { Bell, User, LogOut, AlertTriangle, Package } from 'lucide-react';
-import { mainNavItems, bottomNavItems } from '../../config/navigation';
+import { mainNavItems, bottomNavItems } from '../../../config/navigation';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button } from './Button';
 import { Tooltip } from './Tooltip';
-import { alertaService } from '../../modules/dashboard/alertaService';
-import { preferenciasService } from '../../modules/configuracion/preferenciasService';
+import { alertaService } from '../../../modules/dashboard/alertaService';
+import { preferenciasService } from '../../../modules/configuracion/preferenciasService';
 import { AutoLogoutTimer } from '../auth/AutoLogoutTimer';
 
 /** Obtiene el título de la página según la ruta activa */
@@ -58,22 +58,21 @@ export function TopBar() {
 
       {/* Acciones del lado derecho */}
       <div className="flex items-center gap-4">
-        
+
         {/* Temporizador de Cierre de Sesión */}
         <AutoLogoutTimer />
 
         {/* Notificaciones */}
         <div className="relative" ref={dropdownRef}>
-          <Tooltip text="Notificaciones" position="bottom"> 
+          <Tooltip text="Notificaciones" position="bottom">
             <button
               id="notifications-btn"
               aria-label="Notificaciones"
               onClick={() => setShowDropdown(!showDropdown)}
-              className={`relative p-2 rounded-xl transition-all ${
-                showDropdown 
-                  ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600' 
+              className={`relative p-2 rounded-xl transition-all ${showDropdown
+                  ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600'
                   : 'text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700'
-              }`}
+                }`}
             >
               <Bell size={20} />
               {alerts.length > 0 && (
@@ -95,7 +94,7 @@ export function TopBar() {
                   {alerts.length} pendientes
                 </span>
               </div>
-              
+
               <div className="max-h-96 overflow-y-auto">
                 {alerts.length > 0 ? (
                   <div className="divide-y divide-zinc-50 dark:divide-zinc-700/50">
@@ -135,9 +134,9 @@ export function TopBar() {
                   </div>
                 )}
               </div>
-              
-              <Link 
-                to="/inventario" 
+
+              <Link
+                to="/inventario"
                 onClick={() => setShowDropdown(false)}
                 className="block p-4 text-center text-xs font-bold text-blue-600 dark:text-blue-400 hover:bg-zinc-50 dark:hover:bg-zinc-700/50 border-t border-zinc-50 dark:border-zinc-700/50 transition-colors"
               >
@@ -163,9 +162,9 @@ export function TopBar() {
           </div>
 
           <Tooltip text="Cerrar Sesión" position="bottom">
-            <Button 
-              variant="danger" 
-              size="sm" 
+            <Button
+              variant="danger"
+              size="sm"
               onClick={logout}
               className="p-2 bg-red-500 hover:bg-red-200 text-white shadow-lg shadow-red-200 dark:shadow-none border-none rounded-xl transition-all"
             >

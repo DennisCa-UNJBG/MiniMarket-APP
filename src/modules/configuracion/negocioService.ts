@@ -1,4 +1,4 @@
-import { getDb } from '../../lib/db';
+import { getDb } from '../../shared/lib/db';
 
 export interface DatosNegocio {
   id?: number;
@@ -19,7 +19,7 @@ export const negocioService = {
     const results = await db.select<DatosNegocio[]>(
       'SELECT * FROM negocio ORDER BY id DESC LIMIT 1'
     );
-    
+
     if (results.length > 0) {
       return results[0];
     }
