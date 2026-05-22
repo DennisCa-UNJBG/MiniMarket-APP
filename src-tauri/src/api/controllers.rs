@@ -5,7 +5,7 @@ use axum::{
 };
 use serde_json::{json, Value};
 use sqlx::SqlitePool;
-use crate::api::dtos::{SyncPayloadDto, StockPayloadDto, KardexPayloadDto, ProductoCrearDto};
+use crate::api::dtos::{SyncPayloadDto, StockPayloadDto, KardexPayloadDto, ProductoCrearDto, CajaPayloadDto};
 
 pub async fn get_productos(
     headers: HeaderMap,
@@ -386,4 +386,58 @@ pub async fn verificar_crear_producto(
             )
         }
     }
+}
+
+pub async fn sincronizar_cajas(
+    headers: HeaderMap,
+    State(pool): State<SqlitePool>,
+    Json(payload): Json<CajaPayloadDto>,
+) -> (StatusCode, Json<Value>) {
+    let auth_key = headers.get("X-Sucursal-Key")
+        .and_then(|h| h.to_str().ok())
+        .unwrap_or("");
+
+    if auth_key != payload.sucursal_id {
+        return (StatusCode::FORBIDDEN, Json(json!({ "error": "Llave no coincide con sucursal" })));
+    }
+
+    let sucursal = sqlx::query("SELECT id FROM sucursales WHERE codigo = ? AND estado = 'activo'")
+        .bind(&payload.sucursal_id)
+        .fetch_optional(&pool)
+        .await
+        .unwrap();
+
+    if sucursal.is_none() {
+        return (StatusCode::FORBIDDEN, Json(json!({ "error": "Sucursal no autorizada o inactiva" })));
+    }
+
+    let mut procesadas = 0;
+    for c in payload.cajas {
+        let res = sqlx::query(
+            "INSERT INTO cajas (usuario_id, monto_inicial, monto_final, monto_esperado, fecha_apertura, fecha_cierre, estado, sucursal_id, sincronizado) 
+             VALUES (?, ?, ?, ?, ?, ?, 'cerrada', ?, 1)"
+        )
+        .bind(c.usuario_id)
+        .bind(c.monto_inicial)
+        .bind(c.monto_final)
+        .bind(c.monto_esperado)
+        .bind(&c.fecha_apertura)
+        .bind(&c.fecha_cierre)
+        .bind(&payload.sucursal_id)
+        .execute(&pool)
+        .await;
+
+        if res.is_ok() {
+            procesadas += 1;
+        }
+    }
+
+    (
+        StatusCode::OK,
+        Json(json!({
+            "status": "ok",
+            "mensaje": format!("Sincronización de cajas exitosa: {} procesadas", procesadas),
+            "procesadas": procesadas
+        })),
+    )
 }

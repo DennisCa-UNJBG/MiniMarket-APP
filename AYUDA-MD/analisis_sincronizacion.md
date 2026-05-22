@@ -20,6 +20,11 @@ sequenceDiagram
     Central-->>Sucursal: 200 OK (Mensaje de éxito)
     Note over Sucursal: Marca ventas locales como sincronizadas
 
+    Sucursal->>Central: POST /api/cajas-sync (Arqueos de cajas cerradas)
+    Note right of Central: Registra arqueos de cajas en central
+    Central-->>Sucursal: 200 OK (Mensaje de éxito)
+    Note over Sucursal: Marca cajas locales como sincronizadas
+
     Sucursal->>Central: POST /api/kardex-sync (Movimientos de inventario)
     Note right of Central: Registra transacciones en kardex central
     Central-->>Sucursal: 200 OK (Mensaje de éxito)
@@ -50,6 +55,7 @@ Las sucursales son responsables de reportar sus transacciones comerciales, movim
 | **Ventas Realizadas** | `POST /api/sincronizar` | - `fecha` (ISO Date)<br>- `total` (decimal)<br>- `usuario_id` (creador)<br>- `metodo_pago` (EFECTIVO, etc.)<br>- **Detalles:** `codigo_barras`, `cantidad`, `precio_unitario`, `subtotal` | Se actualiza la venta local a `sincronizado = 1` para no volver a enviarla. |
 | **Niveles de Stock** | `POST /api/stock-update` | - `sucursal_id`<br>- **Inventario:** lista de `{ codigo_barras, stock_actual }` | El servidor central realiza un `UPSERT` en la tabla `sucursales_stock`. |
 | **Kardex (Movimientos)** | `POST /api/kardex-sync` | - `sucursal_id`<br>- **Movimientos:** lista de `{ producto_codigo_barras, usuario_id, fecha, tipo_movimiento, cantidad, saldo_posterior, costo_unitario, referencia }` | Se actualiza el movimiento local a `sincronizado = 1`. |
+| **Control de Cajas** | `POST /api/cajas-sync` | - `sucursal_id`<br>- **Cajas:** lista de `{ id_local, usuario_id, monto_inicial, monto_final, monto_esperado, fecha_apertura, fecha_cierre }` | Se actualiza la caja local a `sincronizado = 1`. |
 
 ---
 
@@ -83,3 +89,7 @@ Todas las solicitudes de sincronización iniciadas desde una sucursal incorporan
 > [!WARNING]
 > **Integridad Referencial basada en Códigos de Barras**
 > Las ventas y los movimientos de inventario se asocian en la central mediante el `codigo_barras` del producto en lugar de los IDs autonuméricos locales. Esto evita colisiones de identificadores y asegura que, aunque los IDs de base de datos locales y centrales difieran, los productos se mapeen correctamente a nivel global.
+
+> [!IMPORTANT]
+> **Gestión Desacoplada de Configuración (Fase 2)**
+> El servicio de sincronización [syncService](file:///c:/Users/denni/Documents/UNJBG/2026/Practicas/Sistema-Inventario/src/modules/sincronizacion/Service.ts) no depende del servicio de sucursales para conectarse con la central. Los parámetros de conexión (`api_url_central` y `sucursal_id`) se obtienen llamando directamente a `getConfig()` de [systemConfigService](file:///c:/Users/denni/Documents/UNJBG/2026/Practicas/Sistema-Inventario/src/modules/configuracion/systemConfigService.ts). Esto elimina dependencias circulares y encapsula limpiamente la configuración global del sistema en su propio módulo.

@@ -2,6 +2,7 @@ import { CloudSync } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ventaService } from '../../ventas/Service';
+import { cajaService } from '../../caja/Service';
 import { syncService } from '../Service';
 import { notificationService } from '../../../shared/lib/notifications';
 import { Button } from '../../../shared/components/ui/Button';
@@ -14,36 +15,49 @@ export function SyncActionsCard() {
     queryFn: () => invoke<boolean>('is_server_running')
   });
 
-  const { data: pendingSales = 0, refetch: refetchPending } = useQuery({
+  const { data: pendingSales = 0, refetch: refetchPendingSales } = useQuery({
     queryKey: ['pending-sales'],
     queryFn: () => ventaService.getVentasPendientes(),
     enabled: !isCentral
   });
 
+  const { data: pendingCajas = 0, refetch: refetchPendingCajas } = useQuery({
+    queryKey: ['pending-cajas'],
+    queryFn: () => cajaService.getCajasPendientes(),
+    enabled: !isCentral
+  });
+
+  const refetchPending = () => {
+    refetchPendingSales();
+    refetchPendingCajas();
+  };
+
   const syncMutation = useMutation({
     mutationFn: async () => {
-      notificationService.info('Sincronizando', 'Enviando ventas y descargando catálogo actualizado...');
+      notificationService.info('Sincronizando', 'Enviando ventas, cajas y descargando catálogo actualizado...');
 
       const [
         { enviadas },
         { enviadas: kEnviadas },
+        { enviadas: cEnviadas },
         _,
         { creados: pCreados, actualizados: pActualizados },
         { creados: uCreados, actualizados: uActualizados }
       ] = await Promise.all([
         syncService.pushSales(),
         syncService.pushKardex(),
+        syncService.pushCajas(),
         syncService.pushStockLevels(),
         syncService.pullProducts(),
         syncService.pullUsers()
       ]);
 
-      return { enviadas, kEnviadas, pCreados, pActualizados, uCreados, uActualizados };
+      return { enviadas, kEnviadas, cEnviadas, pCreados, pActualizados, uCreados, uActualizados };
     },
     onSuccess: (data) => {
       notificationService.success(
         'Sincronización Completa',
-        `Enviados: ${data.enviadas} ventas y ${data.kEnviadas} movimientos. Stock OK. Catálogo: +${data.pCreados}/~${data.pActualizados}. Usuarios: +${data.uCreados}/~${data.uActualizados}.`
+        `Enviados: ${data.enviadas} ventas, ${data.cEnviadas} cajas y ${data.kEnviadas} movimientos. Stock OK. Catálogo: +${data.pCreados}/~${data.pActualizados}. Usuarios: +${data.uCreados}/~${data.uActualizados}.`
       );
       refetchPending();
       queryClient.invalidateQueries({ queryKey: ['products'] });
@@ -80,6 +94,13 @@ export function SyncActionsCard() {
               <span className="text-zinc-400 uppercase tracking-wider">Ventas pendientes</span>
               <span className="bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 px-3 py-1 rounded-full text-[10px]">
                 {pendingSales} registros
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between text-xs font-bold border-b border-zinc-50 dark:border-zinc-700 pb-2">
+              <span className="text-zinc-400 uppercase tracking-wider">Arqueos de Caja pendientes</span>
+              <span className="bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 px-3 py-1 rounded-full text-[10px]">
+                {pendingCajas} registros
               </span>
             </div>
 

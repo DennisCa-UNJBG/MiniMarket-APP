@@ -63,3 +63,20 @@ pub struct ProductoCrearDto {
     pub precio_compra: f64,
     pub precio_venta: f64,
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CajaSyncDto {
+    pub id_local: i32,
+    pub usuario_id: i32,
+    pub monto_inicial: f64,
+    pub monto_final: Option<f64>,
+    pub monto_esperado: Option<f64>,
+    pub fecha_apertura: String,
+    pub fecha_cierre: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CajaPayloadDto {
+    pub sucursal_id: String,
+    pub cajas: Vec<CajaSyncDto>,
+}

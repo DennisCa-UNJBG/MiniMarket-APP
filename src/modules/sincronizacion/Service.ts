@@ -294,5 +294,54 @@ export const syncService = {
     ));
 
     return { enviadas: movimientos.length };
+  },
+
+  /**
+   * Envía los registros de caja locales cerrados y no sincronizados a la central
+   */
+  async pushCajas() {
+    const config = await systemConfigService.getConfig();
+    if (!config || !config.api_url_central || !config.sucursal_id) {
+      throw new Error('Configuración de sucursal incompleta');
+    }
+
+    const db = await getDb();
+    const cajasPendientes = await db.select<any[]>(
+      "SELECT * FROM cajas WHERE estado = 'cerrada' AND sincronizado = 0"
+    );
+
+    if (cajasPendientes.length === 0) return { enviadas: 0 };
+
+    const response = await fetch(`${config.api_url_central}/api/cajas-sync`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Sucursal-Key': config.sucursal_id
+      },
+      body: JSON.stringify({
+        sucursal_id: config.sucursal_id,
+        cajas: cajasPendientes.map(c => ({
+          id_local: c.id,
+          usuario_id: c.usuario_id,
+          monto_inicial: c.monto_inicial,
+          monto_final: c.monto_final,
+          monto_esperado: c.monto_esperado,
+          fecha_apertura: c.fecha_apertura,
+          fecha_cierre: c.fecha_cierre
+        }))
+      })
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Error al enviar registros de caja');
+    }
+
+    // Marcar como sincronizados localmente
+    await Promise.all(cajasPendientes.map(c =>
+      db.execute('UPDATE cajas SET sincronizado = 1 WHERE id = ?', [c.id])
+    ));
+
+    return { enviadas: cajasPendientes.length };
   }
 };

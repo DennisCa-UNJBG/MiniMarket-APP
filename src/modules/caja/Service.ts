@@ -123,6 +123,17 @@ export const cajaService = {
        LIMIT ?`,
       [limit]
     );
+  },
+
+  /**
+   * Obtiene la cantidad de cajas cerradas pendientes de sincronización
+   */
+  async getCajasPendientes(): Promise<number> {
+    const db = await getDb();
+    const result = await db.select<any[]>(
+      "SELECT COUNT(*) as count FROM cajas WHERE estado = 'cerrada' AND sincronizado = 0"
+    );
+    return result.length > 0 ? result[0].count : 0;
   }
 };
 

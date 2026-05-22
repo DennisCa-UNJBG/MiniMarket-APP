@@ -436,6 +436,12 @@ pub fn run() {
             description: "add_sincronizado_to_productos",
             sql: "ALTER TABLE productos ADD COLUMN sincronizado INTEGER DEFAULT 1;",
             kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 23,
+            description: "add_sincronizado_to_cajas",
+            sql: "ALTER TABLE cajas ADD COLUMN sincronizado INTEGER DEFAULT 0;",
+            kind: MigrationKind::Up,
         }
     ];
 
