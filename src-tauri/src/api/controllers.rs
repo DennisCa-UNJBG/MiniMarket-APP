@@ -277,28 +277,38 @@ pub async fn verificar_crear_producto(
         return (StatusCode::FORBIDDEN, Json(json!({ "error": "Sucursal no autorizada o inactiva" })));
     }
 
-    // Verificar si ya existe el código de barras
-    let prod_existente = sqlx::query("SELECT nombre FROM productos WHERE codigo_barras = ?")
-        .bind(&payload.codigo_barras)
-        .fetch_optional(&pool)
-        .await
-        .unwrap();
-
-    if let Some(row) = prod_existente {
-        use sqlx::Row;
-        let nombre_existente: String = row.get("nombre");
-        return (
-            StatusCode::CONFLICT,
-            Json(json!({
-                "error": "El código de barras ya está registrado en la central",
-                "producto": {
-                    "nombre": nombre_existente
-                }
-            })),
-        );
+    // Validar que el nombre no esté vacío
+    if payload.nombre.trim().is_empty() {
+        return (StatusCode::BAD_REQUEST, Json(json!({ "error": "El nombre del producto es requerido" })));
     }
 
-    // Resolver categoría en la central
+    // Generar código de barras secuencial en la central
+    // Formato: PROD-XXXX (mismo formato que usa la sede central en el frontend)
+    // Buscar el último código PROD- y extraer su número para incrementar
+    let ultimo_cod = sqlx::query(
+        "SELECT codigo_barras FROM productos \
+         WHERE codigo_barras LIKE 'PROD-%' \
+         ORDER BY CAST(SUBSTR(codigo_barras, 6) AS INTEGER) DESC \
+         LIMIT 1"
+    )
+    .fetch_optional(&pool)
+    .await
+    .unwrap();
+
+    let siguiente_num = if let Some(row) = ultimo_cod {
+        use sqlx::Row;
+        let last: String = row.get("codigo_barras");
+        // Extraer la parte numérica después de "PROD-"
+        let num_str = last.trim_start_matches("PROD-");
+        num_str.parse::<u64>().unwrap_or(0) + 1
+    } else {
+        1
+    };
+
+    // Formatear con ceros a la izquierda (mínimo 4 dígitos)
+    let codigo_barras = format!("PROD-{:04}", siguiente_num);
+
+    // Resolver o crear categoría por nombre
     let mut categoria_id: Option<i32> = None;
     if let Some(cat_nombre) = &payload.categoria_nombre {
         if !cat_nombre.trim().is_empty() {
@@ -312,7 +322,7 @@ pub async fn verificar_crear_producto(
                 use sqlx::Row;
                 categoria_id = Some(cat_row.get("id"));
             } else {
-                // Crear categoría si no existe
+                // Crear categoría si no existe en la central
                 let ins_cat = sqlx::query("INSERT INTO categorias (nombre, color) VALUES (?, '#6366f1')")
                     .bind(cat_nombre)
                     .execute(&pool)
@@ -324,30 +334,49 @@ pub async fn verificar_crear_producto(
         }
     }
 
-    // Resolver unidad de medida si viene como unidad_id
-    // Nota: Aunque payload tenga unidad_id, en la central podemos guardar el nombre o abreviatura
-    let mut unidad_txt: Option<String> = None;
-    if let Some(uid) = payload.unidad_id {
-        let u_res = sqlx::query("SELECT abreviatura FROM unidades_medida WHERE id = ?")
-            .bind(uid)
+    // Resolver o crear unidad de medida por nombre/abreviatura
+    let mut unidad_id_central: Option<i32> = None;
+    if let Some(u_nombre) = &payload.unidad_nombre {
+        if !u_nombre.trim().is_empty() {
+            // Buscar primero por nombre exacto (case-insensitive)
+            let u_res = sqlx::query(
+                "SELECT id FROM unidades_medida WHERE LOWER(nombre) = LOWER(?) OR LOWER(abreviatura) = LOWER(?)"
+            )
+            .bind(u_nombre)
+            .bind(payload.unidad_abreviatura.as_deref().unwrap_or(u_nombre))
             .fetch_optional(&pool)
             .await
             .unwrap();
-        if let Some(u_row) = u_res {
-            use sqlx::Row;
-            unidad_txt = Some(u_row.get("abreviatura"));
+
+            if let Some(u_row) = u_res {
+                use sqlx::Row;
+                unidad_id_central = Some(u_row.get("id"));
+            } else {
+                // Crear unidad de medida si no existe en la central
+                let abrev = payload.unidad_abreviatura.as_deref().unwrap_or(u_nombre);
+                let ins_u = sqlx::query(
+                    "INSERT INTO unidades_medida (nombre, abreviatura) VALUES (?, ?)"
+                )
+                .bind(u_nombre)
+                .bind(abrev)
+                .execute(&pool)
+                .await;
+                if let Ok(r) = ins_u {
+                    unidad_id_central = Some(r.last_insert_rowid() as i32);
+                }
+            }
         }
     }
 
-    // Insertar producto
+    // Insertar el producto en la central
     let res = sqlx::query(
-        "INSERT INTO productos (codigo_barras, nombre, categoria_id, unidad_medida, stock_minimo, estado) 
+        "INSERT INTO productos (codigo_barras, nombre, categoria_id, unidad_id, stock_minimo, estado) \
          VALUES (?, ?, ?, ?, ?, 'activo')"
     )
-    .bind(&payload.codigo_barras)
+    .bind(&codigo_barras)
     .bind(&payload.nombre)
     .bind(categoria_id)
-    .bind(unidad_txt)
+    .bind(unidad_id_central)
     .bind(payload.stock_minimo)
     .execute(&pool)
     .await;
@@ -359,7 +388,7 @@ pub async fn verificar_crear_producto(
             // Insertar precio inicial si aplica
             if payload.precio_venta > 0.0 || payload.precio_compra > 0.0 {
                 let _ = sqlx::query(
-                    "INSERT INTO precios_historial (producto_id, precio_compra, precio_venta, activo) 
+                    "INSERT INTO precios_historial (producto_id, precio_compra, precio_venta, activo) \
                      VALUES (?, ?, ?, 1)"
                 )
                 .bind(prod_id)
@@ -374,15 +403,16 @@ pub async fn verificar_crear_producto(
                 Json(json!({
                     "status": "ok",
                     "id": prod_id,
-                    "codigo_barras": payload.codigo_barras,
-                    "nombre": payload.nombre
+                    "codigo_barras": codigo_barras,
+                    "nombre": payload.nombre,
+                    "mensaje": "Producto creado exitosamente en la sede central"
                 })),
             )
         }
         Err(e) => {
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({ "error": format!("Error al guardar producto: {}", e) })),
+                Json(json!({ "error": format!("Error al guardar producto en la central: {}", e) })),
             )
         }
     }

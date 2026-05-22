@@ -16,6 +16,7 @@
     "fs:allow-exists",
     "fs:allow-copy-file",
     "fs:allow-mkdir",
-    "fs:default"
+    "fs:default",
+    "log:default"
   ]
 }

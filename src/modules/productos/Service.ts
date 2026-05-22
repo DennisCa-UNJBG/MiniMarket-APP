@@ -67,16 +67,48 @@ export const productoService = {
       if (prodExistente.length > 0) {
         throw new Error(`El código de barras ya está registrado en el catálogo maestro ("${prodExistente[0].nombre}").`);
       }
+
+      // INSERT directo en la BD central
+      const result = await db.execute(
+        `INSERT INTO productos (codigo_barras, nombre, categoria_id, unidad_id, stock_minimo, stock_actual, sincronizado) 
+         VALUES (?, ?, ?, ?, ?, ?, 1)`,
+        [
+          product.codigo_barras,
+          product.nombre,
+          product.categoria_id,
+          product.unidad_id,
+          product.stock_minimo,
+          product.stock_actual
+        ]
+      );
+
+      const productId = result.lastInsertId as number;
+
+      await logService.register({
+        usuario_id: usuarioId,
+        accion: 'CREAR_PRODUCTO',
+        tabla: 'productos',
+        registro_id: productId,
+        detalles: `Se creó el producto: ${product.nombre} (${product.codigo_barras})`
+      });
+
+      if (product.precio_compra !== undefined && product.precio_venta !== undefined) {
+        await db.execute(
+          `INSERT INTO precios_historial (producto_id, precio_compra, precio_venta, activo) 
+           VALUES (?, ?, ?, 1)`,
+          [productId, product.precio_compra, product.precio_venta]
+        );
+      }
+
     } else {
-      // --- FLUJO DE SUCURSAL (Validación síncrona en línea) ---
-      // Obtener la configuración de la sucursal
+      // --- FLUJO DE SUCURSAL (La central genera el código de barras) ---
       const config = await systemConfigService.getConfig();
       if (!config || !config.api_url_central || !config.sucursal_id) {
         throw new Error('Configuración de sucursal incompleta. Configure la conexión a la sede central.');
       }
 
       // Obtener el nombre de la categoría local para enviarla a la central
-      let categoriaNombre = "";
+      let categoriaNombre = '';
       if (product.categoria_id) {
         const catRow = await db.select<any[]>('SELECT nombre FROM categorias WHERE id = ?', [product.categoria_id]);
         if (catRow.length > 0) {
@@ -84,75 +116,90 @@ export const productoService = {
         }
       }
 
-      // Realizar la verificación y creación en línea en la central
-      let response;
+      // Obtener nombre y abreviatura de la unidad local para enviarlos a la central
+      let unidadNombre = '';
+      let unidadAbreviatura = '';
+      if (product.unidad_id) {
+        const uRow = await db.select<any[]>(
+          'SELECT nombre, abreviatura FROM unidades_medida WHERE id = ?',
+          [product.unidad_id]
+        );
+        if (uRow.length > 0) {
+          unidadNombre = uRow[0].nombre;
+          unidadAbreviatura = uRow[0].abreviatura;
+        }
+      }
+
+      // Enviar a la central — la central genera el código de barras
+      let response: Response;
       try {
-        response = await fetch(`${config.api_url_central}/api/productos/verificar-crear`, {
+        response = await fetch(`${config.api_url_central}/api/productos/crear-desde-sucursal`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'X-Sucursal-Key': config.sucursal_id
           },
           body: JSON.stringify({
-            codigo_barras: product.codigo_barras,
             nombre: product.nombre,
             categoria_nombre: categoriaNombre || null,
-            unidad_id: product.unidad_id || null,
+            unidad_nombre: unidadNombre || null,
+            unidad_abreviatura: unidadAbreviatura || null,
             stock_minimo: product.stock_minimo,
             precio_compra: product.precio_compra || 0.0,
             precio_venta: product.precio_venta || 0.0
           })
         });
       } catch (err) {
-        throw new Error('No se pudo conectar con el servidor central para validar el producto. Operación cancelada.');
+        throw new Error('No se pudo conectar con el servidor central. Verifique la conexión e intente nuevamente.');
       }
 
       if (!response.ok) {
-        if (response.status === 409) {
-          const errorData = await response.json();
-          const prodExistente = errorData.producto?.nombre ? ` ("${errorData.producto.nombre}")` : "";
-          throw new Error(`El código de barras ya está registrado en la central${prodExistente}.`);
-        } else {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.error || 'Error al validar el producto en el servidor central.');
-        }
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Error al crear el producto en el servidor central (código ${response.status}).`);
+      }
+
+      // La central respondió exitosamente — obtener el código de barras generado
+      const responseData = await response.json();
+      const codigoBarrasGenerado: string = responseData.codigo_barras;
+
+      if (!codigoBarrasGenerado) {
+        throw new Error('El servidor central no retornó un código de barras. Contacte al administrador.');
+      }
+
+      // Insertar localmente con el código de barras generado por la central
+      const result = await db.execute(
+        `INSERT INTO productos (codigo_barras, nombre, categoria_id, unidad_id, stock_minimo, stock_actual, sincronizado) 
+         VALUES (?, ?, ?, ?, ?, ?, 1)`,
+        [
+          codigoBarrasGenerado,
+          product.nombre,
+          product.categoria_id,
+          product.unidad_id,
+          product.stock_minimo,
+          product.stock_actual
+        ]
+      );
+
+      const productId = result.lastInsertId as number;
+
+      await logService.register({
+        usuario_id: usuarioId,
+        accion: 'CREAR_PRODUCTO',
+        tabla: 'productos',
+        registro_id: productId,
+        detalles: `Se creó el producto: ${product.nombre} (${codigoBarrasGenerado}) vía sede central`
+      });
+
+      if (product.precio_compra !== undefined && product.precio_venta !== undefined) {
+        await db.execute(
+          `INSERT INTO precios_historial (producto_id, precio_compra, precio_venta, activo) 
+           VALUES (?, ?, ?, 1)`,
+          [productId, product.precio_compra, product.precio_venta]
+        );
       }
     }
-
-    // 4. Si la central responde con éxito, insertar localmente con sincronizado = 1
-    const result = await db.execute(
-      `INSERT INTO productos (codigo_barras, nombre, categoria_id, unidad_id, stock_minimo, stock_actual, sincronizado) 
-       VALUES (?, ?, ?, ?, ?, ?, 1)`,
-      [
-        product.codigo_barras,
-        product.nombre,
-        product.categoria_id,
-        product.unidad_id,
-        product.stock_minimo,
-        product.stock_actual
-      ]
-    );
-
-    const productId = result.lastInsertId as number;
-
-    // Registrar Log de Creación
-    await logService.register({
-      usuario_id: usuarioId,
-      accion: 'CREAR_PRODUCTO',
-      tabla: 'productos',
-      registro_id: productId,
-      detalles: `Se creó el producto: ${product.nombre} (${product.codigo_barras})`
-    });
-
-    // Si se proporcionaron precios, registrarlos en el historial
-    if (product.precio_compra !== undefined && product.precio_venta !== undefined) {
-      await db.execute(
-        `INSERT INTO precios_historial (producto_id, precio_compra, precio_venta, activo) 
-         VALUES (?, ?, ?, 1)`,
-        [productId, product.precio_compra, product.precio_venta]
-      );
-    }
   },
+
 
   async updateStatus(id: number, estado: 'activo' | 'inactivo', usuarioId: number): Promise<void> {
     const db = await getDb();
