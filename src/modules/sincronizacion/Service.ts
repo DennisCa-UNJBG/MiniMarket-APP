@@ -548,5 +548,47 @@ export const syncService = {
     }));
 
     return { creados, actualizados };
+  },
+
+  /**
+   * Ejecuta la sincronización completa (push y pull) de forma organizada
+   */
+  async syncAllData() {
+    const [
+      sales,
+      kardex,
+      cajas,
+      compras,
+      _,
+      products,
+      users,
+      roles,
+      units
+    ] = await Promise.all([
+      this.pushSales(),
+      this.pushKardex(),
+      this.pushCajas(),
+      this.pushCompras(),
+      this.pushStockLevels(),
+      this.pullProducts(),
+      this.pullUsers(),
+      this.pullRoles(),
+      this.pullUnidadesMedida()
+    ]);
+
+    return {
+      enviadas: sales.enviadas,
+      kEnviadas: kardex.enviadas,
+      cEnviadas: cajas.enviadas,
+      coEnviadas: compras.enviadas,
+      pCreados: products.creados,
+      pActualizados: products.actualizados,
+      uCreados: users.creados,
+      uActualizados: users.actualizados,
+      rCreados: roles.creados,
+      rActualizados: roles.actualizados,
+      umCreados: units.creados,
+      umActualizados: units.actualizados
+    };
   }
 };

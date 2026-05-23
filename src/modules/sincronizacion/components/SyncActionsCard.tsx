@@ -1,16 +1,13 @@
 import { CloudSync } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { ventaService } from '../../ventas/Service';
 import { cajaService } from '../../caja/Service';
 import { inventarioService } from '../../inventario/Service';
-import { syncService } from '../Service';
-import { notificationService } from '../../../shared/lib/notifications';
+import { useSync } from '../hooks/useSync';
 import { Button } from '../../../shared/components/ui/Button';
 
 export function SyncActionsCard() {
-  const queryClient = useQueryClient();
-
   const { data: isCentral = false } = useQuery({
     queryKey: ['server-status'],
     queryFn: () => invoke<boolean>('is_server_running')
@@ -40,69 +37,9 @@ export function SyncActionsCard() {
     refetchPendingCompras();
   };
 
-  const syncMutation = useMutation({
-    mutationFn: async () => {
-      notificationService.info('Sincronizando', 'Enviando ventas, cajas, compras y descargando catálogo actualizado...');
-
-      const [
-        { enviadas },
-        { enviadas: kEnviadas },
-        { enviadas: cEnviadas },
-        { enviadas: coEnviadas },
-        _,
-        { creados: pCreados, actualizados: pActualizados },
-        { creados: uCreados, actualizados: uActualizados },
-        { creados: rCreados, actualizados: rActualizados },
-        { creados: umCreados, actualizados: umActualizados }
-      ] = await Promise.all([
-        syncService.pushSales(),
-        syncService.pushKardex(),
-        syncService.pushCajas(),
-        syncService.pushCompras(),
-        syncService.pushStockLevels(),
-        syncService.pullProducts(),
-        syncService.pullUsers(),
-        syncService.pullRoles(),
-        syncService.pullUnidadesMedida()
-      ]);
-
-      return {
-        enviadas,
-        kEnviadas,
-        cEnviadas,
-        coEnviadas,
-        pCreados,
-        pActualizados,
-        uCreados,
-        uActualizados,
-        rCreados,
-        rActualizados,
-        umCreados,
-        umActualizados
-      };
-    },
-    onSuccess: (data) => {
-      notificationService.success(
-        'Sincronización Exitosa',
-        `Se han sincronizado correctamente todos los datos con la Sede Central.
-
-        📤 ENVIADOS A LA CENTRAL:
-        • Ventas: ${data.enviadas} registrada(s)
-        • Compras: ${data.coEnviadas} ingreso(s)
-        • Cajas: ${data.cEnviadas} cierre(s)
-        • Kardex: ${data.kEnviadas} movimiento(s)
-
-        📥 RECIBIDOS DE LA CENTRAL:
-        • Catálogo: ${data.pCreados} nuevo(s), ${data.pActualizados} actualizado(s)
-        • Unidades: ${data.umCreados} nueva(s), ${data.umActualizados} actualizada(s)
-        • Roles: ${data.rCreados} nuevo(s), ${data.rActualizados} actualizado(s)
-        • Usuarios: ${data.uCreados} nuevo(s), ${data.uActualizados} autorizado(s)`
-      );
+  const syncMutation = useSync({
+    onSuccess: () => {
       refetchPending();
-      queryClient.invalidateQueries({ queryKey: ['products'] });
-    },
-    onError: (error: any) => {
-      notificationService.error('Error de Sincronización', error.message);
     }
   });
 

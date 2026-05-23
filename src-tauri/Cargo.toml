@@ -1,6 +1,6 @@
 [package]
 name = "minimarket-app"
-version = "0.9.80"
+version = "0.9.82"
 description = "Aplicación para gestión de minimarket"
 authors = ["Dennis Calderón Mamani"]
 edition = "2021"

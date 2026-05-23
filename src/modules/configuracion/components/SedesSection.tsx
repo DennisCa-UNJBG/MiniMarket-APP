@@ -4,7 +4,7 @@ import { Server, RefreshCw, Save } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../../shared/contexts/AuthContext';
 import { systemConfigService, type SucursalConfig } from '../systemConfigService';
-import { syncService } from '../../sincronizacion/Service';
+import { useSync } from '../../sincronizacion/hooks/useSync';
 import { notificationService } from '../../../shared/lib/notifications';
 import { Tooltip } from '../../../shared/components/ui/Tooltip';
 import { Button } from '../../../shared/components/ui/Button';
@@ -50,30 +50,9 @@ export function SedesSection({ initialData }: { initialData: SucursalConfig | nu
     }
   });
 
-  const syncMutation = useMutation({
-    mutationFn: async () => {
-      notificationService.info('Sincronizando', 'Actualizando catálogo, usuarios y enviando ventas...');
-      const [
-        { enviadas: vEnviadas },
-        { enviadas: kEnviadas },
-        _,
-        { creados: pCreados, actualizados: pActualizados },
-        { creados: uCreados, actualizados: uActualizados }
-      ] = await Promise.all([
-        syncService.pushSales(),
-        syncService.pushKardex(),
-        syncService.pushStockLevels(),
-        syncService.pullProducts(),
-        syncService.pullUsers()
-      ]);
-      return { vEnviadas, kEnviadas, pCreados, pActualizados, uCreados, uActualizados };
-    },
-    onSuccess: (data) => {
-      notificationService.success(
-        'Sincronización Completa',
-        `Enviado: ${data.vEnviadas} ventas y ${data.kEnviadas} mov. Catálogo: +${data.pCreados}/~${data.pActualizados}. Usuarios: +${data.uCreados}/~${data.uActualizados}.`
-      );
-      queryClient.invalidateQueries({ queryKey: ['products'] });
+  const syncMutation = useSync({
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sucursal-config'] });
     }
   });
 
