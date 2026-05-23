@@ -1,12 +1,25 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+// @ts-expect-error fs is a Node.js module
+import { readFileSync } from "fs";
+// @ts-expect-error path is a Node.js module
+import { resolve } from "path";
 
 // @ts-expect-error process is a nodejs global
 const host = process.env.TAURI_DEV_HOST;
 
+const tauriConfig = JSON.parse(
+  // @ts-expect-error __dirname is a Node.js global
+  readFileSync(resolve(__dirname, "src-tauri/tauri.conf.json"), "utf-8")
+);
+const syncKey = tauriConfig.plugins?.sync?.key || "MiniMarket-Secure-Sync-Key-2026";
+
 // https://vite.dev/config/
 export default defineConfig(async () => ({
   plugins: [react()],
+  define: {
+    "import.meta.env.VITE_SYNC_KEY": JSON.stringify(syncKey)
+  },
 
   build: {
     chunkSizeWarningLimit: 1000,

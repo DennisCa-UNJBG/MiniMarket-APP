@@ -2,10 +2,12 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct VentaSyncDto {
+    pub id_local: i32,
     pub fecha: String,
     pub total: f64,
     pub usuario_id: i32,
     pub metodo_pago: String,
+    pub estado: String,
     pub detalles: Vec<DetalleSyncDto>,
 }
 
@@ -37,6 +39,7 @@ pub struct SyncPayloadDto {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct KardexSyncDto {
+    pub id_local: i32,
     pub producto_codigo_barras: String,
     pub usuario_id: i32,
     pub fecha: String,
@@ -102,6 +105,7 @@ pub struct CompraDetalleSyncDto {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CompraSyncDto {
+    pub id_local: i32,
     pub fecha: String,
     pub total: f64,
     pub usuario_id: i32,

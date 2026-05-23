@@ -1,34 +1,32 @@
 use axum::{
     extract::State,
-    http::{HeaderMap, StatusCode},
+    http::HeaderMap,
     Json,
 };
-use serde_json::{json, Value};
+use serde_json::json;
 use sqlx::SqlitePool;
+use crate::api::{ApiResult, db_error, validate_sucursal};
 use crate::api::dtos::{CategoriaCrearDto, CategoriaEditarDto};
 
 pub async fn crear_categoria(
     headers: HeaderMap,
     State(pool): State<SqlitePool>,
     Json(payload): Json<CategoriaCrearDto>,
-) -> (StatusCode, Json<Value>) {
-    let sucursal_id = headers.get("X-Sucursal-Key").and_then(|h| h.to_str().ok()).unwrap_or("");
-    if sucursal_id.is_empty() {
-        return (StatusCode::UNAUTHORIZED, Json(json!({ "error": "Llave de sucursal requerida" })));
-    }
+) -> Result<ApiResult, ApiResult> {
+    let _sucursal_id = validate_sucursal(&headers, &pool).await?;
 
     if payload.nombre.trim().is_empty() {
-        return (StatusCode::BAD_REQUEST, Json(json!({ "error": "El nombre de la categoría es requerido" })));
+        return Ok((axum::http::StatusCode::BAD_REQUEST, Json(json!({ "error": "El nombre de la categoría es requerido" }))));
     }
 
     let cat_existente = sqlx::query("SELECT id FROM categorias WHERE LOWER(nombre) = LOWER(?)")
         .bind(&payload.nombre)
         .fetch_optional(&pool)
         .await
-        .unwrap();
+        .map_err(db_error)?;
 
     if cat_existente.is_some() {
-        return (StatusCode::CONFLICT, Json(json!({ "error": "La categoría ya existe en la central" })));
+        return Ok((axum::http::StatusCode::CONFLICT, Json(json!({ "error": "La categoría ya existe en la central" }))));
     }
 
     let res = sqlx::query("INSERT INTO categorias (nombre, color, estado) VALUES (?, ?, 'activo')")
@@ -40,8 +38,8 @@ pub async fn crear_categoria(
     match res {
         Ok(r) => {
             let cat_id = r.last_insert_rowid();
-            (
-                StatusCode::CREATED,
+            Ok((
+                axum::http::StatusCode::CREATED,
                 Json(json!({
                     "status": "ok",
                     "data": {
@@ -51,14 +49,9 @@ pub async fn crear_categoria(
                         "estado": "activo"
                     }
                 })),
-            )
+            ))
         }
-        Err(e) => {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({ "error": format!("Error al guardar la categoría en la central: {}", e) })),
-            )
-        }
+        Err(e) => Err(db_error(e)),
     }
 }
 
@@ -66,29 +59,12 @@ pub async fn verificar_editar_categoria(
     headers: HeaderMap,
     State(pool): State<SqlitePool>,
     Json(payload): Json<CategoriaEditarDto>,
-) -> (StatusCode, Json<Value>) {
-    let sucursal_id = headers.get("X-Sucursal-Key")
-        .and_then(|h| h.to_str().ok())
-        .unwrap_or("");
-
-    if sucursal_id.is_empty() {
-        return (StatusCode::UNAUTHORIZED, Json(json!({ "error": "Llave de sucursal requerida" })));
-    }
-
-    // Validar sucursal activa
-    let sucursal = sqlx::query("SELECT id FROM sucursales WHERE codigo = ? AND estado = 'activo'")
-        .bind(sucursal_id)
-        .fetch_optional(&pool)
-        .await
-        .unwrap();
-
-    if sucursal.is_none() {
-        return (StatusCode::FORBIDDEN, Json(json!({ "error": "Sucursal no autorizada o inactiva" })));
-    }
+) -> Result<ApiResult, ApiResult> {
+    let _sucursal_id = validate_sucursal(&headers, &pool).await?;
 
     // Validar que el nombre no esté vacío
     if payload.nombre.trim().is_empty() {
-        return (StatusCode::BAD_REQUEST, Json(json!({ "error": "El nombre de la categoría es requerido" })));
+        return Ok((axum::http::StatusCode::BAD_REQUEST, Json(json!({ "error": "El nombre de la categoría es requerido" }))));
     }
 
     // Actualizar categoría en la central
@@ -102,22 +78,17 @@ pub async fn verificar_editar_categoria(
     match res {
         Ok(r) => {
             if r.rows_affected() == 0 {
-                (StatusCode::NOT_FOUND, Json(json!({ "error": "Categoría no encontrada en el servidor central" })))
+                Ok((axum::http::StatusCode::NOT_FOUND, Json(json!({ "error": "Categoría no encontrada en el servidor central" }))))
             } else {
-                (
-                    StatusCode::OK,
+                Ok((
+                    axum::http::StatusCode::OK,
                     Json(json!({
                         "status": "ok",
                         "mensaje": "Categoría actualizada exitosamente en la sede central"
                     })),
-                )
+                ))
             }
         }
-        Err(e) => {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({ "error": format!("Error al actualizar la categoría en la central: {}", e) })),
-            )
-        }
+        Err(e) => Err(db_error(e)),
     }
 }

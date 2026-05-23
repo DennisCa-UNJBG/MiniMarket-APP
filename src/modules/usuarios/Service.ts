@@ -3,6 +3,7 @@ import { authService } from '../login/Service';
 import { logService } from '../../shared/lib/logService';
 import { invoke } from '@tauri-apps/api/core';
 import { systemConfigService } from '../configuracion/systemConfigService';
+import { encryptBranchCode } from '../sincronizacion/Service';
 
 
 export const userService = {
@@ -90,7 +91,7 @@ export const userService = {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'X-Sucursal-Key': config.sucursal_id
+            'X-Sucursal-Key': encryptBranchCode(config.sucursal_id)
           },
           body: JSON.stringify({
             username: user.username,

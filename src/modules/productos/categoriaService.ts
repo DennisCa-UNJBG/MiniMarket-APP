@@ -2,6 +2,7 @@ import { getDb } from '../../shared/lib/db';
 import { invoke } from '@tauri-apps/api/core';
 import { systemConfigService } from '../configuracion/systemConfigService';
 import { logService } from '../../shared/lib/logService';
+import { encryptBranchCode } from '../sincronizacion/Service';
 
 export interface Category {
   id: number;
@@ -66,7 +67,7 @@ export const categoriaService = {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'X-Sucursal-Key': config.sucursal_id
+            'X-Sucursal-Key': encryptBranchCode(config.sucursal_id)
           },
           body: JSON.stringify({ nombre, color })
         });
@@ -127,7 +128,7 @@ export const categoriaService = {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            'X-Sucursal-Key': config.sucursal_id
+            'X-Sucursal-Key': encryptBranchCode(config.sucursal_id)
           },
           body: JSON.stringify({ id, nombre, color })
         });

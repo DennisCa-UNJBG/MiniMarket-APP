@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 import { HashRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider, QueryCache, MutationCache } from '@tanstack/react-query';
 import { ThemeProvider } from './shared/contexts/ThemeContext';
@@ -65,7 +66,7 @@ const queryClient = new QueryClient({
 function AppContent() {
   const { isAuthenticated, login, isLoading } = useAuth();
 
-  // Autoinicio del Servidor Central si la preferencia está activa
+    // Autoinicio del Servidor Central si la preferencia está activa
   useEffect(() => {
     const shouldAutoStart = localStorage.getItem('central_server_auto_start') === 'true';
     if (shouldAutoStart) {
@@ -80,6 +81,23 @@ function AppContent() {
         });
     }
   }, []);
+
+  // Escuchar errores fatales del servidor central emitidos desde Rust
+  useEffect(() => {
+    const unlisten = listen<string>('server-error', (event) => {
+      notificationService.error(
+        '⚠️ Error del Servidor Central',
+        event.payload || 'El servidor encontró un error inesperado y se detuvo.'
+      );
+      // Sincronizar el estado del botón toggle con la realidad
+      queryClient.invalidateQueries({ queryKey: ['server-status'] });
+    });
+
+    return () => {
+      unlisten.then(fn => fn());
+    };
+  }, []);
+
 
   if (isLoading) {
     return (

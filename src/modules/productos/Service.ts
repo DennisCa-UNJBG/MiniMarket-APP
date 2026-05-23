@@ -2,6 +2,7 @@ import { getDb } from '../../shared/lib/db';
 import { logService } from '../../shared/lib/logService';
 import { systemConfigService } from '../configuracion/systemConfigService';
 import { invoke } from '@tauri-apps/api/core';
+import { encryptBranchCode } from '../sincronizacion/Service';
 
 export interface Product {
   id: number;
@@ -115,7 +116,7 @@ export const productoService = {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'X-Sucursal-Key': config.sucursal_id
+            'X-Sucursal-Key': encryptBranchCode(config.sucursal_id)
           },
           body: JSON.stringify({
             nombre: product.nombre,
@@ -282,7 +283,7 @@ export const productoService = {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            'X-Sucursal-Key': config.sucursal_id
+            'X-Sucursal-Key': encryptBranchCode(config.sucursal_id)
           },
           body: JSON.stringify({
             codigo_barras: codigoBarras,

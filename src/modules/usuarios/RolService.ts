@@ -2,6 +2,7 @@ import { getDb } from '../../shared/lib/db';
 import { logService } from '../../shared/lib/logService';
 import { invoke } from '@tauri-apps/api/core';
 import { systemConfigService } from '../configuracion/systemConfigService';
+import { encryptBranchCode } from '../sincronizacion/Service';
 
 export interface Rol {
   id: number;
@@ -103,7 +104,7 @@ export const rolService = {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'X-Sucursal-Key': config.sucursal_id
+            'X-Sucursal-Key': encryptBranchCode(config.sucursal_id)
           },
           body: JSON.stringify({ nombre, descripcion, permisos })
         });

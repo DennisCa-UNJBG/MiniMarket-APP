@@ -3,11 +3,15 @@ mod api;
 use serde_json::json;
 use std::fs;
 use std::sync::Arc;
-use tauri::{AppHandle, Manager, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 use tokio::sync::Mutex;
 // use axum::Router; // Eliminado por ser innecesario tras la refactorización
 use local_ip_address::local_ip;
 use tower_http::cors::CorsLayer;
+use std::sync::OnceLock;
+
+// Llave de sincronización global cargada de la configuración
+pub static SYNC_KEY: OnceLock<String> = OnceLock::new();
 
 // Estado para controlar el servidor
 struct ServerState {
@@ -32,6 +36,16 @@ async fn toggle_server(
     let mut shutdown_tx = state.shutdown_tx.lock().await;
 
     if active && !*is_running {
+        // Inicializar la llave de sincronización desde tauri.conf.json
+        let sync_key = app_handle.config().plugins.0.get("sync")
+            .and_then(|val| val.get("key"))
+            .and_then(|val| val.as_str())
+            .unwrap_or("MiniMarket-Secure-Sync-Key-2026")
+            .to_string();
+        
+        // Registrar en el OnceLock si aún no está asignado
+        let _ = SYNC_KEY.set(sync_key);
+
         // Iniciar servidor
         let (tx, rx) = tokio::sync::oneshot::channel::<()>();
         *shutdown_tx = Some(tx);
@@ -40,22 +54,69 @@ async fn toggle_server(
         let app_handle_clone = app_handle.clone();
 
         tokio::spawn(async move {
-            let app_dir = app_handle_clone.path().app_data_dir().unwrap();
+            // Macro helper: registra el error, notifica al frontend y sale limpiamente
+            // del spawn sin causar PANIC.
+            macro_rules! server_fatal {
+                ($handle:expr, $msg:expr) => {{
+                    let msg = $msg.to_string();
+                    eprintln!("[Servidor Central] ERROR FATAL: {}", msg);
+                    let _ = $handle.emit("server-error", msg);
+                    return;
+                }};
+            }
+
+            let app_dir = match app_handle_clone.path().app_data_dir() {
+                Ok(dir) => dir,
+                Err(e) => server_fatal!(app_handle_clone, format!("No se pudo obtener la carpeta de datos: {}", e)),
+            };
             let db_path = format!("sqlite:{}", app_dir.join("inventario.db").to_string_lossy());
 
-            // Conexión a la DB para el servidor Axum
-            let pool = sqlx::SqlitePool::connect(&db_path).await.unwrap();
+            // Conexión a la DB para el servidor Axum con pool configurado (máx. 5 conexiones)
+            let pool = match sqlx::sqlite::SqlitePoolOptions::new()
+                .max_connections(5)
+                .connect(&db_path)
+                .await
+            {
+                Ok(p) => p,
+                Err(e) => server_fatal!(app_handle_clone, format!("No se pudo conectar a la base de datos del servidor: {}", e)),
+            };
 
-            let app = api::create_router(pool).layer(CorsLayer::permissive());
+            // 1. Obtener puerto configurable desde tauri.conf.json (M-01)
+            let port = app_handle_clone.config().plugins.0.get("sync")
+                .and_then(|val| val.get("port"))
+                .and_then(|val| val.as_u64())
+                .unwrap_or(8080) as u16;
 
-            let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await.unwrap();
+            // 2. Configurar CORS restringido (M-03)
+            use tower_http::cors::Any;
+            let cors = CorsLayer::new()
+                .allow_methods([
+                    axum::http::Method::GET,
+                    axum::http::Method::POST,
+                    axum::http::Method::PUT,
+                ])
+                .allow_headers([
+                    axum::http::header::CONTENT_TYPE,
+                    axum::http::header::HeaderName::from_static("x-sucursal-key"),
+                ])
+                .allow_origin(Any);
 
-            axum::serve(listener, app)
+            let app = api::create_router(pool).layer(cors);
+
+            let addr = format!("0.0.0.0:{}", port);
+            let listener = match tokio::net::TcpListener::bind(&addr).await {
+                Ok(l) => l,
+                Err(e) => server_fatal!(app_handle_clone, format!("Puerto {} no disponible: {}", port, e)),
+            };
+
+            if let Err(e) = axum::serve(listener, app)
                 .with_graceful_shutdown(async {
                     rx.await.ok();
                 })
                 .await
-                .unwrap();
+            {
+                server_fatal!(app_handle_clone, format!("El servidor HTTP falló inesperadamente: {}", e));
+            }
         });
 
         Ok(true)
@@ -76,10 +137,6 @@ async fn is_server_running(state: State<'_, Arc<ServerState>>) -> Result<bool, S
     Ok(*state.is_running.lock().await)
 }
 
-#[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
-}
 
 #[tauri::command]
 async fn get_db_stats(app_handle: AppHandle) -> Result<serde_json::Value, String> {
@@ -256,7 +313,6 @@ pub fn run() {
                 .build(),
         )
         .invoke_handler(tauri::generate_handler![
-            greet,
             get_db_stats,
             backup_database,
             reveal_in_explorer,

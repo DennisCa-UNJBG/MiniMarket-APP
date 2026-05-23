@@ -1,37 +1,35 @@
 use axum::{
     extract::State,
-    http::{HeaderMap, StatusCode},
+    http::HeaderMap,
     Json,
 };
-use serde_json::{json, Value};
+use serde_json::json;
 use sqlx::SqlitePool;
+use crate::api::{ApiResult, db_error, validate_sucursal};
 use crate::api::dtos::RolCrearDto;
 
 pub async fn crear_rol(
     headers: HeaderMap,
     State(pool): State<SqlitePool>,
     Json(payload): Json<RolCrearDto>,
-) -> (StatusCode, Json<Value>) {
-    let sucursal_id = headers.get("X-Sucursal-Key").and_then(|h| h.to_str().ok()).unwrap_or("");
-    if sucursal_id.is_empty() {
-        return (StatusCode::UNAUTHORIZED, Json(json!({ "error": "Llave de sucursal requerida" })));
-    }
+) -> Result<ApiResult, ApiResult> {
+    let _sucursal_id = validate_sucursal(&headers, &pool).await?;
 
     if payload.nombre.trim().is_empty() {
-        return (StatusCode::BAD_REQUEST, Json(json!({ "error": "El nombre del rol es requerido" })));
+        return Ok((axum::http::StatusCode::BAD_REQUEST, Json(json!({ "error": "El nombre del rol es requerido" }))));
     }
 
     let rol_existente = sqlx::query("SELECT id FROM roles WHERE LOWER(nombre) = LOWER(?)")
         .bind(&payload.nombre)
         .fetch_optional(&pool)
         .await
-        .unwrap();
+        .map_err(db_error)?;
 
     if rol_existente.is_some() {
-        return (StatusCode::CONFLICT, Json(json!({ "error": "El rol ya existe en la central" })));
+        return Ok((axum::http::StatusCode::CONFLICT, Json(json!({ "error": "El rol ya existe en la central" }))));
     }
 
-    let permisos_json = serde_json::to_string(&payload.permisos).unwrap_or_else(|_| "[]".to_string());
+    let permisos_json = serde_json::to_string(&payload.permisos).map_err(db_error)?;
 
     let res = sqlx::query("INSERT INTO roles (nombre, descripcion, permisos, estado) VALUES (?, ?, ?, 'activo')")
         .bind(&payload.nombre)
@@ -43,8 +41,8 @@ pub async fn crear_rol(
     match res {
         Ok(r) => {
             let rol_id = r.last_insert_rowid();
-            (
-                StatusCode::CREATED,
+            Ok((
+                axum::http::StatusCode::CREATED,
                 Json(json!({
                     "status": "ok",
                     "data": {
@@ -55,33 +53,22 @@ pub async fn crear_rol(
                         "estado": "activo"
                     }
                 })),
-            )
+            ))
         }
-        Err(e) => {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({ "error": format!("Error al guardar el rol en la central: {}", e) })),
-            )
-        }
+        Err(e) => Err(db_error(e)),
     }
 }
 
 pub async fn get_roles(
     headers: HeaderMap,
     State(pool): State<SqlitePool>,
-) -> (StatusCode, Json<Value>) {
-    let sucursal_id = headers.get("X-Sucursal-Key")
-        .and_then(|h| h.to_str().ok())
-        .unwrap_or("");
-
-    if sucursal_id.is_empty() {
-        return (StatusCode::UNAUTHORIZED, Json(json!({ "error": "Llave de sucursal requerida" })));
-    }
+) -> Result<ApiResult, ApiResult> {
+    let _sucursal_id = validate_sucursal(&headers, &pool).await?;
 
     let roles = sqlx::query("SELECT id, nombre, descripcion, permisos, estado FROM roles")
         .fetch_all(&pool)
         .await
-        .unwrap();
+        .map_err(db_error)?;
 
     let mut data = Vec::new();
     for r in roles {
@@ -95,5 +82,5 @@ pub async fn get_roles(
         }));
     }
 
-    (StatusCode::OK, Json(json!({ "status": "ok", "data": data })))
+    Ok((axum::http::StatusCode::OK, Json(json!({ "status": "ok", "data": data }))))
 }

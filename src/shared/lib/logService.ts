@@ -8,20 +8,25 @@ export interface LogEntry {
   detalles?: string;
 }
 
+let cachedSucursalId: string | null = null;
+
 export const logService = {
   async register(log: LogEntry): Promise<void> {
     const db = await getDb();
     
-    // Obtener sucursal_id de la configuración si existe
-    let sucursalId: string | null = null;
-    try {
-      const configRes = await db.select<any[]>('SELECT sucursal_id FROM configuracion LIMIT 1');
-      if (configRes.length > 0) {
-        sucursalId = configRes[0].sucursal_id;
+    // Obtener sucursal_id de la configuración si existe y no está en caché
+    if (cachedSucursalId === null) {
+      try {
+        const configRes = await db.select<any[]>('SELECT sucursal_id FROM configuracion LIMIT 1');
+        if (configRes.length > 0) {
+          cachedSucursalId = configRes[0].sucursal_id;
+        }
+      } catch (e) {
+        // Ignorar si la tabla de configuración no existe o está vacía
       }
-    } catch (e) {
-      // Ignorar si la tabla de configuración no existe o está vacía
     }
+
+    const sucursalId = cachedSucursalId;
 
     await db.execute(
       `INSERT INTO logs (usuario_id, sucursal_id, accion, tabla, registro_id, detalles) 

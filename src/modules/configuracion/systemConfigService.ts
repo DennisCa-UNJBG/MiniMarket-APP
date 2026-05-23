@@ -1,5 +1,6 @@
 import { getDb } from '../../shared/lib/db';
 import { logService } from '../../shared/lib/logService';
+import { encryptBranchCode } from '../sincronizacion/Service';
 
 export interface SucursalConfig {
   id?: number;
@@ -61,7 +62,7 @@ export const systemConfigService = {
     const response = await fetch(`${url}/api/productos`, {
       method: 'GET',
       headers: {
-        'X-Sucursal-Key': sucursalCodigo
+        'X-Sucursal-Key': encryptBranchCode(sucursalCodigo)
       }
     });
 

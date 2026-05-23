@@ -23,6 +23,12 @@
       "csp": null
     }
   },
+  "plugins": {
+    "sync": {
+      "key": "MiniMarket-Secure-Sync-Key-2026",
+      "port": 8080
+    }
+  },
   "bundle": {
     "active": true,
     "targets": "all",

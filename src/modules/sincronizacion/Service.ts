@@ -1,5 +1,35 @@
 import { systemConfigService } from '../configuracion/systemConfigService';
 import { getDb } from '../../shared/lib/db';
+import { fetchWithTimeout } from '../../shared/lib/fetch';
+
+export function encryptBranchCode(code: string): string {
+  const baseKey = import.meta.env.VITE_SYNC_KEY || "MiniMarket-Secure-Sync-Key-2026";
+  const encryptedBytes = [...code].map((char, i) => {
+    return char.charCodeAt(0) ^ baseKey.charCodeAt(i % baseKey.length);
+  });
+  return encryptedBytes.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function decryptPasswordHash(encryptedHex: string, username: string): string {
+  const baseKey = import.meta.env.VITE_SYNC_KEY || "MiniMarket-Secure-Sync-Key-2026";
+  const userKey: number[] = [];
+  for (let i = 0; i < baseKey.length; i++) {
+    const uByte = username.charCodeAt(i % username.length) || 0;
+    userKey.push(baseKey.charCodeAt(i) ^ uByte);
+  }
+  
+  // Decodificar hexadecimal a bytes
+  const encryptedBytes: number[] = [];
+  for (let i = 0; i < encryptedHex.length; i += 2) {
+    encryptedBytes.push(parseInt(encryptedHex.substring(i, i + 2), 16));
+  }
+  
+  // Descifrar con XOR
+  const decryptedBytes = encryptedBytes.map((b, i) => b ^ userKey[i % userKey.length]);
+  
+  // Convertir bytes a string
+  return String.fromCharCode(...decryptedBytes);
+}
 
 export const syncService = {
   /**
@@ -12,10 +42,10 @@ export const syncService = {
     }
 
     // 1. Obtener datos de la central
-    const response = await fetch(`${config.api_url_central}/api/productos`, {
+    const response = await fetchWithTimeout(`${config.api_url_central}/api/productos`, {
       method: 'GET',
       headers: {
-        'X-Sucursal-Key': config.sucursal_id
+        'X-Sucursal-Key': encryptBranchCode(config.sucursal_id)
       }
     });
 
@@ -58,73 +88,81 @@ export const syncService = {
     const catMap = new Map<string, number>(catList.map(c => [c.nombre.toLowerCase(), c.id]));
     const unitMap = new Map<string, number>(unitList.map(u => [u.nombre.toLowerCase(), u.id]));
 
-    // 3. Crear las categorías que falten en paralelo
-    await Promise.all(uniqueCats.map(async (catName) => {
-      const catNorm = catName.toLowerCase();
-      if (!catMap.has(catNorm)) {
-        const insCat = await db.execute('INSERT INTO categorias (nombre, color) VALUES (?, ?)', [catName, '#6366f1']);
-        const newId = insCat.lastInsertId ?? null;
-        if (newId) {
-          catMap.set(catNorm, newId);
+    await db.execute('BEGIN TRANSACTION');
+    try {
+      // 3. Crear las categorías que falten secuencialmente
+      for (const catName of uniqueCats) {
+        const catNorm = catName.toLowerCase();
+        if (!catMap.has(catNorm)) {
+          const insCat = await db.execute('INSERT INTO categorias (nombre, color) VALUES (?, ?)', [catName, '#6366f1']);
+          const newId = insCat.lastInsertId ?? null;
+          if (newId) {
+            catMap.set(catNorm, newId);
+          }
         }
       }
-    }));
 
-    // Crear las unidades de medida que falten en paralelo
-    await Promise.all(Array.from(uniqueUnitsMap.values()).map(async (unit) => {
-      const unitNorm = unit.nombre.toLowerCase();
-      if (!unitMap.has(unitNorm)) {
-        const abrevNorm = unit.abreviatura.toLowerCase();
-        const existingByAbrev = unitList.find(u => u.abreviatura.toLowerCase() === abrevNorm);
-        if (existingByAbrev) {
-          unitMap.set(unitNorm, existingByAbrev.id);
-          return;
+      // Crear las unidades de medida que falten secuencialmente
+      for (const unit of uniqueUnitsMap.values()) {
+        const unitNorm = unit.nombre.toLowerCase();
+        if (!unitMap.has(unitNorm)) {
+          const abrevNorm = unit.abreviatura.toLowerCase();
+          const existingByAbrev = unitList.find(u => u.abreviatura.toLowerCase() === abrevNorm);
+          if (existingByAbrev) {
+            unitMap.set(unitNorm, existingByAbrev.id);
+            continue;
+          }
+
+          const insUnit = await db.execute('INSERT INTO unidades_medida (nombre, abreviatura) VALUES (?, ?)', [unit.nombre, unit.abreviatura]);
+          const newId = insUnit.lastInsertId ?? null;
+          if (newId) {
+            unitMap.set(unitNorm, newId);
+          }
+        }
+      }
+
+      // 4. Procesar todos los productos secuencialmente de forma segura
+      for (const p of productosCentral) {
+        const categoriaId = p.categoria ? (catMap.get(p.categoria.toLowerCase()) ?? null) : null;
+        const unidadId = p.unidad_nombre ? (unitMap.get(p.unidad_nombre.toLowerCase()) ?? null) : null;
+
+        // Upsert Producto
+        const prodRes = await db.select<any[]>('SELECT id FROM productos WHERE codigo_barras = ?', [p.codigo_barras]);
+
+        let productoId: number;
+        if (prodRes.length > 0) {
+          productoId = prodRes[0].id;
+          await db.execute(
+            'UPDATE productos SET nombre = ?, categoria_id = ?, unidad_id = ?, stock_minimo = ? WHERE id = ?',
+            [p.nombre, categoriaId, unidadId, p.stock_minimo, productoId]
+          );
+          actualizados++;
+        } else {
+          const insProd = await db.execute(
+            'INSERT INTO productos (codigo_barras, nombre, categoria_id, unidad_id, stock_minimo) VALUES (?, ?, ?, ?, ?)',
+            [p.codigo_barras, p.nombre, categoriaId, unidadId, p.stock_minimo]
+          );
+          productoId = insProd.lastInsertId as number;
+          creados++;
         }
 
-        const insUnit = await db.execute('INSERT INTO unidades_medida (nombre, abreviatura) VALUES (?, ?)', [unit.nombre, unit.abreviatura]);
-        const newId = insUnit.lastInsertId ?? null;
-        if (newId) {
-          unitMap.set(unitNorm, newId);
+        // Actualizar Precios (Solo si vienen de la central)
+        if (p.precio_venta !== null && p.precio_compra !== null) {
+          // Desactivar precios anteriores
+          await db.execute('UPDATE precios_historial SET activo = 0 WHERE producto_id = ?', [productoId]);
+          // Insertar nuevo precio
+          await db.execute(
+            'INSERT INTO precios_historial (producto_id, precio_compra, precio_venta, activo) VALUES (?, ?, ?, 1)',
+            [productoId, p.precio_compra, p.precio_venta]
+          );
         }
       }
-    }));
 
-    // 4. Procesar todos los productos en paralelo de forma segura
-    await Promise.all(productosCentral.map(async (p: any) => {
-      const categoriaId = p.categoria ? (catMap.get(p.categoria.toLowerCase()) ?? null) : null;
-      const unidadId = p.unidad_nombre ? (unitMap.get(p.unidad_nombre.toLowerCase()) ?? null) : null;
-
-      // Upsert Producto
-      const prodRes = await db.select<any[]>('SELECT id FROM productos WHERE codigo_barras = ?', [p.codigo_barras]);
-
-      let productoId: number;
-      if (prodRes.length > 0) {
-        productoId = prodRes[0].id;
-        await db.execute(
-          'UPDATE productos SET nombre = ?, categoria_id = ?, unidad_id = ?, stock_minimo = ? WHERE id = ?',
-          [p.nombre, categoriaId, unidadId, p.stock_minimo, productoId]
-        );
-        actualizados++;
-      } else {
-        const insProd = await db.execute(
-          'INSERT INTO productos (codigo_barras, nombre, categoria_id, unidad_id, stock_minimo) VALUES (?, ?, ?, ?, ?)',
-          [p.codigo_barras, p.nombre, categoriaId, unidadId, p.stock_minimo]
-        );
-        productoId = insProd.lastInsertId as number;
-        creados++;
-      }
-
-      // Actualizar Precios (Solo si vienen de la central)
-      if (p.precio_venta !== null && p.precio_compra !== null) {
-        // Desactivar precios anteriores
-        await db.execute('UPDATE precios_historial SET activo = 0 WHERE producto_id = ?', [productoId]);
-        // Insertar nuevo precio
-        await db.execute(
-          'INSERT INTO precios_historial (producto_id, precio_compra, precio_venta, activo) VALUES (?, ?, ?, 1)',
-          [productoId, p.precio_compra, p.precio_venta]
-        );
-      }
-    }));
+      await db.execute('COMMIT');
+    } catch (error) {
+      await db.execute('ROLLBACK');
+      throw error;
+    }
 
     return { creados, actualizados };
   },
@@ -138,9 +176,9 @@ export const syncService = {
       throw new Error('Configuración de sucursal incompleta');
     }
 
-    const response = await fetch(`${config.api_url_central}/api/usuarios`, {
+    const response = await fetchWithTimeout(`${config.api_url_central}/api/usuarios`, {
       method: 'GET',
-      headers: { 'X-Sucursal-Key': config.sucursal_id }
+      headers: { 'X-Sucursal-Key': encryptBranchCode(config.sucursal_id) }
     });
 
     if (!response.ok) {
@@ -156,23 +194,43 @@ export const syncService = {
     let actualizados = 0;
     let creados = 0;
 
-    await Promise.all(usuariosCentral.map(async (u: any) => {
-      const userRes = await db.select<any[]>('SELECT id FROM usuarios WHERE username = ?', [u.username]);
+    await db.execute('BEGIN TRANSACTION');
+    try {
+      for (const u of usuariosCentral) {
+        const decryptedHash = decryptPasswordHash(u.password_hash, u.username);
 
-      if (userRes.length > 0) {
-        await db.execute(
-          'UPDATE usuarios SET password_hash = ?, nombre_completo = ?, rol_id = ?, estado = ? WHERE username = ?',
-          [u.password_hash, u.nombre_completo, u.rol_id, u.estado, u.username]
-        );
-        actualizados++;
-      } else {
-        await db.execute(
-          'INSERT INTO usuarios (id, username, password_hash, nombre_completo, rol_id, estado) VALUES (?, ?, ?, ?, ?, ?)',
-          [u.id, u.username, u.password_hash, u.nombre_completo, u.rol_id, u.estado]
-        );
-        creados++;
+        // Buscar si ya existe localmente por username o por ID
+        const userByUsername = await db.select<any[]>('SELECT id FROM usuarios WHERE username = ?', [u.username]);
+        const userById = await db.select<any[]>('SELECT username FROM usuarios WHERE id = ?', [u.id]);
+
+        if (userByUsername.length > 0) {
+          // Si el username coincide, actualizamos todos los campos (incluido ID central)
+          await db.execute(
+            'UPDATE usuarios SET id = ?, password_hash = ?, nombre_completo = ?, rol_id = ?, estado = ? WHERE username = ?',
+            [u.id, decryptedHash, u.nombre_completo, u.rol_id, u.estado, u.username]
+          );
+          actualizados++;
+        } else if (userById.length > 0) {
+          // Si el ID ya existe pero con otro username, actualizamos los datos y renombramos el username
+          await db.execute(
+            'UPDATE usuarios SET username = ?, password_hash = ?, nombre_completo = ?, rol_id = ?, estado = ? WHERE id = ?',
+            [u.username, decryptedHash, u.nombre_completo, u.rol_id, u.estado, u.id]
+          );
+          actualizados++;
+        } else {
+          // Si no existe por ID ni por Username, hacemos una inserción limpia
+          await db.execute(
+            'INSERT INTO usuarios (id, username, password_hash, nombre_completo, rol_id, estado) VALUES (?, ?, ?, ?, ?, ?)',
+            [u.id, u.username, decryptedHash, u.nombre_completo, u.rol_id, u.estado]
+          );
+          creados++;
+        }
       }
-    }));
+      await db.execute('COMMIT');
+    } catch (error) {
+      await db.execute('ROLLBACK');
+      throw error;
+    }
 
     return { creados, actualizados };
   },
@@ -206,10 +264,12 @@ export const syncService = {
       );
 
       return {
+        id_local: v.id,
         fecha: v.fecha,
         total: v.total,
         usuario_id: v.usuario_id,
         metodo_pago: v.metodo_pago || 'EFECTIVO',
+        estado: v.estado || 'completado',
         detalles: detalles.map(d => ({
           codigo_barras: d.codigo_barras,
           cantidad: d.cantidad,
@@ -220,11 +280,11 @@ export const syncService = {
     }));
 
     // 3. Enviar a la central
-    const response = await fetch(`${config.api_url_central}/api/sincronizar`, {
+    const response = await fetchWithTimeout(`${config.api_url_central}/api/sincronizar`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-Sucursal-Key': config.sucursal_id
+        'X-Sucursal-Key': encryptBranchCode(config.sucursal_id)
       },
       body: JSON.stringify({
         sucursal_id: config.sucursal_id,
@@ -259,11 +319,11 @@ export const syncService = {
       'SELECT codigo_barras, stock_actual FROM productos WHERE codigo_barras IS NOT NULL'
     );
 
-    const response = await fetch(`${config.api_url_central}/api/stock-update`, {
+    const response = await fetchWithTimeout(`${config.api_url_central}/api/stock-update`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-Sucursal-Key': config.sucursal_id
+        'X-Sucursal-Key': encryptBranchCode(config.sucursal_id)
       },
       body: JSON.stringify({
         sucursal_id: config.sucursal_id,
@@ -301,15 +361,16 @@ export const syncService = {
 
     if (movimientos.length === 0) return { enviadas: 0 };
 
-    const response = await fetch(`${config.api_url_central}/api/kardex-sync`, {
+    const response = await fetchWithTimeout(`${config.api_url_central}/api/kardex-sync`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-Sucursal-Key': config.sucursal_id
+        'X-Sucursal-Key': encryptBranchCode(config.sucursal_id)
       },
       body: JSON.stringify({
         sucursal_id: config.sucursal_id,
         movimientos: movimientos.map(m => ({
+          id_local: m.id,
           producto_codigo_barras: m.producto_codigo_barras,
           usuario_id: m.usuario_id,
           fecha: m.fecha,
@@ -351,11 +412,11 @@ export const syncService = {
 
     if (cajasPendientes.length === 0) return { enviadas: 0 };
 
-    const response = await fetch(`${config.api_url_central}/api/cajas-sync`, {
+    const response = await fetchWithTimeout(`${config.api_url_central}/api/cajas-sync`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-Sucursal-Key': config.sucursal_id
+        'X-Sucursal-Key': encryptBranchCode(config.sucursal_id)
       },
       body: JSON.stringify({
         sucursal_id: config.sucursal_id,
@@ -413,6 +474,7 @@ export const syncService = {
       );
 
       return {
+        id_local: c.id,
         fecha: c.fecha,
         total: c.total,
         usuario_id: c.usuario_id,
@@ -429,11 +491,11 @@ export const syncService = {
     }));
 
     // 3. Enviar a la central
-    const response = await fetch(`${config.api_url_central}/api/compras-sync`, {
+    const response = await fetchWithTimeout(`${config.api_url_central}/api/compras-sync`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-Sucursal-Key': config.sucursal_id
+        'X-Sucursal-Key': encryptBranchCode(config.sucursal_id)
       },
       body: JSON.stringify({
         sucursal_id: config.sucursal_id,
@@ -463,9 +525,9 @@ export const syncService = {
       throw new Error('Configuración de sucursal incompleta');
     }
 
-    const response = await fetch(`${config.api_url_central}/api/roles`, {
+    const response = await fetchWithTimeout(`${config.api_url_central}/api/roles`, {
       method: 'GET',
-      headers: { 'X-Sucursal-Key': config.sucursal_id }
+      headers: { 'X-Sucursal-Key': encryptBranchCode(config.sucursal_id) }
     });
 
     if (!response.ok) {
@@ -481,23 +543,30 @@ export const syncService = {
     let actualizados = 0;
     let creados = 0;
 
-    await Promise.all(rolesCentral.map(async (r: any) => {
-      const rolRes = await db.select<any[]>('SELECT id FROM roles WHERE id = ?', [r.id]);
+    await db.execute('BEGIN TRANSACTION');
+    try {
+      for (const r of rolesCentral) {
+        const rolRes = await db.select<any[]>('SELECT id FROM roles WHERE id = ?', [r.id]);
 
-      if (rolRes.length > 0) {
-        await db.execute(
-          'UPDATE roles SET nombre = ?, descripcion = ?, permisos = ?, estado = ? WHERE id = ?',
-          [r.nombre, r.descripcion, r.permisos, r.estado, r.id]
-        );
-        actualizados++;
-      } else {
-        await db.execute(
-          'INSERT INTO roles (id, nombre, descripcion, permisos, estado) VALUES (?, ?, ?, ?, ?)',
-          [r.id, r.nombre, r.descripcion, r.permisos, r.estado]
-        );
-        creados++;
+        if (rolRes.length > 0) {
+          await db.execute(
+            'UPDATE roles SET nombre = ?, descripcion = ?, permisos = ?, estado = ? WHERE id = ?',
+            [r.nombre, r.descripcion, r.permisos, r.estado, r.id]
+          );
+          actualizados++;
+        } else {
+          await db.execute(
+            'INSERT INTO roles (id, nombre, descripcion, permisos, estado) VALUES (?, ?, ?, ?, ?)',
+            [r.id, r.nombre, r.descripcion, r.permisos, r.estado]
+          );
+          creados++;
+        }
       }
-    }));
+      await db.execute('COMMIT');
+    } catch (error) {
+      await db.execute('ROLLBACK');
+      throw error;
+    }
 
     return { creados, actualizados };
   },
@@ -511,9 +580,9 @@ export const syncService = {
       throw new Error('Configuración de sucursal incompleta');
     }
 
-    const response = await fetch(`${config.api_url_central}/api/unidades-medida`, {
+    const response = await fetchWithTimeout(`${config.api_url_central}/api/unidades-medida`, {
       method: 'GET',
-      headers: { 'X-Sucursal-Key': config.sucursal_id }
+      headers: { 'X-Sucursal-Key': encryptBranchCode(config.sucursal_id) }
     });
 
     if (!response.ok) {
@@ -529,23 +598,30 @@ export const syncService = {
     let actualizados = 0;
     let creados = 0;
 
-    await Promise.all(unidadesCentral.map(async (u: any) => {
-      const unitRes = await db.select<any[]>('SELECT id FROM unidades_medida WHERE id = ?', [u.id]);
+    await db.execute('BEGIN TRANSACTION');
+    try {
+      for (const u of unidadesCentral) {
+        const unitRes = await db.select<any[]>('SELECT id FROM unidades_medida WHERE id = ?', [u.id]);
 
-      if (unitRes.length > 0) {
-        await db.execute(
-          'UPDATE unidades_medida SET nombre = ?, abreviatura = ?, estado = ? WHERE id = ?',
-          [u.nombre, u.abreviatura, u.estado, u.id]
-        );
-        actualizados++;
-      } else {
-        await db.execute(
-          'INSERT INTO unidades_medida (id, nombre, abreviatura, estado) VALUES (?, ?, ?, ?)',
-          [u.id, u.nombre, u.abreviatura, u.estado]
-        );
-        creados++;
+        if (unitRes.length > 0) {
+          await db.execute(
+            'UPDATE unidades_medida SET nombre = ?, abreviatura = ?, estado = ? WHERE id = ?',
+            [u.nombre, u.abreviatura, u.estado, u.id]
+          );
+          actualizados++;
+        } else {
+          await db.execute(
+            'INSERT INTO unidades_medida (id, nombre, abreviatura, estado) VALUES (?, ?, ?, ?)',
+            [u.id, u.nombre, u.abreviatura, u.estado]
+          );
+          creados++;
+        }
       }
-    }));
+      await db.execute('COMMIT');
+    } catch (error) {
+      await db.execute('ROLLBACK');
+      throw error;
+    }
 
     return { creados, actualizados };
   },
@@ -554,27 +630,19 @@ export const syncService = {
    * Ejecuta la sincronización completa (push y pull) de forma organizada
    */
   async syncAllData() {
-    const [
-      sales,
-      kardex,
-      cajas,
-      compras,
-      _,
-      products,
-      users,
-      roles,
-      units
-    ] = await Promise.all([
-      this.pushSales(),
-      this.pushKardex(),
-      this.pushCajas(),
-      this.pushCompras(),
-      this.pushStockLevels(),
-      this.pullProducts(),
-      this.pullUsers(),
-      this.pullRoles(),
-      this.pullUnidadesMedida()
-    ]);
+    // 1. Ejecutar PUSH (Subir datos locales a la central) en secuencia estricta.
+    // Si alguno falla, el error se propaga y la sincronización se detiene inmediatamente.
+    const sales = await this.pushSales();
+    const kardex = await this.pushKardex();
+    const cajas = await this.pushCajas();
+    const compras = await this.pushCompras();
+    await this.pushStockLevels();
+
+    // 2. Ejecutar PULL (Descargar datos actualizados de la central) en secuencia estricta.
+    const products = await this.pullProducts();
+    const users = await this.pullUsers();
+    const roles = await this.pullRoles();
+    const units = await this.pullUnidadesMedida();
 
     return {
       enviadas: sales.enviadas,

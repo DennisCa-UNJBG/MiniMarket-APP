@@ -54,19 +54,28 @@ export const ventaService = {
         [ventaId, item.producto_id, item.cantidad, item.precio_unitario, subtotal]
       );
 
-      // 3. Actualizar Stock y Obtener stock posterior
-      const pData = await db.select<any[]>('SELECT stock_actual, stock_minimo, nombre FROM productos WHERE id = ?', [item.producto_id]);
-      if (pData.length === 0) throw new Error(`Producto ${item.producto_id} no encontrado`);
+      // 3. Actualizar Stock de forma atómica y validar existencias
+      const resUpdate = await db.execute(
+        'UPDATE productos SET stock_actual = stock_actual - ? WHERE id = ? AND stock_actual >= ?',
+        [item.cantidad, item.producto_id, item.cantidad]
+      );
 
-      const { stock_actual, stock_minimo, nombre } = pData[0];
-      const nuevoStock = stock_actual - item.cantidad;
-
-      // Verificar alerta de stock
-      if (nuevoStock <= (stock_minimo || 0)) {
-        alertas.push(nombre);
+      if (resUpdate.rowsAffected === 0) {
+        // Consultar el nombre y stock restante del producto para un error descriptivo
+        const pInfo = await db.select<any[]>('SELECT nombre, stock_actual FROM productos WHERE id = ?', [item.producto_id]);
+        const nombreProd = pInfo[0]?.nombre || `ID: ${item.producto_id}`;
+        const stockActualVal = pInfo[0]?.stock_actual || 0;
+        throw new Error(`Stock insuficiente para el producto "${nombreProd}". Quedan ${stockActualVal} unidades disponibles e intentaste vender ${item.cantidad}.`);
       }
 
-      await db.execute('UPDATE productos SET stock_actual = ? WHERE id = ?', [nuevoStock, item.producto_id]);
+      // Obtener el stock posterior para el Kardex y alertas
+      const pData = await db.select<any[]>('SELECT stock_actual, stock_minimo, nombre FROM productos WHERE id = ?', [item.producto_id]);
+      const { stock_actual, stock_minimo, nombre } = pData[0];
+
+      // Verificar alerta de stock mínimo
+      if (stock_actual <= (stock_minimo || 0)) {
+        alertas.push(nombre);
+      }
 
       // 4. Registrar en Kardex
       await db.execute(
@@ -76,7 +85,7 @@ export const ventaService = {
           item.producto_id,
           venta.usuario_id,
           item.cantidad,
-          nuevoStock,
+          stock_actual,
           item.precio_unitario,
           `VENTA #${ventaId} (${venta.metodo_pago})`,
           sucursalId
@@ -191,31 +200,31 @@ export const ventaService = {
     ]);
     const sucursalId = config?.sucursal_id || 'LOCAL';
 
-    // Si no hay fecha 'desde', usamos el inicio del día actual en hora local
-    const fechaFiltro = desde ? desde : "date('now', 'localtime')";
-    const isTimestamp = desde ? true : false;
+    // Obtener ventas y gastos en paralelo utilizando sentencias parametrizadas seguras sin interpolación dinámica
+    const queryVentas = `
+      SELECT 
+        COALESCE(SUM(total), 0) as total,
+        COALESCE(SUM(CASE WHEN metodo_pago = 'EFECTIVO' THEN total ELSE 0 END), 0) as total_efectivo,
+        COALESCE(SUM(CASE WHEN metodo_pago = 'TARJETA' THEN total ELSE 0 END), 0) as total_digital,
+        COUNT(*) as count
+      FROM ventas
+      WHERE ${desde ? "fecha >= ?" : "date(fecha, 'localtime') >= date('now', 'localtime')"}
+      AND estado != 'anulado'
+      AND (sucursal_id = ? OR sucursal_id IS NULL)
+    `;
 
-    // Obtener ventas y gastos en paralelo
+    const queryGastos = `
+      SELECT COALESCE(SUM(total), 0) as total_gastos
+      FROM compras_ingresos
+      WHERE ${desde ? "fecha >= ?" : "date(fecha, 'localtime') >= date('now', 'localtime')"}
+      AND metodo_pago = 'EFECTIVO'
+      AND estado != 'anulado'
+      AND (sucursal_id = ? OR sucursal_id IS NULL)
+    `;
+
     const [ventas, gastos] = await Promise.all([
-      db.select<any[]>(`
-        SELECT 
-          COALESCE(SUM(total), 0) as total,
-          COALESCE(SUM(CASE WHEN metodo_pago = 'EFECTIVO' THEN total ELSE 0 END), 0) as total_efectivo,
-          COALESCE(SUM(CASE WHEN metodo_pago = 'TARJETA' THEN total ELSE 0 END), 0) as total_digital,
-          COUNT(*) as count
-        FROM ventas
-        WHERE ${isTimestamp ? "fecha >= ?" : "date(fecha, 'localtime') >= " + fechaFiltro}
-        AND estado != 'anulado'
-        AND (sucursal_id = ? OR sucursal_id IS NULL)
-      `, isTimestamp ? [desde, sucursalId] : [sucursalId]),
-      db.select<any[]>(`
-        SELECT COALESCE(SUM(total), 0) as total_gastos
-        FROM compras_ingresos
-        WHERE ${isTimestamp ? "fecha >= ?" : "date(fecha, 'localtime') >= " + fechaFiltro}
-        AND metodo_pago = 'EFECTIVO'
-        AND estado != 'anulado'
-        AND (sucursal_id = ? OR sucursal_id IS NULL)
-      `, isTimestamp ? [desde, sucursalId] : [sucursalId])
+      db.select<any[]>(queryVentas, desde ? [desde, sucursalId] : [sucursalId]),
+      db.select<any[]>(queryGastos, desde ? [desde, sucursalId] : [sucursalId])
     ]);
 
     return {
@@ -264,36 +273,49 @@ export const ventaService = {
   async anularVenta(ventaId: number): Promise<void> {
     const db = await getDb();
 
-    // Obtener usuario_id de la venta antes de anular
-    const ventaInfo = await db.select<any[]>('SELECT usuario_id FROM ventas WHERE id = ?', [ventaId]);
-    const { usuario_id } = ventaInfo[0] || { usuario_id: 1 };
+    // Obtener usuario_id y sucursal_id de la venta antes de anular
+    const ventaInfo = await db.select<any[]>('SELECT usuario_id, sucursal_id FROM ventas WHERE id = ?', [ventaId]);
+    const { usuario_id, sucursal_id } = ventaInfo[0] || { usuario_id: 1, sucursal_id: null };
 
-    // 1. Obtener detalles para revertir stock
-    const items = await db.select<any[]>('SELECT producto_id, cantidad FROM ventas_detalle WHERE venta_id = ?', [ventaId]);
+    // 1. Obtener detalles para revertir stock y obtener precio unitario original
+    const items = await db.select<any[]>('SELECT producto_id, cantidad, precio_unitario FROM ventas_detalle WHERE venta_id = ?', [ventaId]);
 
-    // 2. Revertir stock de cada producto
-    await Promise.all(items.map(item =>
-      db.execute(
+    // 2. Revertir stock de cada producto secuencialmente e insertar reversión en Kardex
+    for (const item of items) {
+      await db.execute(
         'UPDATE productos SET stock_actual = stock_actual + ? WHERE id = ?',
         [item.cantidad, item.producto_id]
-      )
-    ));
+      );
 
-    // 3. Eliminar registros del Kardex asociados
-    await db.execute(
-      "DELETE FROM kardex WHERE referencia LIKE ?",
-      [`VENTA #${ventaId} %`]
-    );
+      // Obtener el stock posterior resultante
+      const pData = await db.select<any[]>('SELECT stock_actual FROM productos WHERE id = ?', [item.producto_id]);
+      const stockActual = pData[0]?.stock_actual || 0;
 
-    // 4. Marcar como ANULADA
+      // Registrar movimiento de ingreso por devolución en el Kardex de forma inmutable
+      await db.execute(
+        `INSERT INTO kardex (producto_id, usuario_id, tipo_movimiento, cantidad, saldo_posterior, costo_unitario, referencia, sucursal_id, sincronizado) 
+         VALUES (?, ?, 'INGRESO', ?, ?, ?, ?, ?, 0)`,
+        [
+          item.producto_id,
+          usuario_id,
+          item.cantidad,
+          stockActual,
+          item.precio_unitario,
+          `ANULACION VENTA #${ventaId}`,
+          sucursal_id
+        ]
+      );
+    }
+
+    // 3. Marcar venta como ANULADA y sincronizado = 0 para empujar el cambio de estado a la central
     await db.execute(
-      "UPDATE ventas SET estado = 'anulado' WHERE id = ?",
+      "UPDATE ventas SET estado = 'anulado', sincronizado = 0 WHERE id = ?",
       [ventaId]
     );
 
     // Las estadísticas del cliente se revierten mediante el trigger trg_cliente_venta_anular de la base de datos
 
-    // 5. Log de auditoría
+    // 4. Log de auditoría
     await logService.register({
       usuario_id: usuario_id,
       accion: 'ANULACION_VENTA',

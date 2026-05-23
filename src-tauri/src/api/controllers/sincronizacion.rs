@@ -1,44 +1,59 @@
 use axum::{
     extract::State,
-    http::{HeaderMap, StatusCode},
+    http::HeaderMap,
     Json,
 };
-use serde_json::{json, Value};
+use serde_json::json;
 use sqlx::SqlitePool;
+use crate::api::{ApiResult, db_error, validate_sucursal};
 use crate::api::dtos::{SyncPayloadDto, StockPayloadDto, KardexPayloadDto, CajaPayloadDto, CompraPayloadDto};
 
 pub async fn sincronizar_ventas(
     headers: HeaderMap,
     State(pool): State<SqlitePool>,
     Json(payload): Json<SyncPayloadDto>,
-) -> (StatusCode, Json<Value>) {
-    let auth_key = headers.get("X-Sucursal-Key")
-        .and_then(|h| h.to_str().ok())
-        .unwrap_or("");
+) -> Result<ApiResult, ApiResult> {
+    let sucursal_id = validate_sucursal(&headers, &pool).await?;
 
-    if auth_key != payload.sucursal_id {
-        return (StatusCode::FORBIDDEN, Json(json!({ "error": "Llave no coincide con sucursal" })));
-    }
-
-    let sucursal = sqlx::query("SELECT id FROM sucursales WHERE codigo = ? AND estado = 'activo'")
-        .bind(&payload.sucursal_id)
-        .fetch_optional(&pool)
-        .await
-        .unwrap();
-
-    if sucursal.is_none() {
-        return (StatusCode::FORBIDDEN, Json(json!({ "error": "Sucursal no autorizada" })));
+    if sucursal_id != payload.sucursal_id {
+        return Ok((axum::http::StatusCode::FORBIDDEN, Json(json!({ "error": "Llave no coincide con sucursal" }))));
     }
 
     let mut procesadas = 0;
     for v in payload.ventas {
+        // Verificar idempotencia: si ya existe la venta de esta sucursal con este id_local
+        let existe = sqlx::query("SELECT id, estado FROM ventas WHERE sucursal_id = ? AND sucursal_local_id = ?")
+            .bind(&payload.sucursal_id)
+            .bind(v.id_local)
+            .fetch_optional(&pool)
+            .await
+            .map_err(db_error)?;
+
+        if let Some(row) = existe {
+            use sqlx::Row;
+            let db_estado: String = row.get("estado");
+            if db_estado != v.estado {
+                let id_central: i32 = row.get("id");
+                sqlx::query("UPDATE ventas SET estado = ? WHERE id = ?")
+                    .bind(&v.estado)
+                    .bind(id_central)
+                    .execute(&pool)
+                    .await
+                    .map_err(db_error)?;
+            }
+            procesadas += 1;
+            continue;
+        }
+
         let res = sqlx::query(
-            "INSERT INTO ventas (usuario_id, fecha, total, sucursal_id, sincronizado) VALUES (?, ?, ?, ?, 1)"
+            "INSERT INTO ventas (usuario_id, fecha, total, sucursal_id, sucursal_local_id, estado, sincronizado) VALUES (?, ?, ?, ?, ?, ?, 1)"
         )
         .bind(v.usuario_id)
         .bind(&v.fecha)
         .bind(v.total)
         .bind(&payload.sucursal_id)
+        .bind(v.id_local)
+        .bind(&v.estado)
         .execute(&pool)
         .await;
 
@@ -49,7 +64,7 @@ pub async fn sincronizar_ventas(
                     .bind(&d.codigo_barras)
                     .fetch_optional(&pool)
                     .await
-                    .unwrap();
+                    .map_err(db_error)?;
 
                 if let Some(p_row) = prod {
                     use sqlx::Row;
@@ -75,23 +90,21 @@ pub async fn sincronizar_ventas(
         .execute(&pool)
         .await;
 
-    (StatusCode::OK, Json(json!({ 
+    Ok((axum::http::StatusCode::OK, Json(json!({ 
         "status": "ok", 
         "mensaje": format!("Sincronizadas {} ventas", procesadas) 
-    })))
+    }))))
 }
 
 pub async fn update_stock(
     headers: HeaderMap,
     State(pool): State<SqlitePool>,
     Json(payload): Json<StockPayloadDto>,
-) -> (StatusCode, Json<Value>) {
-    let auth_key = headers.get("X-Sucursal-Key")
-        .and_then(|h| h.to_str().ok())
-        .unwrap_or("");
+) -> Result<ApiResult, ApiResult> {
+    let sucursal_id = validate_sucursal(&headers, &pool).await?;
 
-    if auth_key != payload.sucursal_id {
-        return (StatusCode::FORBIDDEN, Json(json!({ "error": "Llave no coincide" })));
+    if sucursal_id != payload.sucursal_id {
+        return Ok((axum::http::StatusCode::FORBIDDEN, Json(json!({ "error": "Llave no coincide" }))));
     }
 
     // 1. Persistir el stock de cada producto reportado
@@ -116,34 +129,48 @@ pub async fn update_stock(
         .execute(&pool)
         .await;
 
-    (StatusCode::OK, Json(json!({ "status": "ok" })))
+    Ok((axum::http::StatusCode::OK, Json(json!({ "status": "ok" }))))
 }
 
 pub async fn sincronizar_kardex(
     headers: HeaderMap,
     State(pool): State<SqlitePool>,
     Json(payload): Json<KardexPayloadDto>,
-) -> (StatusCode, Json<Value>) {
-    let auth_key = headers.get("X-Sucursal-Key").and_then(|h| h.to_str().ok()).unwrap_or("");
-    if auth_key != payload.sucursal_id {
-        return (StatusCode::FORBIDDEN, Json(json!({ "error": "Llave no coincide" })));
+) -> Result<ApiResult, ApiResult> {
+    let sucursal_id = validate_sucursal(&headers, &pool).await?;
+
+    if sucursal_id != payload.sucursal_id {
+        return Ok((axum::http::StatusCode::FORBIDDEN, Json(json!({ "error": "Llave no coincide" }))));
     }
 
     let mut procesados = 0;
     for m in payload.movimientos {
+        // Verificar idempotencia: si ya existe el movimiento de esta sucursal con este id_local
+        let existe = sqlx::query("SELECT id FROM kardex WHERE sucursal_id = ? AND sucursal_local_id = ?")
+            .bind(&payload.sucursal_id)
+            .bind(m.id_local)
+            .fetch_optional(&pool)
+            .await
+            .map_err(db_error)?;
+
+        if existe.is_some() {
+            procesados += 1;
+            continue;
+        }
+
         // Buscar producto por código de barras
         let prod = sqlx::query("SELECT id FROM productos WHERE codigo_barras = ?")
             .bind(&m.producto_codigo_barras)
             .fetch_optional(&pool)
             .await
-            .unwrap();
+            .map_err(db_error)?;
 
         if let Some(p_row) = prod {
             use sqlx::Row;
             let p_id: i32 = p_row.get("id");
             let _ = sqlx::query(
-                "INSERT INTO kardex (producto_id, usuario_id, fecha, tipo_movimiento, cantidad, saldo_posterior, costo_unitario, referencia, sucursal_id, sincronizado) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)"
+                "INSERT INTO kardex (producto_id, usuario_id, fecha, tipo_movimiento, cantidad, saldo_posterior, costo_unitario, referencia, sucursal_id, sucursal_local_id, sincronizado) \
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)"
             )
             .bind(p_id)
             .bind(m.usuario_id)
@@ -154,43 +181,45 @@ pub async fn sincronizar_kardex(
             .bind(m.costo_unitario)
             .bind(&m.referencia)
             .bind(&payload.sucursal_id)
+            .bind(m.id_local)
             .execute(&pool)
             .await;
             procesados += 1;
         }
     }
 
-    (StatusCode::OK, Json(json!({ "status": "ok", "procesados": procesados })))
+    Ok((axum::http::StatusCode::OK, Json(json!({ "status": "ok", "procesados": procesados }))))
 }
 
 pub async fn sincronizar_cajas(
     headers: HeaderMap,
     State(pool): State<SqlitePool>,
     Json(payload): Json<CajaPayloadDto>,
-) -> (StatusCode, Json<Value>) {
-    let auth_key = headers.get("X-Sucursal-Key")
-        .and_then(|h| h.to_str().ok())
-        .unwrap_or("");
+) -> Result<ApiResult, ApiResult> {
+    let sucursal_id = validate_sucursal(&headers, &pool).await?;
 
-    if auth_key != payload.sucursal_id {
-        return (StatusCode::FORBIDDEN, Json(json!({ "error": "Llave no coincide con sucursal" })));
-    }
-
-    let sucursal = sqlx::query("SELECT id FROM sucursales WHERE codigo = ? AND estado = 'activo'")
-        .bind(&payload.sucursal_id)
-        .fetch_optional(&pool)
-        .await
-        .unwrap();
-
-    if sucursal.is_none() {
-        return (StatusCode::FORBIDDEN, Json(json!({ "error": "Sucursal no autorizada o inactiva" })));
+    if sucursal_id != payload.sucursal_id {
+        return Ok((axum::http::StatusCode::FORBIDDEN, Json(json!({ "error": "Llave no coincide con sucursal" }))));
     }
 
     let mut procesadas = 0;
     for c in payload.cajas {
+        // Verificar idempotencia: si ya existe la caja de esta sucursal con este id_local
+        let existe = sqlx::query("SELECT id FROM cajas WHERE sucursal_id = ? AND sucursal_local_id = ?")
+            .bind(&payload.sucursal_id)
+            .bind(c.id_local)
+            .fetch_optional(&pool)
+            .await
+            .map_err(db_error)?;
+
+        if existe.is_some() {
+            procesadas += 1;
+            continue;
+        }
+
         let res = sqlx::query(
-            "INSERT INTO cajas (usuario_id, monto_inicial, monto_final, monto_esperado, fecha_apertura, fecha_cierre, estado, sucursal_id, sincronizado) 
-             VALUES (?, ?, ?, ?, ?, ?, 'cerrada', ?, 1)"
+            "INSERT INTO cajas (usuario_id, monto_inicial, monto_final, monto_esperado, fecha_apertura, fecha_cierre, estado, sucursal_id, sucursal_local_id, sincronizado) \
+             VALUES (?, ?, ?, ?, ?, ?, 'cerrada', ?, ?, 1)"
         )
         .bind(c.usuario_id)
         .bind(c.monto_inicial)
@@ -199,6 +228,7 @@ pub async fn sincronizar_cajas(
         .bind(&c.fecha_apertura)
         .bind(&c.fecha_cierre)
         .bind(&payload.sucursal_id)
+        .bind(c.id_local)
         .execute(&pool)
         .await;
 
@@ -207,50 +237,63 @@ pub async fn sincronizar_cajas(
         }
     }
 
-    (
-        StatusCode::OK,
+    Ok((
+        axum::http::StatusCode::OK,
         Json(json!({
             "status": "ok",
             "mensaje": format!("Sincronización de cajas exitosa: {} procesadas", procesadas),
             "procesadas": procesadas
         })),
-    )
+    ))
 }
 
 pub async fn sincronizar_compras(
     headers: HeaderMap,
     State(pool): State<SqlitePool>,
     Json(payload): Json<CompraPayloadDto>,
-) -> (StatusCode, Json<Value>) {
-    let auth_key = headers.get("X-Sucursal-Key")
-        .and_then(|h| h.to_str().ok())
-        .unwrap_or("");
+) -> Result<ApiResult, ApiResult> {
+    let sucursal_id = validate_sucursal(&headers, &pool).await?;
 
-    if auth_key != payload.sucursal_id {
-        return (StatusCode::FORBIDDEN, Json(json!({ "error": "Llave no coincide con sucursal" })));
-    }
-
-    let sucursal = sqlx::query("SELECT id FROM sucursales WHERE codigo = ? AND estado = 'activo'")
-        .bind(&payload.sucursal_id)
-        .fetch_optional(&pool)
-        .await
-        .unwrap();
-
-    if sucursal.is_none() {
-        return (StatusCode::FORBIDDEN, Json(json!({ "error": "Sucursal no autorizada o inactiva" })));
+    if sucursal_id != payload.sucursal_id {
+        return Ok((axum::http::StatusCode::FORBIDDEN, Json(json!({ "error": "Llave no coincide con sucursal" }))));
     }
 
     let mut procesadas = 0;
     for c in payload.compras {
+        // Verificar idempotencia: si ya existe la compra de esta sucursal con este id_local
+        let existe = sqlx::query("SELECT id, estado FROM compras_ingresos WHERE sucursal_id = ? AND sucursal_local_id = ?")
+            .bind(&payload.sucursal_id)
+            .bind(c.id_local)
+            .fetch_optional(&pool)
+            .await
+            .map_err(db_error)?;
+
+        if let Some(row) = existe {
+            use sqlx::Row;
+            let db_estado: String = row.get("estado");
+            if db_estado != c.estado {
+                let id_central: i32 = row.get("id");
+                sqlx::query("UPDATE compras_ingresos SET estado = ? WHERE id = ?")
+                    .bind(&c.estado)
+                    .bind(id_central)
+                    .execute(&pool)
+                    .await
+                    .map_err(db_error)?;
+            }
+            procesadas += 1;
+            continue;
+        }
+
         let res = sqlx::query(
-            "INSERT INTO compras_ingresos (usuario_id, fecha, documento_referencia, total, sucursal_id, metodo_pago, estado, sincronizado) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, 1)"
+            "INSERT INTO compras_ingresos (usuario_id, fecha, documento_referencia, total, sucursal_id, sucursal_local_id, metodo_pago, estado, sincronizado) \
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)"
         )
         .bind(c.usuario_id)
         .bind(&c.fecha)
         .bind(&c.documento_referencia)
         .bind(c.total)
         .bind(&payload.sucursal_id)
+        .bind(c.id_local)
         .bind(&c.metodo_pago)
         .bind(&c.estado)
         .execute(&pool)
@@ -263,7 +306,7 @@ pub async fn sincronizar_compras(
                     .bind(&d.codigo_barras)
                     .fetch_optional(&pool)
                     .await
-                    .unwrap();
+                    .map_err(db_error)?;
 
                 if let Some(p_row) = prod {
                     use sqlx::Row;
@@ -284,12 +327,12 @@ pub async fn sincronizar_compras(
         }
     }
 
-    (
-        StatusCode::OK,
+    Ok((
+        axum::http::StatusCode::OK,
         Json(json!({
             "status": "ok",
             "mensaje": format!("Sincronización de compras exitosa: {} procesadas", procesadas),
             "procesadas": procesadas
         })),
-    )
+    ))
 }
