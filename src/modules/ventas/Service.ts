@@ -280,8 +280,8 @@ export const ventaService = {
     // 1. Obtener detalles para revertir stock y obtener precio unitario original
     const items = await db.select<any[]>('SELECT producto_id, cantidad, precio_unitario FROM ventas_detalle WHERE venta_id = ?', [ventaId]);
 
-    // 2. Revertir stock de cada producto secuencialmente e insertar reversión en Kardex
-    for (const item of items) {
+    // 2. Revertir stock de cada producto de forma concurrente e insertar reversión en Kardex
+    await Promise.all(items.map(async (item) => {
       await db.execute(
         'UPDATE productos SET stock_actual = stock_actual + ? WHERE id = ?',
         [item.cantidad, item.producto_id]
@@ -305,7 +305,7 @@ export const ventaService = {
           sucursal_id
         ]
       );
-    }
+    }));
 
     // 3. Marcar venta como ANULADA y sincronizado = 0 para empujar el cambio de estado a la central
     await db.execute(

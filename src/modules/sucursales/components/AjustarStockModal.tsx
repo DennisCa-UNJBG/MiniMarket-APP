@@ -74,7 +74,7 @@ export function AjustarStockModal({
         {/* Cabecera */}
         <div className="p-6 border-b border-zinc-100 dark:border-zinc-700/50 flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-bold text-zinc-800 dark:text-white">Ajustar Stock Manual</h3>
+            <h3 className="text-lg font-semibold text-zinc-800 dark:text-white">Ajustar Stock Manual</h3>
             <p className="text-xs text-zinc-400 dark:text-zinc-500">Sucursal: {sucursalId}</p>
           </div>
           <button

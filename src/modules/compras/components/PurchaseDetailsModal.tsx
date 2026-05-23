@@ -3,6 +3,7 @@ import { Modal } from '../../../shared/components/ui/Modal';
 import { Badge } from '../../../shared/components/ui/Badge';
 import { Button } from '../../../shared/components/ui/Button';
 import { inventarioService } from '../../inventario/Service';
+import { dateUtils } from '../../../shared/lib/dateUtils';
 
 interface PurchaseRecord {
   id: number;
@@ -21,8 +22,7 @@ interface PurchaseDetailsModalProps {
 }
 
 const formatDateTimeLocal = (dateStr: string) => {
-  if (!dateStr) return '';
-  return new Date(dateStr).toLocaleString();
+  return dateUtils.formatUTCtoLocalString(dateStr);
 };
 
 export function PurchaseDetailsModal({ isOpen, onClose, purchase }: PurchaseDetailsModalProps) {

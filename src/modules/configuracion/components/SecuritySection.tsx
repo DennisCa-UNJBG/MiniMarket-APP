@@ -92,11 +92,11 @@ export function SecuritySection() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="flex flex-col gap-1.5">
               <label htmlFor="config-usuario" className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Usuario</label>
-              <input id="config-usuario" disabled value={user?.username || 'admin'} className="w-full px-4 py-2.5 text-sm font-medium border border-zinc-100 dark:border-zinc-700 rounded-2xl bg-zinc-100 dark:bg-zinc-800 text-zinc-500 cursor-not-allowed" />
+              <input id="config-usuario" disabled readOnly value={user?.username || 'admin'} className="w-full px-4 py-2.5 text-sm font-medium border border-zinc-100 dark:border-zinc-700 rounded-2xl bg-zinc-100 dark:bg-zinc-800 text-zinc-500 cursor-not-allowed" />
             </div>
             <div className="flex flex-col gap-1.5">
               <label htmlFor="config-rol" className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Rol del Sistema</label>
-              <input id="config-rol" disabled value={user?.rol_id === 1 ? 'Administrador' : 'Cajero'} className="w-full px-4 py-2.5 text-sm font-medium border border-zinc-100 dark:border-zinc-700 rounded-2xl bg-zinc-100 dark:bg-zinc-800 text-zinc-500 cursor-not-allowed" />
+              <input id="config-rol" disabled readOnly value={user?.rol_id === 1 ? 'Administrador' : 'Cajero'} className="w-full px-4 py-2.5 text-sm font-medium border border-zinc-100 dark:border-zinc-700 rounded-2xl bg-zinc-100 dark:bg-zinc-800 text-zinc-500 cursor-not-allowed" />
             </div>
             <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
               <PasswordField label="Nueva Contraseña" value={securityData.newPassword} onChange={val => setSecurityData(prev => ({ ...prev, newPassword: val }))} placeholder="Nueva clave" />

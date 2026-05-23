@@ -23,6 +23,7 @@ import { Button } from '../../shared/components/ui/Button';
 import { DataTable, type TableColumn } from '../../shared/components/ui/DataTable';
 import { SedeModal } from './components/SedeModal';
 import { EmptyState } from '../../shared/components/ui/EmptyState';
+import { dateUtils } from '../../shared/lib/dateUtils';
 import { SucursalDetalle } from './components/SucursalDetalle';
 
 export function Sucursales() {
@@ -80,8 +81,7 @@ export function Sucursales() {
     if (estado !== 'activo') return { label: 'DESACTIVADO', variant: 'gray' as const };
     if (!lastSync) return { label: 'NUNCA', variant: 'gray' as const };
 
-    const diff = new Date().getTime() - new Date(lastSync).getTime();
-    if (diff < 300000) return { label: 'EN LÍNEA', variant: 'emerald' as const };
+    if (dateUtils.isRecentUTC(lastSync)) return { label: 'EN LÍNEA', variant: 'emerald' as const };
     return { label: 'DESCONECTADO', variant: 'amber' as const };
   };
 
@@ -132,7 +132,7 @@ export function Sucursales() {
             </div>
             <div suppressHydrationWarning className="flex items-center gap-2 text-[10px] text-zinc-400">
               <Clock size={10} />
-              {row.ultima_sincronizacion ? new Date(row.ultima_sincronizacion).toLocaleString() : 'Sin sincronización'}
+              {row.ultima_sincronizacion ? dateUtils.formatUTCtoLocalString(row.ultima_sincronizacion) : 'Sin sincronización'}
             </div>
           </div>
         )

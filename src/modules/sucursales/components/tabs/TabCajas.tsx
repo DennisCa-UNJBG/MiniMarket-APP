@@ -3,6 +3,7 @@ import { Search, User, Wallet } from 'lucide-react';
 import { DataTable, type TableColumn } from '../../../../shared/components/ui/DataTable';
 import { Badge } from '../../../../shared/components/ui/Badge';
 import { EmptyState } from '../../../../shared/components/ui/EmptyState';
+import { dateUtils } from '../../../../shared/lib/dateUtils';
 
 interface TabCajasProps {
   filteredCajas: any[];
@@ -39,7 +40,7 @@ export const TabCajas: React.FC<TabCajasProps> = ({
       header: 'Apertura',
       render: (row) => (
         <span suppressHydrationWarning className="text-xs text-zinc-500 dark:text-zinc-400">
-          {new Date(row.fecha_apertura).toLocaleString()}
+          {dateUtils.formatUTCtoLocalString(row.fecha_apertura)}
         </span>
       )
     },
@@ -48,7 +49,7 @@ export const TabCajas: React.FC<TabCajasProps> = ({
       header: 'Cierre',
       render: (row) => (
         <span suppressHydrationWarning className="text-xs text-zinc-500 dark:text-zinc-400">
-          {row.fecha_cierre ? new Date(row.fecha_cierre).toLocaleString() : 'Abierta'}
+          {row.fecha_cierre ? dateUtils.formatUTCtoLocalString(row.fecha_cierre) : 'Abierta'}
         </span>
       )
     },

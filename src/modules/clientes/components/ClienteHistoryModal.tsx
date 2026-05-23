@@ -54,7 +54,7 @@ export function ClienteHistoryModal({
         {isLoadingHistory ? (
           <div className="h-48 flex flex-col items-center justify-center gap-2">
             <Loader2 className="size-8 text-blue-600 animate-spin" />
-            <p className="text-xs text-zinc-400 dark:text-zinc-500 font-medium">Cargando compras...</p>
+            <p className="text-xs text-zinc-400 dark:text-zinc-500 font-medium">Cargando compras…</p>
           </div>
         ) : !historyData || historyData.data.length === 0 ? (
           <div className="h-48 border border-zinc-100 dark:border-zinc-700 rounded-xl flex items-center justify-center">

@@ -3,6 +3,7 @@ import { Search, History } from 'lucide-react';
 import { DataTable, type TableColumn } from '../../../../shared/components/ui/DataTable';
 import { Badge } from '../../../../shared/components/ui/Badge';
 import { EmptyState } from '../../../../shared/components/ui/EmptyState';
+import { dateUtils } from '../../../../shared/lib/dateUtils';
 
 interface TabKardexProps {
   filteredKardex: any[];
@@ -21,7 +22,7 @@ export const TabKardex: React.FC<TabKardexProps> = ({
       header: 'Fecha / Hora',
       render: (row) => (
         <span suppressHydrationWarning className="text-xs text-zinc-500 dark:text-zinc-400">
-          {new Date(row.fecha).toLocaleString()}
+          {dateUtils.formatUTCtoLocalString(row.fecha)}
         </span>
       )
     },

@@ -34,9 +34,7 @@ interface TabProductosState {
   search: string;
   form: { code: string; name: string; categoryId: string; unitId: string; sellPrice: string; minStock: string };
   catSearch: string;
-  showCatList: boolean;
   unitSearch: string;
-  showUnitList: boolean;
   isSubmitted: boolean;
 }
 
@@ -46,9 +44,7 @@ type TabProductosAction =
   | { type: 'SET_SEARCH'; payload: string }
   | { type: 'SET_FORM'; payload: Partial<TabProductosState['form']> | ((prev: TabProductosState['form']) => TabProductosState['form']) }
   | { type: 'SET_CAT_SEARCH'; payload: string }
-  | { type: 'SET_SHOW_CAT_LIST'; payload: boolean }
   | { type: 'SET_UNIT_SEARCH'; payload: string }
-  | { type: 'SET_SHOW_UNIT_LIST'; payload: boolean }
   | { type: 'SET_IS_SUBMITTED'; payload: boolean };
 
 function tabProductosReducer(state: TabProductosState, action: TabProductosAction): TabProductosState {
@@ -68,12 +64,8 @@ function tabProductosReducer(state: TabProductosState, action: TabProductosActio
       };
     case 'SET_CAT_SEARCH':
       return { ...state, catSearch: action.payload };
-    case 'SET_SHOW_CAT_LIST':
-      return { ...state, showCatList: action.payload };
     case 'SET_UNIT_SEARCH':
       return { ...state, unitSearch: action.payload };
-    case 'SET_SHOW_UNIT_LIST':
-      return { ...state, showUnitList: action.payload };
     case 'SET_IS_SUBMITTED':
       return { ...state, isSubmitted: action.payload };
     default:
@@ -87,9 +79,7 @@ const initialTabProductosState: TabProductosState = {
   search: '',
   form: { code: '', name: '', categoryId: '', unitId: '', sellPrice: '', minStock: '' },
   catSearch: '',
-  showCatList: false,
   unitSearch: '',
-  showUnitList: false,
   isSubmitted: false
 };
 
@@ -105,9 +95,7 @@ export function TabProductos({ categories }: { categories: Category[] }) {
     search,
     form,
     catSearch,
-    showCatList,
     unitSearch,
-    showUnitList,
     isSubmitted
   } = state;
 
@@ -116,9 +104,7 @@ export function TabProductos({ categories }: { categories: Category[] }) {
   const setSearch = (payload: string) => dispatch({ type: 'SET_SEARCH', payload });
   const setForm = (payload: Partial<TabProductosState['form']> | ((prev: TabProductosState['form']) => TabProductosState['form'])) => dispatch({ type: 'SET_FORM', payload });
   const setCatSearch = (payload: string) => dispatch({ type: 'SET_CAT_SEARCH', payload });
-  const setShowCatList = (payload: boolean) => dispatch({ type: 'SET_SHOW_CAT_LIST', payload });
   const setUnitSearch = (payload: string) => dispatch({ type: 'SET_UNIT_SEARCH', payload });
-  const setShowUnitList = (payload: boolean) => dispatch({ type: 'SET_SHOW_UNIT_LIST', payload });
   const setIsSubmitted = (payload: boolean) => dispatch({ type: 'SET_IS_SUBMITTED', payload });
 
 
@@ -382,14 +368,10 @@ export function TabProductos({ categories }: { categories: Category[] }) {
         errors={errors}
         unitSearch={unitSearch}
         setUnitSearch={setUnitSearch}
-        showUnitList={showUnitList}
-        setShowUnitList={setShowUnitList}
         units={units}
         filteredUnits={filteredUnits}
         catSearch={catSearch}
         setCatSearch={setCatSearch}
-        showCatList={showCatList}
-        setShowCatList={setShowCatList}
         categories={categories}
         filteredCategories={filteredCategories}
         onSave={handleSave}

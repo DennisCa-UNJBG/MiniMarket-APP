@@ -18,16 +18,9 @@ import { notificationService } from '../../shared/lib/notifications';
 import { NewPurchaseModal } from './components/NewPurchaseModal';
 import { PurchaseDetailsModal } from './components/PurchaseDetailsModal';
 import { EmptyState } from '../../shared/components/ui/EmptyState';
+import { dateUtils } from '../../shared/lib/dateUtils';
 
-const formatDate = (dateStr: string) => {
-  if (!dateStr) return '';
-  return new Date(dateStr + " UTC").toLocaleDateString();
-};
 
-const formatTime = (dateStr: string) => {
-  if (!dateStr) return '';
-  return new Date(dateStr + " UTC").toLocaleTimeString();
-};
 
 interface PurchaseRecord {
   id: number;
@@ -137,8 +130,8 @@ export function Compras() {
       header: 'Fecha',
       render: (row) => (
         <div className="flex flex-col">
-          <span className="text-sm text-zinc-800 dark:text-zinc-200">{formatDate(row.fecha)}</span>
-          <span className="text-[10px] text-zinc-400">{formatTime(row.fecha)}</span>
+          <span className="text-sm text-zinc-800 dark:text-zinc-200">{dateUtils.formatUTCtoLocalDateString(row.fecha)}</span>
+          <span className="text-[10px] text-zinc-400">{dateUtils.formatUTCtoLocalTimeString(row.fecha)}</span>
         </div>
       )
     },
@@ -247,7 +240,7 @@ export function Compras() {
           <div>
             <p className="text-xs text-zinc-500 dark:text-zinc-400">Compras del Mes</p>
             <p suppressHydrationWarning className="text-lg font-bold text-zinc-800 dark:text-white">
-              {purchasesRes.data.filter((p: any) => new Date(p.fecha).getMonth() === new Date().getMonth()).length}
+              {purchasesRes.data.filter((p: any) => dateUtils.isCurrentMonthUTC(p.fecha)).length}
             </p>
           </div>
         </div>

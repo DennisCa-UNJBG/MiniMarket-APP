@@ -38,7 +38,6 @@ interface ClientesState {
     email: string;
   };
   isSubmitted: boolean;
-  isQueryingAPI: boolean;
   editingId: number | null;
   // Historial
   showHistoryModal: boolean;
@@ -55,7 +54,6 @@ type ClientesAction =
   | { type: 'SET_PAGE_SIZE'; payload: number }
   | { type: 'SET_FORM'; payload: Partial<ClientesState['form']> | ((prev: ClientesState['form']) => ClientesState['form']) }
   | { type: 'SET_IS_SUBMITTED'; payload: boolean }
-  | { type: 'SET_IS_QUERYING_API'; payload: boolean }
   | { type: 'SET_EDITING_ID'; payload: number | null }
   | { type: 'RESET_FORM' }
   // Historial
@@ -84,8 +82,6 @@ function clientesReducer(state: ClientesState, action: ClientesAction): Clientes
       };
     case 'SET_IS_SUBMITTED':
       return { ...state, isSubmitted: action.payload };
-    case 'SET_IS_QUERYING_API':
-      return { ...state, isQueryingAPI: action.payload };
     case 'SET_EDITING_ID':
       return { ...state, editingId: action.payload };
     case 'RESET_FORM':
@@ -93,7 +89,6 @@ function clientesReducer(state: ClientesState, action: ClientesAction): Clientes
         ...state,
         form: { nombre: '', dni_ruc: '', telefono: '', email: '' },
         isSubmitted: false,
-        isQueryingAPI: false,
         editingId: null
       };
     case 'SET_SHOW_HISTORY_MODAL':
@@ -118,7 +113,6 @@ const initialClientesState: ClientesState = {
   pageSize: 6,
   form: { nombre: '', dni_ruc: '', telefono: '', email: '' },
   isSubmitted: false,
-  isQueryingAPI: false,
   editingId: null,
   showHistoryModal: false,
   selectedHistoryClient: null,
@@ -140,7 +134,6 @@ export function Clientes() {
     pageSize,
     form,
     isSubmitted,
-    isQueryingAPI,
     editingId,
     showHistoryModal,
     selectedHistoryClient,
@@ -151,7 +144,10 @@ export function Clientes() {
 
   const setShowModal = (payload: boolean) => dispatch({ type: 'SET_SHOW_MODAL', payload });
   const setSearch = (payload: string) => dispatch({ type: 'SET_SEARCH', payload });
-  const setPage = (payload: number) => dispatch({ type: 'SET_PAGE', payload });
+  const setPage = (payload: number | ((prev: number) => number)) => {
+    const nextVal = typeof payload === 'function' ? payload(state.page) : payload;
+    dispatch({ type: 'SET_PAGE', payload: nextVal });
+  };
   const setPageSize = (payload: number) => dispatch({ type: 'SET_PAGE_SIZE', payload });
   const setForm = (payload: Partial<ClientesState['form']> | ((prev: ClientesState['form']) => ClientesState['form'])) => dispatch({ type: 'SET_FORM', payload });
   const setIsSubmitted = (payload: boolean) => dispatch({ type: 'SET_IS_SUBMITTED', payload });
@@ -231,13 +227,13 @@ export function Clientes() {
     }
   });
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setIsSubmitted(true);
     if (!isValid) {
       notificationService.warning('Campos incompletos', 'Por favor, corrige los errores en el formulario.');
       return;
     }
-    saveMutation.mutate(form);
+    await saveMutation.mutateAsync(form);
   };
 
   const handleEdit = (c: Cliente) => {
@@ -265,17 +261,40 @@ export function Clientes() {
       return;
     }
 
-    dispatch({ type: 'SET_IS_QUERYING_API', payload: true });
     try {
       const res = await perudevsService.queryDocument(doc);
       setForm({ nombre: res.nombre });
       notificationService.success('Consulta exitosa', `Encontrado: ${res.nombre}`);
     } catch (err: any) {
       notificationService.error('Error de consulta', err.message || 'No se pudo obtener la información del cliente.');
-    } finally {
-      dispatch({ type: 'SET_IS_QUERYING_API', payload: false });
     }
   };
+
+  // Generar botones de paginación en una sola pasada para evitar doble iteración (.filter().map())
+  const pageButtons: React.ReactNode[] = [];
+  let lastAddedPage = 0;
+  for (let i = 1; i <= totalPages; i++) {
+    if (Math.abs(i - page) <= 2 || i === 1 || i === totalPages) {
+      const showEllipsis = lastAddedPage > 0 && i - lastAddedPage > 1;
+      pageButtons.push(
+        <div key={i} className="flex items-center">
+          {showEllipsis && <span className="px-1 text-zinc-400 dark:text-zinc-600">...</span>}
+          <button
+            onClick={() => setPage(i)}
+            className={[
+              'min-w-[30px] h-[30px] px-1 text-xs font-medium rounded-lg transition-colors',
+              i === page
+                ? 'bg-blue-600 text-white'
+                : 'text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700/50 hover:text-blue-600 dark:hover:text-blue-400',
+            ].join(' ')}
+          >
+            {i}
+          </button>
+        </div>
+      );
+      lastAddedPage = i;
+    }
+  }
 
   return (
     <div className="space-y-5">
@@ -315,7 +334,7 @@ export function Clientes() {
       {isLoading ? (
         <div className="h-64 flex flex-col items-center justify-center gap-2 bg-white dark:bg-zinc-800 rounded-2xl border border-zinc-100 dark:border-zinc-700 shadow-sm">
           <Loader2 className="size-8 text-blue-600 animate-spin" />
-          <p className="text-xs text-zinc-400 dark:text-zinc-500">Cargando clientes...</p>
+          <p className="text-xs text-zinc-400 dark:text-zinc-500">Cargando clientes…</p>
         </div>
       ) : clients.length === 0 ? (
         <div className="bg-white dark:bg-zinc-800 rounded-2xl border border-zinc-100 dark:border-zinc-700 shadow-sm">
@@ -394,7 +413,7 @@ export function Clientes() {
                 </button>
 
                 <button
-                  onClick={() => setPage(page - 1)}
+                  onClick={() => setPage(prev => prev - 1)}
                   disabled={page === 1}
                   className="p-1.5 rounded-lg text-zinc-400 dark:text-zinc-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-zinc-100 dark:hover:bg-zinc-700/50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                   aria-label="Página anterior"
@@ -402,30 +421,10 @@ export function Clientes() {
                   <ChevronLeft size={15} />
                 </button>
 
-                {Array.from({ length: totalPages }, (_, i) => i + 1)
-                  .filter((n) => Math.abs(n - page) <= 2 || n === 1 || n === totalPages)
-                  .map((n, idx, arr) => {
-                    const showEllipsis = idx > 0 && n - arr[idx - 1] > 1;
-                    return (
-                      <div key={n} className="flex items-center">
-                        {showEllipsis && <span className="px-1 text-zinc-400 dark:text-zinc-600">...</span>}
-                        <button
-                          onClick={() => setPage(n)}
-                          className={[
-                            'min-w-[30px] h-[30px] px-1 text-xs font-medium rounded-lg transition-colors',
-                            n === page
-                              ? 'bg-blue-600 text-white'
-                              : 'text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700/50 hover:text-blue-600 dark:hover:text-blue-400',
-                          ].join(' ')}
-                        >
-                          {n}
-                        </button>
-                      </div>
-                    );
-                  })}
+                {pageButtons}
 
                 <button
-                  onClick={() => setPage(page + 1)}
+                  onClick={() => setPage(prev => prev + 1)}
                   disabled={page === totalPages}
                   className="p-1.5 rounded-lg text-zinc-400 dark:text-zinc-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-zinc-100 dark:hover:bg-zinc-700/50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                   aria-label="Página siguiente"
@@ -452,8 +451,6 @@ export function Clientes() {
         editingId={editingId}
         form={form}
         isSubmitted={isSubmitted}
-        isQueryingAPI={isQueryingAPI}
-        isSaving={saveMutation.isPending}
         errors={errors}
         setForm={(payload) => setForm(payload)}
         onClose={() => {

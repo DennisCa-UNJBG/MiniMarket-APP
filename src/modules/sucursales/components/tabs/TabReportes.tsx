@@ -163,7 +163,7 @@ export const TabReportes: React.FC<TabReportesProps> = ({
         {/* Gráfico de Barras */}
         <div className="bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 p-6 rounded-2xl flex flex-col justify-between shadow-sm">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-bold text-zinc-900 dark:text-white">Ingresos del Período</h3>
+            <h3 className="text-lg font-semibold text-zinc-900 dark:text-white">Ingresos del Período</h3>
             <span className="bg-blue-500/20 text-[#1f5eff] text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider">
               Historial
             </span>
@@ -212,13 +212,13 @@ export const TabReportes: React.FC<TabReportesProps> = ({
         {/* Ranking de Productos */}
         <div className="bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 p-6 rounded-2xl flex flex-col justify-between shadow-sm">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-bold text-zinc-900 dark:text-white">Ranking de Productos</h3>
+            <h3 className="text-lg font-semibold text-zinc-900 dark:text-white">Ranking de Productos</h3>
             <span className="bg-emerald-500/20 text-[#10b981] text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider">
               Top 5 Vendidos
             </span>
           </div>
 
-          <div className="space-y-6 flex-grow flex flex-col justify-center">
+          <div className="gap-y-6 flex-grow flex flex-col justify-center">
             {topProductos.length === 0 ? (
               <div className="text-center py-10">
                 <p className="text-zinc-500 dark:text-zinc-400 text-sm">No hay datos de ventas en este período.</p>
@@ -227,10 +227,10 @@ export const TabReportes: React.FC<TabReportesProps> = ({
               topProductos.map((prod: any, index: number) => {
                 const percentage = maxQuantity > 0 ? (prod.total_cantidad / maxQuantity) * 100 : 0;
                 return (
-                  <div key={index} className="space-y-2">
+                  <div key={prod.producto_nombre} className="space-y-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <span className="w-5 h-5 bg-[#f59e0b] text-white rounded-full flex items-center justify-center text-xs font-bold font-mono">
+                        <span className="size-5 bg-[#f59e0b] text-white rounded-full flex items-center justify-center text-xs font-bold font-mono">
                           {index + 1}
                         </span>
                         <span className="text-sm font-bold text-zinc-800 dark:text-zinc-100">{prod.producto_nombre}</span>

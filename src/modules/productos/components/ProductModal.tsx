@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Scale, Search, AlertTriangle } from 'lucide-react';
 import { Modal } from '../../../shared/components/ui/Modal';
 import { Button } from '../../../shared/components/ui/Button';
@@ -14,14 +15,10 @@ interface ProductModalProps {
   errors: { name: string | null; sellPrice: string | null; minStock: string | null; categoryId: string | null; unitId: string | null };
   unitSearch: string;
   setUnitSearch: (val: string) => void;
-  showUnitList: boolean;
-  setShowUnitList: (val: boolean) => void;
   units: any[];
   filteredUnits: any[];
   catSearch: string;
   setCatSearch: (val: string) => void;
-  showCatList: boolean;
-  setShowCatList: (val: boolean) => void;
   categories: Category[];
   filteredCategories: any[];
   onSave: () => void;
@@ -38,19 +35,17 @@ export function ProductModal({
   errors,
   unitSearch,
   setUnitSearch,
-  showUnitList,
-  setShowUnitList,
   units,
   filteredUnits,
   catSearch,
   setCatSearch,
-  showCatList,
-  setShowCatList,
   categories,
   filteredCategories,
   onSave,
   isPending
 }: ProductModalProps) {
+  const [showUnitList, setShowUnitList] = useState(false);
+  const [showCatList, setShowCatList] = useState(false);
   const inputCls = 'w-full px-3 py-2 text-sm border border-zinc-200 dark:border-zinc-600 rounded-lg bg-zinc-50 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-400 transition';
 
   if (!isOpen) return null;

@@ -5,6 +5,7 @@ import { Button } from '../../../../shared/components/ui/Button';
 import { Tooltip } from '../../../../shared/components/ui/Tooltip';
 import { EmptyState } from '../../../../shared/components/ui/EmptyState';
 import { AjustarStockModal } from '../AjustarStockModal';
+import { dateUtils } from '../../../../shared/lib/dateUtils';
 
 interface TabStockProps {
   sucursalCodigo: string;
@@ -79,7 +80,7 @@ export const TabStock: React.FC<TabStockProps> = ({
       header: 'Última Actualización',
       render: (row) => (
         <span suppressHydrationWarning className="text-xs text-zinc-400">
-          {row.ultima_actualizacion ? new Date(row.ultima_actualizacion).toLocaleString() : 'Sin fecha'}
+          {row.ultima_actualizacion ? dateUtils.formatUTCtoLocalString(row.ultima_actualizacion) : 'Sin fecha'}
         </span>
       )
     },

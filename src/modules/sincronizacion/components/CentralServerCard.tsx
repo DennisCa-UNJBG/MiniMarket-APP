@@ -6,6 +6,7 @@ import { notificationService } from '../../../shared/lib/notifications';
 import { Badge } from '../../../shared/components/ui/Badge';
 import { Button } from '../../../shared/components/ui/Button';
 import { sucursalService } from '../../sucursales/Service';
+import { dateUtils } from '../../../shared/lib/dateUtils';
 
 export function CentralServerCard() {
   const queryClient = useQueryClient();
@@ -43,12 +44,12 @@ export function CentralServerCard() {
   const formattedSucursales = useMemo(() => {
     return sucursales.map(s => {
       const isOnline = s.ultima_sincronizacion
-        ? (new Date().getTime() - new Date(s.ultima_sincronizacion).getTime() < 300000)
+        ? dateUtils.isRecentUTC(s.ultima_sincronizacion)
         : false;
       return {
         ...s,
         fechaSincronizacion: s.ultima_sincronizacion
-          ? new Date(s.ultima_sincronizacion).toLocaleString()
+          ? dateUtils.formatUTCtoLocalString(s.ultima_sincronizacion)
           : 'Nunca sincronizado',
         isOnline
       };
@@ -116,6 +117,7 @@ export function CentralServerCard() {
                 <span className="text-[10px] text-emerald-650 dark:text-emerald-450">Levanta el servidor HTTP de forma automática al abrir el sistema.</span>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
+                <span className="sr-only">Autoiniciar servidor central con la aplicación</span>
                 <input
                   type="checkbox"
                   checked={autoStartEnabled}

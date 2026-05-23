@@ -19,10 +19,12 @@ function Field({
   placeholder?: string;
   type?: string;
 }) {
+  const inputId = `business-field-${label.toLowerCase().replace(/[^a-z0-9]/g, '-')}`;
   return (
     <div className="flex flex-col gap-1.5">
-      <label className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">{label}</label>
+      <label htmlFor={inputId} className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">{label}</label>
       <input
+        id={inputId}
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -95,7 +97,7 @@ export function BusinessSection({ initialData }: { initialData: DatosNegocio }) 
             <div className="sm:col-span-2">
               <div className="flex flex-col gap-1.5">
                 <div className="flex items-center justify-between">
-                  <label className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">
+                  <label htmlFor="api-key-perudevs" className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">
                     Clave API PeruDevs (Consulta RUC/DNI)
                   </label>
                   {hasKey ? (
@@ -110,6 +112,7 @@ export function BusinessSection({ initialData }: { initialData: DatosNegocio }) 
                 </div>
                 <div className="relative">
                   <input
+                    id="api-key-perudevs"
                     type={showPassword ? "text" : "password"}
                     value={apiKey}
                     onChange={(e) => setApiKey(e.target.value)}

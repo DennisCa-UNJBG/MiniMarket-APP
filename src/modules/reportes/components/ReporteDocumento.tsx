@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { type TopProduct, type MonthlyRevenue, type ReportKPIs } from '../Service';
 import { VentasBarChart, RankingProductos } from './ReportComponents';
 import { negocioService } from '../../configuracion/negocioService';
+import { dateUtils } from '../../../shared/lib/dateUtils';
 
 interface ReporteDocumentoProps {
   id: string;
@@ -34,8 +35,8 @@ export const ReporteDocumento: React.FC<ReporteDocumentoProps> = ({ id, kpis, to
             {negocio?.ruc ? `RUC: ${negocio.ruc}` : 'Sistema de Inventario'}
           </p>
           {startDate && endDate && (
-            <p className="text-xs text-blue-600 font-bold mt-1">
-              PERÍODO: {new Date(startDate + 'T00:00:00').toLocaleDateString('es-PE')} al {new Date(endDate + 'T00:00:00').toLocaleDateString('es-PE')}
+            <p suppressHydrationWarning className="text-xs text-blue-600 font-bold mt-1">
+              PERÍODO: {dateUtils.formatLocalISOToLocalDateString(startDate)} al {dateUtils.formatLocalISOToLocalDateString(endDate)}
             </p>
           )}
           <p className="text-[10px] text-zinc-400 font-medium">
@@ -44,7 +45,7 @@ export const ReporteDocumento: React.FC<ReporteDocumentoProps> = ({ id, kpis, to
         </div>
         <div className="text-right">
           <p className="text-sm font-bold text-zinc-400">FECHA DE EMISIÓN</p>
-          <p suppressHydrationWarning className="text-lg font-black">{new Date().toLocaleDateString('es-PE', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+          <p suppressHydrationWarning className="text-lg font-black">{dateUtils.formatToLongDateString()}</p>
         </div>
       </div>
 

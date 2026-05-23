@@ -8,10 +8,10 @@ import { useSync } from '../../sincronizacion/hooks/useSync';
 import { notificationService } from '../../../shared/lib/notifications';
 import { Tooltip } from '../../../shared/components/ui/Tooltip';
 import { Button } from '../../../shared/components/ui/Button';
+import { dateUtils } from '../../../shared/lib/dateUtils';
 
 const formatDateTimeLocal = (dateStr: string) => {
-  if (!dateStr) return '';
-  return new Date(dateStr).toLocaleString();
+  return dateUtils.formatUTCtoLocalString(dateStr);
 };
 
 const DEFAULT_SUCURSAL: SucursalConfig = { sucursal_id: '', nombre_sucursal: '', api_url_central: '' };

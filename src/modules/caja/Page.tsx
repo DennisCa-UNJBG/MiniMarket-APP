@@ -18,16 +18,9 @@ import { Badge } from '../../shared/components/ui/Badge';
 import { Tooltip } from '../../shared/components/ui/Tooltip';
 import { Button } from '../../shared/components/ui/Button';
 import { notificationService } from '../../shared/lib/notifications';
+import { dateUtils } from '../../shared/lib/dateUtils';
 
-const formatDate = (dateStr: string) => {
-  if (!dateStr) return '';
-  return new Date(dateStr + " UTC").toLocaleDateString();
-};
 
-const formatTime = (dateStr: string) => {
-  if (!dateStr) return '';
-  return new Date(dateStr + " UTC").toLocaleTimeString();
-};
 
 export function Caja() {
   const queryClient = useQueryClient();
@@ -127,8 +120,8 @@ export function Caja() {
       header: 'Apertura',
       render: (row) => (
         <div className="flex flex-col">
-          <span className="text-xs font-bold text-zinc-700 dark:text-zinc-200">{formatDate(row.fecha_apertura)}</span>
-          <span className="text-[10px] text-zinc-400">{formatTime(row.fecha_apertura)}</span>
+          <span className="text-xs font-bold text-zinc-700 dark:text-zinc-200">{dateUtils.formatUTCtoLocalDateString(row.fecha_apertura)}</span>
+          <span className="text-[10px] text-zinc-400">{dateUtils.formatUTCtoLocalTimeString(row.fecha_apertura)}</span>
         </div>
       )
     },
@@ -137,8 +130,8 @@ export function Caja() {
       header: 'Cierre',
       render: (row) => row.fecha_cierre ? (
         <div className="flex flex-col">
-          <span className="text-xs font-bold text-zinc-700 dark:text-zinc-200">{formatDate(row.fecha_cierre)}</span>
-          <span className="text-[10px] text-zinc-400">{formatTime(row.fecha_cierre)}</span>
+          <span className="text-xs font-bold text-zinc-700 dark:text-zinc-200">{dateUtils.formatUTCtoLocalDateString(row.fecha_cierre)}</span>
+          <span className="text-[10px] text-zinc-400">{dateUtils.formatUTCtoLocalTimeString(row.fecha_cierre)}</span>
         </div>
       ) : <span className="text-[10px] italic text-zinc-300">En curso…</span>
     },
@@ -168,7 +161,7 @@ export function Caja() {
       align: 'right',
       render: (row) => {
         if (row.estado !== 'cerrada' || row.monto_final === undefined || row.monto_final === null) {
-          return <span className="text-[10px] italic text-blue-500">En curso...</span>;
+          return <span className="text-[10px] italic text-blue-500">En curso…</span>;
         }
         const diferencia = row.monto_final - row.total_monto_esperado;
 

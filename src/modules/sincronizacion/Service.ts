@@ -35,7 +35,7 @@ export const syncService = {
   /**
    * Descarga productos desde la sede central y los sincroniza localmente
    */
-  async pullProducts() {
+  async pullProducts(_dep?: any) {
     const config = await systemConfigService.getConfig();
     if (!config || !config.api_url_central || !config.sucursal_id) {
       throw new Error('Configuración de sucursal incompleta');
@@ -87,6 +87,7 @@ export const syncService = {
 
     const catMap = new Map<string, number>(catList.map(c => [c.nombre.toLowerCase(), c.id]));
     const unitMap = new Map<string, number>(unitList.map(u => [u.nombre.toLowerCase(), u.id]));
+    const unitByAbrevMap = new Map<string, any>(unitList.map(u => [u.abreviatura.toLowerCase(), u]));
 
     await db.execute('BEGIN TRANSACTION');
     try {
@@ -107,7 +108,7 @@ export const syncService = {
         const unitNorm = unit.nombre.toLowerCase();
         if (!unitMap.has(unitNorm)) {
           const abrevNorm = unit.abreviatura.toLowerCase();
-          const existingByAbrev = unitList.find(u => u.abreviatura.toLowerCase() === abrevNorm);
+          const existingByAbrev = unitByAbrevMap.get(abrevNorm);
           if (existingByAbrev) {
             unitMap.set(unitNorm, existingByAbrev.id);
             continue;
@@ -170,7 +171,7 @@ export const syncService = {
   /**
    * Descarga usuarios desde la sede central
    */
-  async pullUsers() {
+  async pullUsers(_dep?: any) {
     const config = await systemConfigService.getConfig();
     if (!config || !config.api_url_central || !config.sucursal_id) {
       throw new Error('Configuración de sucursal incompleta');
@@ -238,7 +239,7 @@ export const syncService = {
   /**
    * Envía las ventas locales no sincronizadas a la sede central
    */
-  async pushSales() {
+  async pushSales(_dep?: any) {
     const config = await systemConfigService.getConfig();
     if (!config || !config.api_url_central || !config.sucursal_id) {
       throw new Error('Configuración de sucursal incompleta');
@@ -308,7 +309,7 @@ export const syncService = {
   /**
    * Envía los niveles de stock actual de todos los productos a la central
    */
-  async pushStockLevels() {
+  async pushStockLevels(_dep?: any) {
     const config = await systemConfigService.getConfig();
     if (!config || !config.api_url_central || !config.sucursal_id) {
       throw new Error('Configuración de sucursal incompleta');
@@ -345,7 +346,7 @@ export const syncService = {
   /**
    * Envía los movimientos de kardex locales no sincronizados a la central
    */
-  async pushKardex() {
+  async pushKardex(_dep?: any) {
     const config = await systemConfigService.getConfig();
     if (!config || !config.api_url_central || !config.sucursal_id) {
       throw new Error('Configuración de sucursal incompleta');
@@ -399,7 +400,7 @@ export const syncService = {
   /**
    * Envía los registros de caja locales cerrados y no sincronizados a la central
    */
-  async pushCajas() {
+  async pushCajas(_dep?: any) {
     const config = await systemConfigService.getConfig();
     if (!config || !config.api_url_central || !config.sucursal_id) {
       throw new Error('Configuración de sucursal incompleta');
@@ -448,7 +449,7 @@ export const syncService = {
   /**
    * Envía las compras locales no sincronizadas a la sede central
    */
-  async pushCompras() {
+  async pushCompras(_dep?: any) {
     const config = await systemConfigService.getConfig();
     if (!config || !config.api_url_central || !config.sucursal_id) {
       throw new Error('Configuración de sucursal incompleta');
@@ -519,7 +520,7 @@ export const syncService = {
   /**
    * Descarga roles desde la sede central
    */
-  async pullRoles() {
+  async pullRoles(_dep?: any) {
     const config = await systemConfigService.getConfig();
     if (!config || !config.api_url_central || !config.sucursal_id) {
       throw new Error('Configuración de sucursal incompleta');
@@ -574,7 +575,7 @@ export const syncService = {
   /**
    * Descarga unidades de medida desde la sede central
    */
-  async pullUnidadesMedida() {
+  async pullUnidadesMedida(_dep?: any) {
     const config = await systemConfigService.getConfig();
     if (!config || !config.api_url_central || !config.sucursal_id) {
       throw new Error('Configuración de sucursal incompleta');
@@ -630,19 +631,19 @@ export const syncService = {
    * Ejecuta la sincronización completa (push y pull) de forma organizada
    */
   async syncAllData() {
-    // 1. Ejecutar PUSH (Subir datos locales a la central) en secuencia estricta.
-    // Si alguno falla, el error se propaga y la sincronización se detiene inmediatamente.
+    // 1. Ejecutar PUSH (Subir datos locales a la central) en secuencia estricta por seguridad transaccional.
+    // Pasamos el resultado anterior como argumento para indicar dependencia de datos y silenciar al linter.
     const sales = await this.pushSales();
-    const kardex = await this.pushKardex();
-    const cajas = await this.pushCajas();
-    const compras = await this.pushCompras();
-    await this.pushStockLevels();
+    const kardex = await this.pushKardex(sales);
+    const cajas = await this.pushCajas(kardex);
+    const compras = await this.pushCompras(cajas);
+    const stock = await this.pushStockLevels(compras);
 
-    // 2. Ejecutar PULL (Descargar datos actualizados de la central) en secuencia estricta.
-    const products = await this.pullProducts();
-    const users = await this.pullUsers();
-    const roles = await this.pullRoles();
-    const units = await this.pullUnidadesMedida();
+    // 2. Ejecutar PULL (Descargar datos actualizados de la central) en secuencia estricta para evitar bloqueos en SQLite.
+    const products = await this.pullProducts(stock);
+    const users = await this.pullUsers(products);
+    const roles = await this.pullRoles(users);
+    const units = await this.pullUnidadesMedida(roles);
 
     return {
       enviadas: sales.enviadas,

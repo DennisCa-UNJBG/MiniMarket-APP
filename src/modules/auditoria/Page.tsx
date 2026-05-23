@@ -12,16 +12,9 @@ import { logService } from '../../shared/lib/logService';
 import { PageHeader } from '../../shared/components/ui/PageHeader';
 import { DataTable, type TableColumn } from '../../shared/components/ui/DataTable';
 import { Badge } from '../../shared/components/ui/Badge';
+import { dateUtils } from '../../shared/lib/dateUtils';
 
-const formatDate = (dateStr: string) => {
-  if (!dateStr) return '';
-  return new Date(dateStr + " UTC").toLocaleDateString();
-};
 
-const formatTime = (dateStr: string) => {
-  if (!dateStr) return '';
-  return new Date(dateStr + " UTC").toLocaleTimeString();
-};
 
 interface AuditoriaState {
   search: string;
@@ -104,10 +97,10 @@ export function Auditoria() {
       render: (row) => (
         <div className="flex flex-col">
           <span className="text-xs font-bold text-zinc-700 dark:text-zinc-200 flex items-center gap-1">
-            <Calendar size={10} /> {formatDate(row.fecha)}
+            <Calendar size={10} /> {dateUtils.formatUTCtoLocalDateString(row.fecha)}
           </span>
           <span className="text-[10px] text-zinc-400 flex items-center gap-1">
-            <Info size={10} /> {formatTime(row.fecha)}
+            <Info size={10} /> {dateUtils.formatUTCtoLocalTimeString(row.fecha)}
           </span>
         </div>
       )

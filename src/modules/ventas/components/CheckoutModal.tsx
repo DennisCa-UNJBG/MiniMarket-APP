@@ -229,7 +229,7 @@ export function CheckoutModal({
                 onChange={(e) => {
                   dispatch({ type: 'SET_ASSOCIATE_CLIENT', payload: e.target.checked });
                 }}
-                className="w-4 h-4 rounded text-blue-600 border-zinc-300 focus:ring-blue-500 dark:bg-zinc-700 dark:border-zinc-600 cursor-pointer"
+                className="size-4 rounded text-blue-600 border-zinc-300 focus:ring-blue-500 dark:bg-zinc-700 dark:border-zinc-600 cursor-pointer"
               />
               <label htmlFor="checkbox-asociar-cliente" className="text-sm font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer select-none">
                 Asociar venta a un cliente
@@ -330,8 +330,8 @@ export function CheckoutModal({
 
           {/* Vuelto / Estado del Pago */}
           <div className={`p-4 rounded-xl flex justify-between items-center transition-colors ${paidNumber >= roundedTotal
-              ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
-              : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400 border border-zinc-100 dark:border-zinc-800'
+            ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
+            : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400 border border-zinc-100 dark:border-zinc-800'
             }`}>
             <span className="font-semibold">{paidNumber >= roundedTotal ? 'Vuelto:' : 'Pendiente:'}</span>
             <span className="text-2xl font-black">S/ {Math.abs(change).toFixed(2)}</span>

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Loader2, Search } from 'lucide-react';
 import { Modal } from '../../../shared/components/ui/Modal';
 import { Button } from '../../../shared/components/ui/Button';
@@ -12,16 +13,14 @@ interface ClienteFormModalProps {
     email: string;
   };
   isSubmitted: boolean;
-  isQueryingAPI: boolean;
-  isSaving: boolean;
   errors: {
     nombre: string | null;
     dni_ruc: string | null;
   };
   setForm: (payload: Partial<ClienteFormModalProps['form']>) => void;
   onClose: () => void;
-  onConsultarAPI: () => void;
-  onSave: () => void;
+  onConsultarAPI: () => Promise<void> | void;
+  onSave: () => Promise<void> | void;
 }
 
 export function ClienteFormModal({
@@ -29,15 +28,34 @@ export function ClienteFormModal({
   editingId,
   form,
   isSubmitted,
-  isQueryingAPI,
-  isSaving,
   errors,
   setForm,
   onClose,
   onConsultarAPI,
   onSave,
 }: ClienteFormModalProps) {
+  const [isQueryingAPI, setIsQueryingAPI] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
   if (!showModal) return null;
+
+  const handleConsultar = async () => {
+    setIsQueryingAPI(true);
+    try {
+      await onConsultarAPI();
+    } finally {
+      setIsQueryingAPI(false);
+    }
+  };
+
+  const handleGuardar = async () => {
+    setIsSaving(true);
+    try {
+      await onSave();
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
     <Modal
@@ -60,7 +78,7 @@ export function ClienteFormModal({
             {!editingId && (
               <Button
                 type="button"
-                onClick={onConsultarAPI}
+                onClick={handleConsultar}
                 disabled={isQueryingAPI}
                 className="px-3"
                 variant="primary"
@@ -123,10 +141,11 @@ export function ClienteFormModal({
         <Button variant="secondary" onClick={onClose}>
           Cancelar
         </Button>
-        <Button onClick={onSave} disabled={isSaving}>
+        <Button onClick={handleGuardar} disabled={isSaving}>
           {isSaving ? 'Guardando...' : 'Guardar Cliente'}
         </Button>
       </div>
     </Modal>
   );
 }
+

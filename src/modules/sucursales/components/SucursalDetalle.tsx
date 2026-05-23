@@ -13,6 +13,7 @@ import { Badge } from '../../../shared/components/ui/Badge';
 import { Card } from '../../../shared/components/ui/Card';
 import { Button } from '../../../shared/components/ui/Button';
 import { useSucursalDetalle } from '../hooks/useSucursalDetalle';
+import { dateUtils } from '../../../shared/lib/dateUtils';
 
 // Subcomponentes modularizados
 import { TabStock } from './tabs/TabStock';
@@ -68,8 +69,7 @@ export function SucursalDetalle({ sucursal, onBack }: SucursalDetalleProps) {
     if (estado !== 'activo') return { label: 'DESACTIVADO', variant: 'gray' as const };
     if (!lastSync) return { label: 'NUNCA', variant: 'gray' as const };
 
-    const diff = new Date().getTime() - new Date(lastSync).getTime();
-    if (diff < 300000) return { label: 'EN LÍNEA', variant: 'emerald' as const };
+    if (dateUtils.isRecentUTC(lastSync)) return { label: 'EN LÍNEA', variant: 'emerald' as const };
     return { label: 'DESCONECTADO', variant: 'amber' as const };
   };
 
@@ -99,7 +99,7 @@ export function SucursalDetalle({ sucursal, onBack }: SucursalDetalleProps) {
           </Button>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-2xl font-bold text-zinc-800 dark:text-white tracking-tight">
+              <h2 className="text-2xl font-semibold text-zinc-800 dark:text-white tracking-tight">
                 {sucursal.nombre}
               </h2>
               <Badge label={currentStatus.label} variant={currentStatus.variant} />
@@ -117,7 +117,7 @@ export function SucursalDetalle({ sucursal, onBack }: SucursalDetalleProps) {
         <Card className="md:col-span-1 border border-zinc-100 dark:border-zinc-800">
           <Card.Header className="flex items-center gap-2 py-3 bg-zinc-50/50 dark:bg-zinc-900/10">
             <Building2 size={16} className="text-blue-500" />
-            <h3 className="text-xs font-black uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
               Datos de Conexión
             </h3>
           </Card.Header>
@@ -133,7 +133,7 @@ export function SucursalDetalle({ sucursal, onBack }: SucursalDetalleProps) {
             <div>
               <span className="text-[10px] font-semibold text-zinc-400 uppercase tracking-widest block">Última Sincronización</span>
               <span suppressHydrationWarning className="text-xs text-zinc-600 dark:text-zinc-400 font-semibold">
-                {sucursal.ultima_sincronizacion ? new Date(sucursal.ultima_sincronizacion).toLocaleString() : 'Nunca ha sincronizado'}
+                {sucursal.ultima_sincronizacion ? dateUtils.formatUTCtoLocalString(sucursal.ultima_sincronizacion) : 'Nunca ha sincronizado'}
               </span>
             </div>
           </Card.Body>

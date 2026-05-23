@@ -114,7 +114,7 @@ export function Dashboard() {
       return {
         dia: day,
         total: match ? match.total : 0,
-        diaNombre: new Date(day + " UTC").toLocaleDateString('es-PE', { weekday: 'short' })
+        diaNombre: dateUtils.getShortWeekday(day)
       };
     });
   }, [rawChart]);

@@ -16,36 +16,15 @@ import { ReporteDocumento } from './components/ReporteDocumento';
 import { VentasBarChart, RankingProductos } from './components/ReportComponents';
 import { logService } from '../../shared/lib/logService';
 import { useAuth } from '../../shared/contexts/AuthContext';
+import { dateUtils } from '../../shared/lib/dateUtils';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
 export function Reportes() {
   const { user } = useAuth();
 
-  const getFirstDayOfMonth = () => {
-    const d = new Date();
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    return `${year}-${month}-01`;
-  };
-
-  const getTodayDate = () => {
-    const d = new Date();
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
-
-  const formatDateStr = (d: Date) => {
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
-
-  const [startDate, setStartDate] = useState(getFirstDayOfMonth());
-  const [endDate, setEndDate] = useState(getTodayDate());
+  const [startDate, setStartDate] = useState(() => dateUtils.getFirstDayOfMonthLocal());
+  const [endDate, setEndDate] = useState(() => dateUtils.getTodayLocal());
 
   // Queries
   const { data: topProducts = [] } = useQuery({
@@ -142,16 +121,16 @@ export function Reportes() {
         {/* Accesos Rápidos */}
         <div className="flex flex-wrap gap-2">
           {[
-            { label: 'Hoy', getDates: () => ({ start: getTodayDate(), end: getTodayDate() }) },
+            { label: 'Hoy', getDates: () => ({ start: dateUtils.getTodayLocal(), end: dateUtils.getTodayLocal() }) },
             {
               label: 'Últimos 7 Días', getDates: () => {
                 const end = new Date();
                 const start = new Date();
                 start.setDate(end.getDate() - 6);
-                return { start: formatDateStr(start), end: formatDateStr(end) };
+                return { start: dateUtils.formatToLocalISO(start), end: dateUtils.formatToLocalISO(end) };
               }
             },
-            { label: 'Este Mes', getDates: () => ({ start: getFirstDayOfMonth(), end: getTodayDate() }) },
+            { label: 'Este Mes', getDates: () => ({ start: dateUtils.getFirstDayOfMonthLocal(), end: dateUtils.getTodayLocal() }) },
             {
               label: 'Mes Anterior', getDates: () => {
                 const d = new Date();
@@ -160,7 +139,7 @@ export function Reportes() {
                 const month = d.getMonth();
                 const start = new Date(year, month, 1);
                 const end = new Date(year, month + 1, 0);
-                return { start: formatDateStr(start), end: formatDateStr(end) };
+                return { start: dateUtils.formatToLocalISO(start), end: dateUtils.formatToLocalISO(end) };
               }
             }
           ].map((opt) => {

@@ -70,5 +70,61 @@ export const dateUtils = {
     if (!utcString) return '';
     const date = new Date(utcString.includes('UTC') ? utcString : utcString + ' UTC');
     return date.toLocaleDateString();
+  },
+
+  /**
+   * Obtiene el primer día del mes actual en formato local 'YYYY-MM-DD'.
+   */
+  getFirstDayOfMonthLocal(): string {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+  },
+
+  /**
+   * Formatea un string de fecha local ISO 'YYYY-MM-DD' a formato de fecha local legible.
+   */
+  formatLocalISOToLocalDateString(isoString: string): string {
+    if (!isoString) return '';
+    const date = new Date(isoString + 'T00:00:00');
+    return date.toLocaleDateString('es-PE');
+  },
+
+  /**
+   * Formatea la fecha actual o una fecha dada a un formato largo legible en español.
+   */
+  formatToLongDateString(date: Date = new Date()): string {
+    return date.toLocaleDateString('es-PE', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric'
+    });
+  },
+
+  /**
+   * Determina si una fecha UTC de la base de datos es reciente (por debajo del límite de milisegundos indicado).
+   */
+  isRecentUTC(utcString: string | null, limitMs = 300000): boolean {
+    if (!utcString) return false;
+    const date = new Date(utcString.includes('UTC') ? utcString : utcString + ' UTC');
+    return (new Date().getTime() - date.getTime()) < limitMs;
+  },
+
+  /**
+   * Obtiene el nombre corto del día de la semana para un string de fecha local ISO 'YYYY-MM-DD'.
+   */
+  getShortWeekday(isoString: string): string {
+    if (!isoString) return '';
+    const date = new Date(isoString + 'T12:00:00Z');
+    return date.toLocaleDateString('es-PE', { weekday: 'short' });
+  },
+
+  /**
+   * Determina si una fecha UTC de la base de datos cae en el mes y año local actual.
+   */
+  isCurrentMonthUTC(utcString: string): boolean {
+    if (!utcString) return false;
+    const date = new Date(utcString.includes('UTC') ? utcString : utcString + ' UTC');
+    const now = new Date();
+    return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
   }
 };

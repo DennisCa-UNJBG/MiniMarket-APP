@@ -1,6 +1,7 @@
 import { createPortal } from 'react-dom';
 import { useQuery } from '@tanstack/react-query';
 import { negocioService } from '../../configuracion/negocioService';
+import { dateUtils } from '../../../shared/lib/dateUtils';
 
 interface VoucherProps {
   venta: any; // Cabecera de la venta
@@ -14,8 +15,8 @@ export function Voucher({ venta, detalles }: VoucherProps) {
   });
 
   // Extraemos y formateamos la fecha/hora para evitar cálculos en JSX y cumplir con buenas prácticas
-  const fechaStr = new Date(venta.fecha + " UTC").toLocaleDateString();
-  const horaStr = new Date(venta.fecha + " UTC").toLocaleTimeString();
+  const fechaStr = dateUtils.formatUTCtoLocalDateString(venta.fecha);
+  const horaStr = dateUtils.formatUTCtoLocalTimeString(venta.fecha);
 
   const voucherMarkup = (
     <div id="printable-voucher" className="hidden print:block font-mono text-black bg-white p-4 w-[80mm] mx-auto">
