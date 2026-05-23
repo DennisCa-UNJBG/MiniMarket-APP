@@ -1,7 +1,7 @@
 {
   "name": "minimarket-app",
   "private": true,
-  "version": "0.9.82",
+  "version": "0.9.83",
   "type": "module",
   "scripts": {
     "dev": "vite",

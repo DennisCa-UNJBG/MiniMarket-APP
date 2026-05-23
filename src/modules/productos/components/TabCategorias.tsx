@@ -12,6 +12,7 @@ import { Tooltip } from '../../../shared/components/ui/Tooltip';
 import { Button } from '../../../shared/components/ui/Button';
 import { Modal } from '../../../shared/components/ui/Modal';
 import { DataTable, type TableColumn } from '../../../shared/components/ui/DataTable';
+import { useAuth } from '../../../shared/contexts/AuthContext';
 
 const getRandomColor = () => {
   const letters = '0123456789ABCDEF';
@@ -24,6 +25,7 @@ const getRandomColor = () => {
 
 export function TabCategorias({ onUpdate }: { onUpdate: () => void }) {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState({ name: '', color: getRandomColor(), productCount: 0 });
@@ -38,7 +40,7 @@ export function TabCategorias({ onUpdate }: { onUpdate: () => void }) {
   const saveMutation = useMutation({
     mutationFn: async (payload: any) => {
       if (editingId) {
-        return categoriaService.update(editingId, payload.name, payload.color);
+        return categoriaService.update(editingId, payload.name, payload.color, user?.id || 1);
       } else {
         return categoriaService.create(payload.name, payload.color);
       }

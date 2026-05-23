@@ -108,33 +108,10 @@ export const productoService = {
         throw new Error('Configuración de sucursal incompleta. Configure la conexión a la sede central.');
       }
 
-      // Obtener el nombre de la categoría local para enviarla a la central
-      let categoriaNombre = '';
-      if (product.categoria_id) {
-        const catRow = await db.select<any[]>('SELECT nombre FROM categorias WHERE id = ?', [product.categoria_id]);
-        if (catRow.length > 0) {
-          categoriaNombre = catRow[0].nombre;
-        }
-      }
-
-      // Obtener nombre y abreviatura de la unidad local para enviarlos a la central
-      let unidadNombre = '';
-      let unidadAbreviatura = '';
-      if (product.unidad_id) {
-        const uRow = await db.select<any[]>(
-          'SELECT nombre, abreviatura FROM unidades_medida WHERE id = ?',
-          [product.unidad_id]
-        );
-        if (uRow.length > 0) {
-          unidadNombre = uRow[0].nombre;
-          unidadAbreviatura = uRow[0].abreviatura;
-        }
-      }
-
       // Enviar a la central — la central genera el código de barras
       let response: Response;
       try {
-        response = await fetch(`${config.api_url_central}/api/productos/crear-desde-sucursal`, {
+        response = await fetch(`${config.api_url_central}/api/productos`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -142,9 +119,8 @@ export const productoService = {
           },
           body: JSON.stringify({
             nombre: product.nombre,
-            categoria_nombre: categoriaNombre || null,
-            unidad_nombre: unidadNombre || null,
-            unidad_abreviatura: unidadAbreviatura || null,
+            categoria_id: product.categoria_id || null,
+            unidad_id: product.unidad_id || null,
             stock_minimo: product.stock_minimo,
             precio_compra: product.precio_compra || 0.0,
             precio_venta: product.precio_venta || 0.0
@@ -227,7 +203,15 @@ export const productoService = {
   async update(id: number, product: Omit<Product, 'id' | 'estado' | 'stock_actual'>, usuarioId: number): Promise<void> {
     const db = await getDb();
 
-    // Obtener precio anterior para el log
+    // 1. Verificar si este equipo está actuando como Sede Central
+    let isCentral = false;
+    try {
+      isCentral = await invoke<boolean>('is_server_running');
+    } catch (e) {
+      throw new Error('Error del sistema: No se pudo verificar si este equipo es la Sede Central. Reinicia la aplicación.');
+    }
+
+    // Obtener precio anterior para el log y comparación
     const oldPriceData = await db.select<any[]>(
       'SELECT precio_venta, precio_compra FROM precios_historial WHERE producto_id = ? AND activo = 1',
       [id]
@@ -235,45 +219,132 @@ export const productoService = {
     const oldVenta = oldPriceData[0]?.precio_venta || 0;
     const oldCompra = oldPriceData[0]?.precio_compra || 0;
 
-    await db.execute(
-      `UPDATE productos 
-       SET nombre = ?, categoria_id = ?, unidad_id = ?, stock_minimo = ?
-       WHERE id = ?`,
-      [product.nombre, product.categoria_id, product.unidad_id, product.stock_minimo, id]
-    );
+    if (isCentral) {
+      // --- FLUJO DE SEDE CENTRAL (Acceso directo a BD) ---
+      await db.execute(
+        `UPDATE productos 
+         SET nombre = ?, categoria_id = ?, unidad_id = ?, stock_minimo = ?
+         WHERE id = ?`,
+        [product.nombre, product.categoria_id, product.unidad_id, product.stock_minimo, id]
+      );
 
-    if (product.precio_venta !== undefined) {
-      // Solo registrar log si el precio realmente cambió
-      if (oldVenta !== product.precio_venta) {
+      if (product.precio_venta !== undefined) {
+        // Solo registrar log si el precio realmente cambió
+        if (oldVenta !== product.precio_venta || oldCompra !== product.precio_compra) {
+          await logService.register({
+            usuario_id: usuarioId,
+            accion: 'CAMBIO_PRECIO',
+            tabla: 'productos',
+            registro_id: id,
+            detalles: `Precio de venta cambiado de S/ ${oldVenta} a S/ ${product.precio_venta} para el producto: ${product.nombre}`
+          });
+        }
+
+        // Desactivar precios anteriores para este producto
+        await db.execute(
+          'UPDATE precios_historial SET activo = 0 WHERE producto_id = ?',
+          [id]
+        );
+        // Insertar el nuevo precio como activo (manteniendo el precio de compra actual si existe)
+        await db.execute(
+          `INSERT INTO precios_historial (producto_id, precio_compra, precio_venta, activo) 
+           VALUES (?, ?, ?, 1)`,
+          [id, product.precio_compra ?? oldCompra, product.precio_venta]
+        );
+      } else {
+        // Si no hay cambio de precio, registrar un log de edición general
+        await logService.register({
+          usuario_id: usuarioId,
+          accion: 'EDITAR_PRODUCTO',
+          tabla: 'productos',
+          registro_id: id,
+          detalles: `Datos actualizados para el producto: ${product.nombre}`
+        });
+      }
+    } else {
+      // --- FLUJO DE SUCURSAL (Sincronización síncrona con la central) ---
+      const config = await systemConfigService.getConfig();
+      if (!config || !config.api_url_central || !config.sucursal_id) {
+        throw new Error('Configuración de sucursal incompleta. Configure la conexión a la sede central.');
+      }
+
+      // Obtener el código de barras local
+      const prodRow = await db.select<any[]>('SELECT codigo_barras FROM productos WHERE id = ?', [id]);
+      if (prodRow.length === 0) {
+        throw new Error('Producto no encontrado localmente.');
+      }
+      const codigoBarras = prodRow[0].codigo_barras;
+
+      // Enviar la edición a la central
+      let response: Response;
+      try {
+        response = await fetch(`${config.api_url_central}/api/productos`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Sucursal-Key': config.sucursal_id
+          },
+          body: JSON.stringify({
+            codigo_barras: codigoBarras,
+            nombre: product.nombre,
+            categoria_id: product.categoria_id || null,
+            unidad_id: product.unidad_id || null,
+            stock_minimo: product.stock_minimo,
+            precio_compra: product.precio_compra || 0.0,
+            precio_venta: product.precio_venta || 0.0
+          })
+        });
+      } catch (err) {
+        throw new Error('No se pudo conectar con el servidor central. Verifique la conexión e intente nuevamente.');
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Error al actualizar el producto en la central (código ${response.status}).`);
+      }
+
+      // La central editó exitosamente — Actualizar la BD local
+      await db.execute(
+        `UPDATE productos 
+         SET nombre = ?, categoria_id = ?, unidad_id = ?, stock_minimo = ?
+         WHERE id = ?`,
+        [product.nombre, product.categoria_id, product.unidad_id, product.stock_minimo, id]
+      );
+
+      const precioCambiado = (oldVenta !== product.precio_venta || oldCompra !== product.precio_compra);
+
+      if (product.precio_venta !== undefined) {
+        // Desactivar precios anteriores para este producto
+        await db.execute(
+          'UPDATE precios_historial SET activo = 0 WHERE producto_id = ?',
+          [id]
+        );
+        // Insertar el nuevo precio como activo
+        await db.execute(
+          `INSERT INTO precios_historial (producto_id, precio_compra, precio_venta, activo) 
+           VALUES (?, ?, ?, 1)`,
+          [id, product.precio_compra ?? oldCompra, product.precio_venta]
+        );
+      }
+
+      // Registrar el log local con el sufijo "vía sede central"
+      if (precioCambiado) {
         await logService.register({
           usuario_id: usuarioId,
           accion: 'CAMBIO_PRECIO',
           tabla: 'productos',
           registro_id: id,
-          detalles: `Precio de venta cambiado de S/ ${oldVenta} a S/ ${product.precio_venta} para el producto: ${product.nombre}`
+          detalles: `Precio de venta cambiado de S/ ${oldVenta} a S/ ${product.precio_venta} para el producto: ${product.nombre} (${codigoBarras}) vía sede central`
+        });
+      } else {
+        await logService.register({
+          usuario_id: usuarioId,
+          accion: 'EDITAR_PRODUCTO',
+          tabla: 'productos',
+          registro_id: id,
+          detalles: `Datos actualizados para el producto: ${product.nombre} (${codigoBarras}) vía sede central`
         });
       }
-
-      // Desactivar precios anteriores para este producto
-      await db.execute(
-        'UPDATE precios_historial SET activo = 0 WHERE producto_id = ?',
-        [id]
-      );
-      // Insertar el nuevo precio como activo (manteniendo el precio de compra actual si existe)
-      await db.execute(
-        `INSERT INTO precios_historial (producto_id, precio_compra, precio_venta, activo) 
-         VALUES (?, ?, ?, 1)`,
-        [id, product.precio_compra ?? oldCompra, product.precio_venta]
-      );
-    } else {
-      // Si no hay cambio de precio, registrar un log de edición general
-      await logService.register({
-        usuario_id: usuarioId,
-        accion: 'EDITAR_PRODUCTO',
-        tabla: 'productos',
-        registro_id: id,
-        detalles: `Datos actualizados para el producto: ${product.nombre}`
-      });
     }
   },
 

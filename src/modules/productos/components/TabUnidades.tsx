@@ -12,9 +12,11 @@ import { Tooltip } from '../../../shared/components/ui/Tooltip';
 import { Button } from '../../../shared/components/ui/Button';
 import { Modal } from '../../../shared/components/ui/Modal';
 import { DataTable, type TableColumn } from '../../../shared/components/ui/DataTable';
+import { useAuth } from '../../../shared/contexts/AuthContext';
 
 export function TabUnidades() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState({ nombre: '', abreviatura: '' });
@@ -27,7 +29,7 @@ export function TabUnidades() {
   const saveMutation = useMutation({
     mutationFn: async (payload: any) => {
       if (editingId) {
-        return unidadMedidaService.update(editingId, payload.nombre, payload.abreviatura);
+        return unidadMedidaService.update(editingId, payload.nombre, payload.abreviatura, user?.id || 1);
       } else {
         return unidadMedidaService.create(payload.nombre, payload.abreviatura);
       }

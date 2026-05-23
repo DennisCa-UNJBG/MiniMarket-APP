@@ -57,10 +57,19 @@ pub struct KardexPayloadDto {
 pub struct ProductoCrearDto {
     // La sucursal NO envía código de barras; la central lo genera.
     pub nombre: String,
-    pub categoria_nombre: Option<String>,
-    // Se envía nombre/abreviatura de la unidad (no el ID local)
-    pub unidad_nombre: Option<String>,
-    pub unidad_abreviatura: Option<String>,
+    pub categoria_id: Option<i32>,
+    pub unidad_id: Option<i32>,
+    pub stock_minimo: f64,
+    pub precio_compra: f64,
+    pub precio_venta: f64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ProductoEditarDto {
+    pub codigo_barras: String,
+    pub nombre: String,
+    pub categoria_id: Option<i32>,
+    pub unidad_id: Option<i32>,
     pub stock_minimo: f64,
     pub precio_compra: f64,
     pub precio_venta: f64,
@@ -115,7 +124,21 @@ pub struct CategoriaCrearDto {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct CategoriaEditarDto {
+    pub id: i32,
+    pub nombre: String,
+    pub color: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct UnidadMedidaCrearDto {
+    pub nombre: String,
+    pub abreviatura: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UnidadMedidaEditarDto {
+    pub id: i32,
     pub nombre: String,
     pub abreviatura: String,
 }
