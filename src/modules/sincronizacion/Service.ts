@@ -32,12 +32,31 @@ export const syncService = {
     let actualizados = 0;
     let creados = 0;
 
-    // 1. Obtener categorías únicas de los productos de la central
+    // 1. Obtener categorías y unidades únicas de los productos de la central
     const uniqueCats = Array.from(new Set(productosCentral.flatMap((p: any) => p.categoria ? [p.categoria] : []))) as string[];
+    
+    // Obtener unidades únicas (mapeadas por nombre en minúsculas)
+    const uniqueUnitsMap = new Map<string, { nombre: string, abreviatura: string }>();
+    for (const p of productosCentral) {
+      if (p.unidad_nombre) {
+        const key = p.unidad_nombre.toLowerCase();
+        if (!uniqueUnitsMap.has(key)) {
+          uniqueUnitsMap.set(key, {
+            nombre: p.unidad_nombre,
+            abreviatura: p.unidad_abreviatura || p.unidad_medida || p.unidad_nombre.substring(0, 3).toUpperCase()
+          });
+        }
+      }
+    }
 
-    // 2. Pre-cargar todas las categorías existentes
-    const catList = await db.select<any[]>('SELECT id, nombre FROM categorias');
+    // 2. Pre-cargar todas las categorías y unidades existentes
+    const [catList, unitList] = await Promise.all([
+      db.select<any[]>('SELECT id, nombre FROM categorias'),
+      db.select<any[]>('SELECT id, nombre, abreviatura FROM unidades_medida')
+    ]);
+
     const catMap = new Map<string, number>(catList.map(c => [c.nombre.toLowerCase(), c.id]));
+    const unitMap = new Map<string, number>(unitList.map(u => [u.nombre.toLowerCase(), u.id]));
 
     // 3. Crear las categorías que falten en paralelo
     await Promise.all(uniqueCats.map(async (catName) => {
@@ -51,9 +70,29 @@ export const syncService = {
       }
     }));
 
+    // Crear las unidades de medida que falten en paralelo
+    await Promise.all(Array.from(uniqueUnitsMap.values()).map(async (unit) => {
+      const unitNorm = unit.nombre.toLowerCase();
+      if (!unitMap.has(unitNorm)) {
+        const abrevNorm = unit.abreviatura.toLowerCase();
+        const existingByAbrev = unitList.find(u => u.abreviatura.toLowerCase() === abrevNorm);
+        if (existingByAbrev) {
+          unitMap.set(unitNorm, existingByAbrev.id);
+          return;
+        }
+
+        const insUnit = await db.execute('INSERT INTO unidades_medida (nombre, abreviatura) VALUES (?, ?)', [unit.nombre, unit.abreviatura]);
+        const newId = insUnit.lastInsertId ?? null;
+        if (newId) {
+          unitMap.set(unitNorm, newId);
+        }
+      }
+    }));
+
     // 4. Procesar todos los productos en paralelo de forma segura
     await Promise.all(productosCentral.map(async (p: any) => {
       const categoriaId = p.categoria ? (catMap.get(p.categoria.toLowerCase()) ?? null) : null;
+      const unidadId = p.unidad_nombre ? (unitMap.get(p.unidad_nombre.toLowerCase()) ?? null) : null;
 
       // Upsert Producto
       const prodRes = await db.select<any[]>('SELECT id FROM productos WHERE codigo_barras = ?', [p.codigo_barras]);
@@ -62,14 +101,14 @@ export const syncService = {
       if (prodRes.length > 0) {
         productoId = prodRes[0].id;
         await db.execute(
-          'UPDATE productos SET nombre = ?, categoria_id = ?, unidad_medida = ?, stock_minimo = ? WHERE id = ?',
-          [p.nombre, categoriaId, p.unidad_medida, p.stock_minimo, productoId]
+          'UPDATE productos SET nombre = ?, categoria_id = ?, unidad_id = ?, stock_minimo = ? WHERE id = ?',
+          [p.nombre, categoriaId, unidadId, p.stock_minimo, productoId]
         );
         actualizados++;
       } else {
         const insProd = await db.execute(
-          'INSERT INTO productos (codigo_barras, nombre, categoria_id, unidad_medida, stock_minimo) VALUES (?, ?, ?, ?, ?)',
-          [p.codigo_barras, p.nombre, categoriaId, p.unidad_medida, p.stock_minimo]
+          'INSERT INTO productos (codigo_barras, nombre, categoria_id, unidad_id, stock_minimo) VALUES (?, ?, ?, ?, ?)',
+          [p.codigo_barras, p.nombre, categoriaId, unidadId, p.stock_minimo]
         );
         productoId = insProd.lastInsertId as number;
         creados++;
@@ -413,5 +452,101 @@ export const syncService = {
     ));
 
     return { enviadas: comprasPendientes.length };
+  },
+
+  /**
+   * Descarga roles desde la sede central
+   */
+  async pullRoles() {
+    const config = await systemConfigService.getConfig();
+    if (!config || !config.api_url_central || !config.sucursal_id) {
+      throw new Error('Configuración de sucursal incompleta');
+    }
+
+    const response = await fetch(`${config.api_url_central}/api/roles`, {
+      method: 'GET',
+      headers: { 'X-Sucursal-Key': config.sucursal_id }
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Error al descargar roles');
+    }
+
+    const [{ data: rolesCentral }, db] = await Promise.all([
+      response.json(),
+      getDb()
+    ]);
+
+    let actualizados = 0;
+    let creados = 0;
+
+    await Promise.all(rolesCentral.map(async (r: any) => {
+      const rolRes = await db.select<any[]>('SELECT id FROM roles WHERE id = ?', [r.id]);
+
+      if (rolRes.length > 0) {
+        await db.execute(
+          'UPDATE roles SET nombre = ?, descripcion = ?, permisos = ?, estado = ? WHERE id = ?',
+          [r.nombre, r.descripcion, r.permisos, r.estado, r.id]
+        );
+        actualizados++;
+      } else {
+        await db.execute(
+          'INSERT INTO roles (id, nombre, descripcion, permisos, estado) VALUES (?, ?, ?, ?, ?)',
+          [r.id, r.nombre, r.descripcion, r.permisos, r.estado]
+        );
+        creados++;
+      }
+    }));
+
+    return { creados, actualizados };
+  },
+
+  /**
+   * Descarga unidades de medida desde la sede central
+   */
+  async pullUnidadesMedida() {
+    const config = await systemConfigService.getConfig();
+    if (!config || !config.api_url_central || !config.sucursal_id) {
+      throw new Error('Configuración de sucursal incompleta');
+    }
+
+    const response = await fetch(`${config.api_url_central}/api/unidades-medida`, {
+      method: 'GET',
+      headers: { 'X-Sucursal-Key': config.sucursal_id }
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Error al descargar unidades de medida');
+    }
+
+    const [{ data: unidadesCentral }, db] = await Promise.all([
+      response.json(),
+      getDb()
+    ]);
+
+    let actualizados = 0;
+    let creados = 0;
+
+    await Promise.all(unidadesCentral.map(async (u: any) => {
+      const unitRes = await db.select<any[]>('SELECT id FROM unidades_medida WHERE id = ?', [u.id]);
+
+      if (unitRes.length > 0) {
+        await db.execute(
+          'UPDATE unidades_medida SET nombre = ?, abreviatura = ?, estado = ? WHERE id = ?',
+          [u.nombre, u.abreviatura, u.estado, u.id]
+        );
+        actualizados++;
+      } else {
+        await db.execute(
+          'INSERT INTO unidades_medida (id, nombre, abreviatura, estado) VALUES (?, ?, ?, ?)',
+          [u.id, u.nombre, u.abreviatura, u.estado]
+        );
+        creados++;
+      }
+    }));
+
+    return { creados, actualizados };
   }
 };

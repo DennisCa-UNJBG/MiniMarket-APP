@@ -11,20 +11,33 @@ export interface LogEntry {
 export const logService = {
   async register(log: LogEntry): Promise<void> {
     const db = await getDb();
+    
+    // Obtener sucursal_id de la configuración si existe
+    let sucursalId: string | null = null;
+    try {
+      const configRes = await db.select<any[]>('SELECT sucursal_id FROM configuracion LIMIT 1');
+      if (configRes.length > 0) {
+        sucursalId = configRes[0].sucursal_id;
+      }
+    } catch (e) {
+      // Ignorar si la tabla de configuración no existe o está vacía
+    }
+
     await db.execute(
-      `INSERT INTO logs (usuario_id, accion, tabla, registro_id, detalles) 
-       VALUES (?, ?, ?, ?, ?)`,
-      [log.usuario_id, log.accion, log.tabla, log.registro_id, log.detalles || null]
+      `INSERT INTO logs (usuario_id, sucursal_id, accion, tabla, registro_id, detalles) 
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [log.usuario_id, sucursalId, log.accion, log.tabla, log.registro_id, log.detalles || null]
     );
   },
 
   async getAll(limit = 100): Promise<any[]> {
     const db = await getDb();
     return db.select(
-      `SELECT l.*, u.nombre_completo as usuario_nombre 
+      `SELECT l.id, l.usuario_id, l.sucursal_id, l.accion, l.tabla, l.registro_id, l.detalles, l.sincronizado, l.created_at as fecha,
+              u.nombre_completo as usuario_nombre 
        FROM logs l
        JOIN usuarios u ON l.usuario_id = u.id
-       ORDER BY l.fecha DESC
+       ORDER BY l.created_at DESC
        LIMIT ?`,
       [limit]
     );
@@ -63,11 +76,12 @@ export const logService = {
         params
       ),
       db.select<any[]>(
-        `SELECT l.*, u.nombre_completo as usuario_nombre 
+        `SELECT l.id, l.usuario_id, l.sucursal_id, l.accion, l.tabla, l.registro_id, l.detalles, l.sincronizado, l.created_at as fecha,
+                u.nombre_completo as usuario_nombre 
          FROM logs l
          JOIN usuarios u ON l.usuario_id = u.id
          ${whereClause}
-         ORDER BY l.fecha DESC
+         ORDER BY l.created_at DESC
          LIMIT ? OFFSET ?`,
         [...params, pageSize, offset]
       )

@@ -84,13 +84,7 @@ export const ventaService = {
       );
     }));
 
-    // Si se especificó un cliente, actualizar sus estadísticas de compra
-    if (venta.cliente_id) {
-      await db.execute(
-        `UPDATE clientes SET compras = compras + 1, total_gastado = total_gastado + ? WHERE id = ?`,
-        [venta.total, venta.cliente_id]
-      );
-    }
+    // Las estadísticas del cliente se actualizan mediante el trigger trg_cliente_venta_insert de la base de datos
 
     // 5. Log de Auditoría
     await logService.register({
@@ -179,10 +173,11 @@ export const ventaService = {
   async getVentaDetalles(ventaId: number): Promise<any[]> {
     const db = await getDb();
     return db.select(`
-      SELECT vd.*, p.nombre as producto_nombre, p.unidad_medida
-    FROM ventas_detalle vd
-    JOIN productos p ON vd.producto_id = p.id
-    WHERE vd.venta_id = ?
+      SELECT vd.*, p.nombre as producto_nombre, u.abreviatura as unidad_medida
+      FROM ventas_detalle vd
+      JOIN productos p ON vd.producto_id = p.id
+      LEFT JOIN unidades_medida u ON p.unidad_id = u.id
+      WHERE vd.venta_id = ?
     `, [ventaId]);
   },
 
@@ -269,9 +264,9 @@ export const ventaService = {
   async anularVenta(ventaId: number): Promise<void> {
     const db = await getDb();
 
-    // Obtener detalles de la venta (cliente_id, total, usuario_id) antes de anular
-    const ventaInfo = await db.select<any[]>('SELECT cliente_id, total, usuario_id FROM ventas WHERE id = ?', [ventaId]);
-    const { cliente_id, total, usuario_id } = ventaInfo[0] || { cliente_id: null, total: 0, usuario_id: 1 };
+    // Obtener usuario_id de la venta antes de anular
+    const ventaInfo = await db.select<any[]>('SELECT usuario_id FROM ventas WHERE id = ?', [ventaId]);
+    const { usuario_id } = ventaInfo[0] || { usuario_id: 1 };
 
     // 1. Obtener detalles para revertir stock
     const items = await db.select<any[]>('SELECT producto_id, cantidad FROM ventas_detalle WHERE venta_id = ?', [ventaId]);
@@ -296,16 +291,7 @@ export const ventaService = {
       [ventaId]
     );
 
-    // Si estaba asociada a un cliente, revertir sus estadísticas
-    if (cliente_id) {
-      await db.execute(
-        `UPDATE clientes 
-         SET compras = MAX(0, compras - 1), 
-             total_gastado = MAX(0.0, total_gastado - ?) 
-         WHERE id = ?`,
-        [total, cliente_id]
-      );
-    }
+    // Las estadísticas del cliente se revierten mediante el trigger trg_cliente_venta_anular de la base de datos
 
     // 5. Log de auditoría
     await logService.register({

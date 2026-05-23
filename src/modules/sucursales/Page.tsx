@@ -243,7 +243,7 @@ export function Sucursales() {
   ];
 
   const handleCopy = (sede: any) => {
-    navigator.clipboard.writeText(`Sede: ${sede.nombre}\nCódigo: ${sede.codigo}`);
+    navigator.clipboard.writeText(`ID: ${sede.codigo}\nNombre: ${sede.nombre}`);
     notificationService.success('Copiado', 'Datos de sede listos para configurar.');
   };
 

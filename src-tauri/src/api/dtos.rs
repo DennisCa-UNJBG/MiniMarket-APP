@@ -107,3 +107,31 @@ pub struct CompraPayloadDto {
     pub sucursal_id: String,
     pub compras: Vec<CompraSyncDto>,
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CategoriaCrearDto {
+    pub nombre: String,
+    pub color: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UnidadMedidaCrearDto {
+    pub nombre: String,
+    pub abreviatura: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UsuarioCrearDto {
+    pub username: String,
+    pub password_hash: String,
+    pub nombre_completo: String,
+    pub rol_nombre: String,
+    pub sucursal_id: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RolCrearDto {
+    pub nombre: String,
+    pub descripcion: Option<String>,
+    pub permisos: Vec<String>,
+}

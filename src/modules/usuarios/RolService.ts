@@ -1,5 +1,7 @@
 import { getDb } from '../../shared/lib/db';
 import { logService } from '../../shared/lib/logService';
+import { invoke } from '@tauri-apps/api/core';
+import { systemConfigService } from '../configuracion/systemConfigService';
 
 export interface Rol {
   id: number;
@@ -55,22 +57,84 @@ export const rolService = {
     const db = await getDb();
     const permisosJson = JSON.stringify(permisos);
 
-    const result = await db.execute(
-      'INSERT INTO roles (nombre, descripcion, permisos, estado) VALUES (?, ?, ?, ?)',
-      [nombre, descripcion, permisosJson, 'activo']
-    );
+    let isCentral = false;
+    try {
+      isCentral = await invoke<boolean>('is_server_running');
+    } catch (e) {
+      throw new Error('Error del sistema: No se pudo verificar si este equipo es la Sede Central. Reinicia la aplicación.');
+    }
 
-    const rolId = result.lastInsertId as number;
+    if (isCentral) {
+      // --- FLUJO DE SEDE CENTRAL (Acceso directo a BD) ---
+      const rolExistente = await db.select<any[]>(
+        'SELECT id FROM roles WHERE LOWER(nombre) = LOWER(?)',
+        [nombre]
+      );
+      if (rolExistente.length > 0) {
+        throw new Error(`El rol "${nombre}" ya está registrado.`);
+      }
 
-    await logService.register({
-      usuario_id: adminId,
-      accion: 'CREAR_ROL',
-      tabla: 'roles',
-      registro_id: rolId,
-      detalles: `Se creó el rol "${nombre}" con ${permisos.length} permisos asignados.`
-    });
+      const result = await db.execute(
+        'INSERT INTO roles (nombre, descripcion, permisos, estado) VALUES (?, ?, ?, ?)',
+        [nombre, descripcion, permisosJson, 'activo']
+      );
 
-    return true;
+      const rolId = result.lastInsertId as number;
+
+      await logService.register({
+        usuario_id: adminId,
+        accion: 'CREAR_ROL',
+        tabla: 'roles',
+        registro_id: rolId,
+        detalles: `Se creó el rol "${nombre}" con ${permisos.length} permisos asignados.`
+      });
+
+      return true;
+    } else {
+      // --- FLUJO DE SUCURSAL (Llamada HTTP síncrona a la central) ---
+      const config = await systemConfigService.getConfig();
+      if (!config || !config.api_url_central || !config.sucursal_id) {
+        throw new Error('Configuración de sucursal incompleta. Configure la conexión a la sede central.');
+      }
+
+      let response: Response;
+      try {
+        response = await fetch(`${config.api_url_central}/api/roles`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Sucursal-Key': config.sucursal_id
+          },
+          body: JSON.stringify({ nombre, descripcion, permisos })
+        });
+      } catch (err) {
+        throw new Error('No se pudo conectar con el servidor central. Verifique la conexión e intente nuevamente.');
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Error al crear el rol en la central (código ${response.status}).`);
+      }
+
+      const responseData = await response.json();
+      const newRol = responseData.data;
+
+      // Insertar localmente con el ID y datos retornados por la central
+      await db.execute(
+        'INSERT OR REPLACE INTO roles (id, nombre, descripcion, permisos, estado) VALUES (?, ?, ?, ?, ?)',
+        [newRol.id, newRol.nombre, newRol.descripcion, newRol.permisos, newRol.estado]
+      );
+
+      await logService.register({
+        usuario_id: adminId,
+        accion: 'CREAR_ROL',
+        tabla: 'roles',
+        registro_id: newRol.id,
+        detalles: `Se creó el rol "${nombre}" con ${permisos.length} permisos asignados vía sede central`
+      });
+
+      return true;
+    }
   },
 
   /**

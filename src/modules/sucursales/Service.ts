@@ -93,10 +93,11 @@ export const sucursalService = {
     const db = await getDb();
     return await db.select(
       `SELECT ss.id, ss.codigo_barras, ss.stock, ss.ultima_actualizacion,
-              p.nombre as producto_nombre, p.unidad_medida, p.stock_minimo,
+              p.nombre as producto_nombre, u.abreviatura as unidad_medida, p.stock_minimo,
               c.nombre as categoria_nombre
        FROM sucursales_stock ss
        LEFT JOIN productos p ON ss.codigo_barras = p.codigo_barras
+       LEFT JOIN unidades_medida u ON p.unidad_id = u.id
        LEFT JOIN categorias c ON p.categoria_id = c.id
        WHERE ss.sucursal_id = ?
        ORDER BY p.nombre ASC`,
@@ -147,9 +148,10 @@ export const sucursalService = {
     const db = await getDb();
     return await db.select(
       `SELECT vd.id, vd.cantidad, vd.precio_unitario, vd.subtotal,
-              p.nombre as producto_nombre, p.unidad_medida
+              p.nombre as producto_nombre, u.abreviatura as unidad_medida
        FROM ventas_detalle vd
        LEFT JOIN productos p ON vd.producto_id = p.id
+       LEFT JOIN unidades_medida u ON p.unidad_id = u.id
        WHERE vd.venta_id = ?`,
       [ventaId]
     );
@@ -210,9 +212,10 @@ export const sucursalService = {
     const db = await getDb();
     return await db.select(
       `SELECT cd.id, cd.cantidad, cd.costo_unitario, cd.subtotal,
-              p.nombre as producto_nombre, p.unidad_medida
+              p.nombre as producto_nombre, u.abreviatura as unidad_medida
        FROM compras_detalle cd
        LEFT JOIN productos p ON cd.producto_id = p.id
+       LEFT JOIN unidades_medida u ON p.unidad_id = u.id
        WHERE cd.compra_id = ?`,
       [compraId]
     );
@@ -300,12 +303,13 @@ export const sucursalService = {
     const hastaStr = `${hasta} 23:59:59`;
 
     return await db.select(
-      `SELECT p.nombre as producto_nombre, p.unidad_medida,
+      `SELECT p.nombre as producto_nombre, u.abreviatura as unidad_medida,
               SUM(vd.cantidad) as total_cantidad,
               SUM(vd.subtotal) as total_recaudado
        FROM ventas_detalle vd
        JOIN ventas v ON vd.venta_id = v.id
        JOIN productos p ON vd.producto_id = p.id
+       LEFT JOIN unidades_medida u ON p.unidad_id = u.id
        WHERE v.sucursal_id = ? AND v.estado != 'anulado' AND v.fecha >= ? AND v.fecha <= ?
        GROUP BY p.id
        ORDER BY total_cantidad DESC

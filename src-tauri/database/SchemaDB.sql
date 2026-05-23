@@ -360,27 +360,6 @@ CREATE TABLE IF NOT EXISTS sync_log (
     created_at            TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- solicitudes_creacion: cola de solicitudes de creación enviadas por sucursales  [SOLICITUD]
---   Existe en las SUCURSALES (y opcionalmente en la central para trazabilidad).
---   Las sucursales NO pueden insertar directamente en productos, categorias,
---   unidades_medida, usuarios ni roles. En cambio, encolan la solicitud aquí.
---   Cuando hay conexión, envían el lote a la central → ésta crea el registro
---   con el ID canónico → responde → la sucursal aplica el resultado localmente.
-CREATE TABLE IF NOT EXISTS solicitudes_creacion (
-    id                INTEGER PRIMARY KEY AUTOINCREMENT,
-    tabla             TEXT    NOT NULL
-                              CHECK (tabla IN ('productos','categorias','unidades_medida','usuarios','roles')),
-    datos_json        TEXT    NOT NULL,   -- JSON con los campos del registro a crear (sin id)
-    estado            TEXT    DEFAULT 'pendiente'
-                              CHECK (estado IN ('pendiente','completada','rechazada')),
-    respuesta_id      INTEGER,            -- ID canónico asignado por la central al crear
-    respuesta_json    TEXT,               -- Registro completo devuelto por la central
-    respuesta_mensaje TEXT,               -- Confirmación o descripción del error
-    sincronizado      INTEGER DEFAULT 0,  -- 0=aún no enviada, 1=ya enviada a la central
-    created_at        TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at        TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
 -- sync_cursors: cursor de sincronización por sucursal × tabla  [SYNC-03]
 --   Solo tiene datos en la SEDE CENTRAL.
 --   Registra "hasta qué punto" se le han enviado los registros maestros a cada sucursal.
@@ -470,9 +449,6 @@ CREATE INDEX IF NOT EXISTS idx_logs_sincronizado      ON logs (sincronizado);   
 -- Sync
 CREATE INDEX IF NOT EXISTS idx_sync_log_sucursal      ON sync_log (sucursal_id, created_at); -- [SYNC-02]
 
--- Solicitudes de creación (consultas frecuentes: pendientes por enviar)
-CREATE INDEX IF NOT EXISTS idx_solicitudes_pendientes
-    ON solicitudes_creacion (estado, sincronizado);                -- [SOLICITUD]
 
 -- Idempotencia: evitar duplicados cuando una sucursal reenvía datos [IDEM]
 CREATE UNIQUE INDEX IF NOT EXISTS idx_ventas_origen

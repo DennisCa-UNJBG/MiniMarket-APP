@@ -27,6 +27,7 @@ export const productoService = {
         p.*, 
         c.nombre as categoria_nombre,
         u.nombre as unidad_nombre,
+        u.abreviatura as unidad_medida,
         ph.precio_compra,
         ph.precio_venta
       FROM productos p

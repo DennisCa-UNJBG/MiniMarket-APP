@@ -51,7 +51,9 @@ export function SyncActionsCard() {
         { enviadas: coEnviadas },
         _,
         { creados: pCreados, actualizados: pActualizados },
-        { creados: uCreados, actualizados: uActualizados }
+        { creados: uCreados, actualizados: uActualizados },
+        { creados: rCreados, actualizados: rActualizados },
+        { creados: umCreados, actualizados: umActualizados }
       ] = await Promise.all([
         syncService.pushSales(),
         syncService.pushKardex(),
@@ -59,15 +61,42 @@ export function SyncActionsCard() {
         syncService.pushCompras(),
         syncService.pushStockLevels(),
         syncService.pullProducts(),
-        syncService.pullUsers()
+        syncService.pullUsers(),
+        syncService.pullRoles(),
+        syncService.pullUnidadesMedida()
       ]);
 
-      return { enviadas, kEnviadas, cEnviadas, coEnviadas, pCreados, pActualizados, uCreados, uActualizados };
+      return {
+        enviadas,
+        kEnviadas,
+        cEnviadas,
+        coEnviadas,
+        pCreados,
+        pActualizados,
+        uCreados,
+        uActualizados,
+        rCreados,
+        rActualizados,
+        umCreados,
+        umActualizados
+      };
     },
     onSuccess: (data) => {
       notificationService.success(
-        'Sincronización Completa',
-        `Enviados: ${data.enviadas} ventas, ${data.coEnviadas} compras, ${data.cEnviadas} cajas y ${data.kEnviadas} movimientos. Stock OK. Catálogo: +${data.pCreados}/~${data.pActualizados}. Usuarios: +${data.uCreados}/~${data.uActualizados}.`
+        'Sincronización Exitosa',
+        `Se han sincronizado correctamente todos los datos con la Sede Central.
+
+        📤 ENVIADOS A LA CENTRAL:
+        • Ventas: ${data.enviadas} registrada(s)
+        • Compras: ${data.coEnviadas} ingreso(s)
+        • Cajas: ${data.cEnviadas} cierre(s)
+        • Kardex: ${data.kEnviadas} movimiento(s)
+
+        📥 RECIBIDOS DE LA CENTRAL:
+        • Catálogo: ${data.pCreados} nuevo(s), ${data.pActualizados} actualizado(s)
+        • Unidades: ${data.umCreados} nueva(s), ${data.umActualizados} actualizada(s)
+        • Roles: ${data.rCreados} nuevo(s), ${data.rActualizados} actualizado(s)
+        • Usuarios: ${data.uCreados} nuevo(s), ${data.uActualizados} autorizado(s)`
       );
       refetchPending();
       queryClient.invalidateQueries({ queryKey: ['products'] });

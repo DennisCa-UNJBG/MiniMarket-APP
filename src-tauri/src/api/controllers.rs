@@ -5,7 +5,10 @@ use axum::{
 };
 use serde_json::{json, Value};
 use sqlx::SqlitePool;
-use crate::api::dtos::{SyncPayloadDto, StockPayloadDto, KardexPayloadDto, ProductoCrearDto, CajaPayloadDto, CompraPayloadDto};
+use crate::api::dtos::{
+    SyncPayloadDto, StockPayloadDto, KardexPayloadDto, ProductoCrearDto, CajaPayloadDto, 
+    CompraPayloadDto, CategoriaCrearDto, UnidadMedidaCrearDto, UsuarioCrearDto, RolCrearDto
+};
 
 pub async fn get_productos(
     headers: HeaderMap,
@@ -30,10 +33,13 @@ pub async fn get_productos(
     }
 
     let productos = sqlx::query(
-        "SELECT p.codigo_barras, p.nombre, p.unidad_medida, p.stock_minimo, 
-                c.nombre as categoria_nombre, ph.precio_venta, ph.precio_compra
+        "SELECT p.codigo_barras, p.nombre, p.stock_minimo, 
+                c.nombre as categoria_nombre,
+                u.nombre as unidad_nombre, u.abreviatura as unidad_abreviatura,
+                ph.precio_venta, ph.precio_compra
          FROM productos p 
          LEFT JOIN categorias c ON p.categoria_id = c.id 
+         LEFT JOIN unidades_medida u ON p.unidad_id = u.id
          LEFT JOIN precios_historial ph ON p.id = ph.producto_id AND ph.activo = 1
          WHERE p.estado = 'activo'"
     )
@@ -47,7 +53,9 @@ pub async fn get_productos(
         data.push(json!({
             "codigo_barras": p.get::<Option<String>, _>("codigo_barras"),
             "nombre": p.get::<String, _>("nombre"),
-            "unidad_medida": p.get::<Option<String>, _>("unidad_medida"),
+            "unidad_nombre": p.get::<Option<String>, _>("unidad_nombre"),
+            "unidad_abreviatura": p.get::<Option<String>, _>("unidad_abreviatura"),
+            "unidad_medida": p.get::<Option<String>, _>("unidad_abreviatura"),
             "stock_minimo": p.get::<f64, _>("stock_minimo"),
             "categoria": p.get::<Option<String>, _>("categoria_nombre"),
             "precio_venta": p.get::<Option<f64>, _>("precio_venta"),
@@ -547,4 +555,316 @@ pub async fn sincronizar_compras(
             "procesadas": procesadas
         })),
     )
+}
+
+pub async fn crear_categoria(
+    headers: HeaderMap,
+    State(pool): State<SqlitePool>,
+    Json(payload): Json<CategoriaCrearDto>,
+) -> (StatusCode, Json<Value>) {
+    let sucursal_id = headers.get("X-Sucursal-Key").and_then(|h| h.to_str().ok()).unwrap_or("");
+    if sucursal_id.is_empty() {
+        return (StatusCode::UNAUTHORIZED, Json(json!({ "error": "Llave de sucursal requerida" })));
+    }
+
+    if payload.nombre.trim().is_empty() {
+        return (StatusCode::BAD_REQUEST, Json(json!({ "error": "El nombre de la categoría es requerido" })));
+    }
+
+    let cat_existente = sqlx::query("SELECT id FROM categorias WHERE LOWER(nombre) = LOWER(?)")
+        .bind(&payload.nombre)
+        .fetch_optional(&pool)
+        .await
+        .unwrap();
+
+    if cat_existente.is_some() {
+        return (StatusCode::CONFLICT, Json(json!({ "error": "La categoría ya existe en la central" })));
+    }
+
+    let res = sqlx::query("INSERT INTO categorias (nombre, color, estado) VALUES (?, ?, 'activo')")
+        .bind(&payload.nombre)
+        .bind(&payload.color)
+        .execute(&pool)
+        .await;
+
+    match res {
+        Ok(r) => {
+            let cat_id = r.last_insert_rowid();
+            (
+                StatusCode::CREATED,
+                Json(json!({
+                    "status": "ok",
+                    "data": {
+                        "id": cat_id,
+                        "nombre": payload.nombre,
+                        "color": payload.color,
+                        "estado": "activo"
+                    }
+                })),
+            )
+        }
+        Err(e) => {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": format!("Error al guardar la categoría en la central: {}", e) })),
+            )
+        }
+    }
+}
+
+pub async fn crear_unidad_medida(
+    headers: HeaderMap,
+    State(pool): State<SqlitePool>,
+    Json(payload): Json<UnidadMedidaCrearDto>,
+) -> (StatusCode, Json<Value>) {
+    let sucursal_id = headers.get("X-Sucursal-Key").and_then(|h| h.to_str().ok()).unwrap_or("");
+    if sucursal_id.is_empty() {
+        return (StatusCode::UNAUTHORIZED, Json(json!({ "error": "Llave de sucursal requerida" })));
+    }
+
+    if payload.nombre.trim().is_empty() || payload.abreviatura.trim().is_empty() {
+        return (StatusCode::BAD_REQUEST, Json(json!({ "error": "El nombre y la abreviatura son requeridos" })));
+    }
+
+    let unit_existente = sqlx::query("SELECT id FROM unidades_medida WHERE LOWER(nombre) = LOWER(?) OR LOWER(abreviatura) = LOWER(?)")
+        .bind(&payload.nombre)
+        .bind(&payload.abreviatura)
+        .fetch_optional(&pool)
+        .await
+        .unwrap();
+
+    if unit_existente.is_some() {
+        return (StatusCode::CONFLICT, Json(json!({ "error": "La unidad de medida o abreviatura ya existe en la central" })));
+    }
+
+    let res = sqlx::query("INSERT INTO unidades_medida (nombre, abreviatura, estado) VALUES (?, ?, 'activo')")
+        .bind(&payload.nombre)
+        .bind(&payload.abreviatura)
+        .execute(&pool)
+        .await;
+
+    match res {
+        Ok(r) => {
+            let unit_id = r.last_insert_rowid();
+            (
+                StatusCode::CREATED,
+                Json(json!({
+                    "status": "ok",
+                    "data": {
+                        "id": unit_id,
+                        "nombre": payload.nombre,
+                        "abreviatura": payload.abreviatura,
+                        "estado": "activo"
+                    }
+                })),
+            )
+        }
+        Err(e) => {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": format!("Error al guardar la unidad de medida en la central: {}", e) })),
+            )
+        }
+    }
+}
+
+pub async fn crear_usuario(
+    headers: HeaderMap,
+    State(pool): State<SqlitePool>,
+    Json(payload): Json<UsuarioCrearDto>,
+) -> (StatusCode, Json<Value>) {
+    let sucursal_id = headers.get("X-Sucursal-Key").and_then(|h| h.to_str().ok()).unwrap_or("");
+    if sucursal_id.is_empty() {
+        return (StatusCode::UNAUTHORIZED, Json(json!({ "error": "Llave de sucursal requerida" })));
+    }
+
+    if payload.username.trim().is_empty() {
+        return (StatusCode::BAD_REQUEST, Json(json!({ "error": "El nombre de usuario es requerido" })));
+    }
+
+    let user_existente = sqlx::query("SELECT id FROM usuarios WHERE LOWER(username) = LOWER(?)")
+        .bind(&payload.username)
+        .fetch_optional(&pool)
+        .await
+        .unwrap();
+
+    if user_existente.is_some() {
+        return (StatusCode::CONFLICT, Json(json!({ "error": "El nombre de usuario ya está registrado en la central" })));
+    }
+
+    let rol_row = sqlx::query("SELECT id FROM roles WHERE LOWER(nombre) = LOWER(?)")
+        .bind(&payload.rol_nombre)
+        .fetch_optional(&pool)
+        .await
+        .unwrap();
+
+    let rol_id = match rol_row {
+        Some(row) => {
+            use sqlx::Row;
+            row.get::<i32, _>("id")
+        }
+        None => {
+            return (StatusCode::BAD_REQUEST, Json(json!({ "error": format!("El rol '{}' no existe en la central", payload.rol_nombre) })));
+        }
+    };
+
+    let res = sqlx::query(
+        "INSERT INTO usuarios (username, password_hash, nombre_completo, rol_id, sucursal_id, estado) \
+         VALUES (?, ?, ?, ?, ?, 'activo')"
+    )
+    .bind(&payload.username)
+    .bind(&payload.password_hash)
+    .bind(&payload.nombre_completo)
+    .bind(rol_id)
+    .bind(&payload.sucursal_id)
+    .execute(&pool)
+    .await;
+
+    match res {
+        Ok(r) => {
+            let user_id = r.last_insert_rowid();
+            (
+                StatusCode::CREATED,
+                Json(json!({
+                    "status": "ok",
+                    "data": {
+                        "id": user_id,
+                        "username": payload.username,
+                        "nombre_completo": payload.nombre_completo,
+                        "rol_id": rol_id,
+                        "sucursal_id": payload.sucursal_id,
+                        "estado": "activo"
+                    }
+                })),
+            )
+        }
+        Err(e) => {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": format!("Error al guardar el usuario en la central: {}", e) })),
+            )
+        }
+    }
+}
+
+pub async fn crear_rol(
+    headers: HeaderMap,
+    State(pool): State<SqlitePool>,
+    Json(payload): Json<RolCrearDto>,
+) -> (StatusCode, Json<Value>) {
+    let sucursal_id = headers.get("X-Sucursal-Key").and_then(|h| h.to_str().ok()).unwrap_or("");
+    if sucursal_id.is_empty() {
+        return (StatusCode::UNAUTHORIZED, Json(json!({ "error": "Llave de sucursal requerida" })));
+    }
+
+    if payload.nombre.trim().is_empty() {
+        return (StatusCode::BAD_REQUEST, Json(json!({ "error": "El nombre del rol es requerido" })));
+    }
+
+    let rol_existente = sqlx::query("SELECT id FROM roles WHERE LOWER(nombre) = LOWER(?)")
+        .bind(&payload.nombre)
+        .fetch_optional(&pool)
+        .await
+        .unwrap();
+
+    if rol_existente.is_some() {
+        return (StatusCode::CONFLICT, Json(json!({ "error": "El rol ya existe en la central" })));
+    }
+
+    let permisos_json = serde_json::to_string(&payload.permisos).unwrap_or_else(|_| "[]".to_string());
+
+    let res = sqlx::query("INSERT INTO roles (nombre, descripcion, permisos, estado) VALUES (?, ?, ?, 'activo')")
+        .bind(&payload.nombre)
+        .bind(&payload.descripcion)
+        .bind(&permisos_json)
+        .execute(&pool)
+        .await;
+
+    match res {
+        Ok(r) => {
+            let rol_id = r.last_insert_rowid();
+            (
+                StatusCode::CREATED,
+                Json(json!({
+                    "status": "ok",
+                    "data": {
+                        "id": rol_id,
+                        "nombre": payload.nombre,
+                        "descripcion": payload.descripcion,
+                        "permisos": permisos_json,
+                        "estado": "activo"
+                    }
+                })),
+            )
+        }
+        Err(e) => {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": format!("Error al guardar el rol en la central: {}", e) })),
+            )
+        }
+    }
+}
+
+pub async fn get_roles(
+    headers: HeaderMap,
+    State(pool): State<SqlitePool>,
+) -> (StatusCode, Json<Value>) {
+    let sucursal_id = headers.get("X-Sucursal-Key")
+        .and_then(|h| h.to_str().ok())
+        .unwrap_or("");
+
+    if sucursal_id.is_empty() {
+        return (StatusCode::UNAUTHORIZED, Json(json!({ "error": "Llave de sucursal requerida" })));
+    }
+
+    let roles = sqlx::query("SELECT id, nombre, descripcion, permisos, estado FROM roles")
+        .fetch_all(&pool)
+        .await
+        .unwrap();
+
+    let mut data = Vec::new();
+    for r in roles {
+        use sqlx::Row;
+        data.push(json!({
+            "id": r.get::<i32, _>("id"),
+            "nombre": r.get::<String, _>("nombre"),
+            "descripcion": r.get::<Option<String>, _>("descripcion"),
+            "permisos": r.get::<Option<String>, _>("permisos"),
+            "estado": r.get::<String, _>("estado"),
+        }));
+    }
+
+    (StatusCode::OK, Json(json!({ "status": "ok", "data": data })))
+}
+
+pub async fn get_unidades_medida(
+    headers: HeaderMap,
+    State(pool): State<SqlitePool>,
+) -> (StatusCode, Json<Value>) {
+    let sucursal_id = headers.get("X-Sucursal-Key")
+        .and_then(|h| h.to_str().ok())
+        .unwrap_or("");
+
+    if sucursal_id.is_empty() {
+        return (StatusCode::UNAUTHORIZED, Json(json!({ "error": "Llave de sucursal requerida" })));
+    }
+
+    let unidades = sqlx::query("SELECT id, nombre, abreviatura, estado FROM unidades_medida")
+        .fetch_all(&pool)
+        .await
+        .unwrap();
+
+    let mut data = Vec::new();
+    for u in unidades {
+        use sqlx::Row;
+        data.push(json!({
+            "id": u.get::<i32, _>("id"),
+            "nombre": u.get::<String, _>("nombre"),
+            "abreviatura": u.get::<String, _>("abreviatura"),
+            "estado": u.get::<String, _>("estado"),
+        }));
+    }
+
+    (StatusCode::OK, Json(json!({ "status": "ok", "data": data })))
 }

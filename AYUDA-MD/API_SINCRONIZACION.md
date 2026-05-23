@@ -6,12 +6,11 @@ El sistema usa tres tipos de operaciones:
 
 - **PUSH** → la sucursal envía sus transacciones a la central
 - **PULL** → la sucursal pide el catálogo actualizado a la central
-- **CREAR** → la sucursal solicita que la central cree un registro maestro
+- **CREAR** → la sucursal solicita de manera síncrona que la central cree un registro maestro (requiere estar online)
 
 > ⚠ **Regla fundamental:** Solo la Sede Central puede crear registros en las tablas
 > `productos`, `categorias`, `unidades_medida`, `usuarios` y `roles`.
-> Las sucursales **no insertan directamente** en esas tablas — envían una solicitud
-> a la central y aplican el resultado que reciben.
+> Las sucursales **no pueden crear estos registros de forma local ni trabajar en modo offline** para estos puntos; dependen de una conexión activa con la Sede Central para solicitar su creación y guardar de inmediato el resultado en su base de datos local.
 
 ```
 SUCURSAL                               SEDE CENTRAL
@@ -459,71 +458,27 @@ Al hacer PULL (sucursal pide a central):
 
 ---
 
-### POST /api/solicitudes-creacion
+### POST /api/productos
 
-Endpoint principal de creación. La sucursal envía un lote de solicitudes (sin ID).
-La central crea cada registro, asigna el ID canónico y responde con los registros completos.
-La sucursal aplica el resultado localmente con `INSERT OR REPLACE` y actualiza `solicitudes_creacion`.
+Crea un nuevo producto en la central de manera síncrona.
 
 **Headers:** `X-Sucursal-Key`, `Content-Type: application/json`
 
 **Body:**
 ```json
 {
-  "sucursal_id": "SUC001",
-  "solicitudes": [
-    {
-      "tabla": "productos",
-      "datos": {
-        "codigo_barras": "7750095131004",
-        "nombre": "Leche Gloria 1L",
-        "categoria_nombre": "Lácteos",
-        "unidad_abreviatura": "LT",
-        "stock_minimo": 5,
-        "precio_compra": 4.50,
-        "precio_venta": 6.00
-      }
-    },
-    {
-      "tabla": "categorias",
-      "datos": {
-        "nombre": "Congelados",
-        "color": "#3b82f6"
-      }
-    },
-    {
-      "tabla": "unidades_medida",
-      "datos": {
-        "nombre": "Gramo",
-        "abreviatura": "GR"
-      }
-    },
-    {
-      "tabla": "usuarios",
-      "datos": {
-        "username": "cajero3",
-        "password": "contraseña_en_texto",
-        "nombre_completo": "Carlos Quispe",
-        "rol_nombre": "Cajero",
-        "sucursal_id": "SUC001"
-      }
-    },
-    {
-      "tabla": "roles",
-      "datos": {
-        "nombre": "Supervisor",
-        "descripcion": "Supervisión de operaciones",
-        "permisos": ["ventas", "reportes", "kardex", "inventario"]
-      }
-    }
-  ]
+  "codigo_barras": "7750095131004",
+  "nombre": "Leche Gloria 1L",
+  "categoria_nombre": "Lácteos",
+  "unidad_abreviatura": "LT",
+  "stock_minimo": 5,
+  "precio_compra": 4.50,
+  "precio_venta": 6.00
 }
 ```
 
-**Lógica en la central por cada solicitud:**
-
+**Lógica en la central:**
 ```sql
--- Para 'productos':
 INSERT INTO productos (codigo_barras, nombre, categoria_id, unidad_id, stock_minimo, estado)
 VALUES (
   ?,
@@ -532,121 +487,168 @@ VALUES (
   (SELECT id FROM unidades_medida WHERE abreviatura = ?),
   ?, 'activo'
 );
--- Luego insertar precio en precios_historial con activo = 1
-
--- Para 'categorias':
-INSERT INTO categorias (nombre, color) VALUES (?, ?);
-
--- Para 'unidades_medida':
-INSERT INTO unidades_medida (nombre, abreviatura) VALUES (?, ?);
-
--- Para 'usuarios':
-INSERT INTO usuarios (username, password_hash, nombre_completo, rol_id, sucursal_id, estado)
-VALUES (?, hash(?), ?, (SELECT id FROM roles WHERE nombre = ?), ?, 'activo');
-
--- Para 'roles':
-INSERT INTO roles (nombre, descripcion, permisos) VALUES (?, ?, json(?));
+-- Luego insertar precio en precios_historial con activo = 1 y asociarlo al producto creado
 ```
 
-**Respuesta 200:**
+**Respuesta 201 Created:**
 ```json
 {
   "ok": true,
-  "resultados": [
-    {
-      "tabla": "productos",
-      "estado": "creado",
-      "datos": {
-        "id": 45,
-        "codigo_barras": "7750095131004",
-        "nombre": "Leche Gloria 1L",
-        "categoria_nombre": "Lácteos",
-        "unidad_abreviatura": "LT",
-        "stock_minimo": 5,
-        "precio_compra": 4.50,
-        "precio_venta": 6.00,
-        "estado": "activo"
-      }
-    },
-    {
-      "tabla": "categorias",
-      "estado": "creado",
-      "datos": { "id": 8, "nombre": "Congelados", "color": "#3b82f6" }
-    },
-    {
-      "tabla": "unidades_medida",
-      "estado": "rechazado",
-      "mensaje": "Ya existe una unidad con la abreviatura 'GR'"
-    },
-    {
-      "tabla": "usuarios",
-      "estado": "creado",
-      "datos": {
-        "id": 12,
-        "username": "cajero3",
-        "nombre_completo": "Carlos Quispe",
-        "rol_nombre": "Cajero"
-      }
-    },
-    {
-      "tabla": "roles",
-      "estado": "creado",
-      "datos": { "id": 4, "nombre": "Supervisor" }
-    }
-  ]
+  "data": {
+    "id": 45,
+    "codigo_barras": "7750095131004",
+    "nombre": "Leche Gloria 1L",
+    "categoria_id": 3,
+    "unidad_id": 2,
+    "stock_minimo": 5.0,
+    "estado": "activo",
+    "precio_compra": 4.50,
+    "precio_venta": 6.00
+  }
 }
-```
-
-**Cómo aplica la sucursal cada resultado:**
-```sql
--- Para cada item con estado = 'creado':
--- 1. INSERT OR REPLACE con el registro completo devuelto por la central
--- 2. Actualizar solicitudes_creacion:
-UPDATE solicitudes_creacion
-SET estado            = 'completada',
-    respuesta_id      = ?,   -- id canónico de la central
-    respuesta_json    = ?,   -- JSON completo del registro creado
-    respuesta_mensaje = 'Creado correctamente',
-    sincronizado      = 1,
-    updated_at        = CURRENT_TIMESTAMP
-WHERE id = ?;
-
--- Para cada item con estado = 'rechazado':
-UPDATE solicitudes_creacion
-SET estado            = 'rechazada',
-    respuesta_mensaje = ?,   -- mensaje de error de la central
-    sincronizado      = 1,
-    updated_at        = CURRENT_TIMESTAMP
-WHERE id = ?;
 ```
 
 ---
 
-### Flujo completo con soporte offline
+### POST /api/categorias
 
-Cuando la sucursal no tiene conexión:
+Crea una nueva categoría.
+
+**Body:**
+```json
+{
+  "nombre": "Congelados",
+  "color": "#3b82f6"
+}
+```
+
+**Respuesta 201 Created:**
+```json
+{
+  "ok": true,
+  "data": {
+    "id": 8,
+    "nombre": "Congelados",
+    "color": "#3b82f6",
+    "estado": "activo"
+  }
+}
+```
+
+---
+
+### POST /api/unidades-medida
+
+Crea una nueva unidad de medida.
+
+**Body:**
+```json
+{
+  "nombre": "Gramo",
+  "abreviatura": "GR"
+}
+```
+
+**Respuesta 201 Created:**
+```json
+{
+  "ok": true,
+  "data": {
+    "id": 6,
+    "nombre": "Gramo",
+    "abreviatura": "GR",
+    "estado": "activo"
+  }
+}
+```
+
+---
+
+### POST /api/usuarios
+
+Crea un nuevo usuario en el sistema.
+
+**Body:**
+```json
+{
+  "username": "cajero3",
+  "password": "contraseña_en_texto",
+  "nombre_completo": "Carlos Quispe",
+  "rol_nombre": "Cajero",
+  "sucursal_id": "SUC001"
+}
+```
+
+**Respuesta 201 Created:**
+```json
+{
+  "ok": true,
+  "data": {
+    "id": 12,
+    "username": "cajero3",
+    "nombre_completo": "Carlos Quispe",
+    "rol_id": 2,
+    "sucursal_id": "SUC001",
+    "estado": "activo"
+  }
+}
+```
+
+---
+
+### POST /api/roles
+
+Crea un nuevo rol con permisos específicos.
+
+**Body:**
+```json
+{
+  "nombre": "Supervisor",
+  "descripcion": "Supervisión de operaciones",
+  "permisos": ["ventas", "reportes", "kardex", "inventario"]
+}
+```
+
+**Respuesta 201 Created:**
+```json
+{
+  "ok": true,
+  "data": {
+    "id": 4,
+    "nombre": "Supervisor",
+    "descripcion": "Supervisión de operaciones",
+    "permisos": "[\"ventas\",\"reportes\",\"kardex\",\"inventario\"]",
+    "estado": "activo"
+  }
+}
+```
+
+---
+
+## Flujo de Creación Síncrono (Online Only)
+
+Las creaciones de registros maestros están prohibidas en modo offline para evitar inconsistencias de datos.
 
 ```
-1. El usuario crea un producto desde la UI de la sucursal
-2. La sucursal inserta en solicitudes_creacion:
-     tabla       = 'productos'
-     datos_json  = '{...datos del producto...}'
-     estado      = 'pendiente'
-     sincronizado = 0
-   (NO inserta en la tabla productos aún)
-
-3. La UI muestra el producto como "pendiente de confirmación central"
-
-4. Cuando hay conexión, la sucursal envía todas las solicitudes pendientes:
-     SELECT * FROM solicitudes_creacion WHERE sincronizado = 0
-     → POST /api/solicitudes-creacion
-
-5. La central crea los registros y responde
-
-6. La sucursal aplica los resultados:
-     - Si 'creado': INSERT OR REPLACE en la tabla correspondiente
-     - Si 'rechazado': mostrar error al usuario
-     - Actualizar solicitudes_creacion.estado y sincronizado = 1
+1. El usuario intenta crear un registro maestro (ej. Producto) desde la UI de la Sucursal.
+2. La Sucursal verifica si tiene conexión activa a la Sede Central.
+     - Si NO hay conexión:
+         * Bloquea la acción en la interfaz.
+         * Muestra un mensaje: "Operación no disponible en modo offline. Debe conectarse a la Sede Central."
+     - Si SÍ hay conexión:
+         * Procede al paso 3.
+3. La Sucursal envía una solicitud HTTP POST síncrona al endpoint de la Sede Central (ej. POST /api/productos).
+4. La Central procesa la solicitud:
+     - Valida la integridad y unicidad de los datos.
+     - Si los datos son válidos, los inserta en su BD local y genera el ID canónico.
+     - Retorna el registro completo con estado de éxito (201 Created).
+     - Si no son válidos (ej. código duplicado), retorna un error (400 Bad Request o 409 Conflict).
+5. La Sucursal recibe la respuesta:
+     - Si la creación fue exitosa (ok: true):
+         * Inserta/Actualiza de inmediato el registro en su base de datos local (ej. INSERT OR REPLACE INTO productos).
+         * Muestra mensaje de éxito y actualiza la pantalla.
+     - Si hubo un error en la Central (ok: false):
+         * Muestra el mensaje de error devuelto por la central al usuario en la UI.
 ```
 
 ---
@@ -661,12 +663,11 @@ Cuando la sucursal no tiene conexión:
 | `cajas` | Sucursal | PUSH | Central nunca modifica — acepta todo |
 | `logs` | Sucursal | PUSH | Central nunca modifica — acepta todo |
 | `sucursales_stock` | Central (alimentada por sucursales) | PUSH | Última lectura reemplaza anterior |
-| `productos`, `precios_historial` | **Central** | PULL + CREAR | Central siempre gana — `INSERT OR REPLACE` |
-| `usuarios` | **Central** | PULL + CREAR | Central siempre gana — upsert por username |
-| `roles` | **Central** | PULL + CREAR | Central siempre gana — upsert por nombre |
-| `categorias` | **Central** | PULL + CREAR | Central siempre gana — upsert por nombre |
-| `unidades_medida` | **Central** | PULL + CREAR | Central siempre gana — upsert por abreviatura |
-| `solicitudes_creacion` | Sucursal (local) | CREAR | Solo existe en sucursales — la central no la necesita |
+| `productos`, `precios_historial` | **Central** | PULL + CREAR | Central siempre gana — `INSERT OR REPLACE` (síncrono online) |
+| `usuarios` | **Central** | PULL + CREAR | Central siempre gana — upsert por username (síncrono online) |
+| `roles` | **Central** | PULL + CREAR | Central siempre gana — upsert por nombre (síncrono online) |
+| `categorias` | **Central** | PULL + CREAR | Central siempre gana — upsert por nombre (síncrono online) |
+| `unidades_medida` | **Central** | PULL + CREAR | Central siempre gana — upsert por abreviatura (síncrono online) |
 
 ---
 
@@ -674,11 +675,13 @@ Cuando la sucursal no tiene conexión:
 
 | Escenario | Comportamiento |
 |---|---|
-| Red cortada antes de confirmar | La sucursal NO marca `sincronizado = 1` → reintenta en la próxima sync |
-| Central devuelve error 5xx | La sucursal registra el error en `sync_log` y reintenta |
-| Registro duplicado en central | `INSERT OR IGNORE` → la central lo ignora silenciosamente, devuelve `duplicadas: N` |
-| Producto desconocido en central | La central ignora ese ítem y lo incluye en el campo `errores` de la respuesta |
-| Sucursal con clave inválida | `401 Unauthorized` → la sucursal muestra error de conexión |
+| Red cortada antes de confirmar (PUSH) | La sucursal NO marca `sincronizado = 1` → reintenta en la próxima sync |
+| Central devuelve error 5xx (PUSH) | La sucursal registra el error en `sync_log` y reintenta |
+| Registro duplicado en central (PUSH) | `INSERT OR IGNORE` → la central lo ignora silenciosamente, devuelve `duplicadas: N` |
+| Producto desconocido en central (PUSH) | La central ignora ese ítem y lo incluye en el campo `errores` de la respuesta |
+| Sucursal con clave inválida (General) | `401 Unauthorized` → la sucursal muestra error de conexión |
+| Sin red al crear maestro (CREAR) | Petición síncrona falla inmediatamente. La sucursal aborta y muestra error offline. |
+| Error de validación/duplicado (CREAR) | Central retorna `400 Bad Request` o `409 Conflict`. Sucursal aborta y muestra error en UI. |
 
 ---
 
