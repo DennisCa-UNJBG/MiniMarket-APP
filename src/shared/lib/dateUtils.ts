@@ -126,5 +126,63 @@ export const dateUtils = {
     const date = new Date(utcString.includes('UTC') ? utcString : utcString + ' UTC');
     const now = new Date();
     return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
+  },
+
+  /**
+   * Obtiene el rango de fechas 'YYYY-MM-DD' del mes anterior (local).
+   */
+  getPreviousMonthRangeLocal(): { start: string; end: string } {
+    const d = new Date();
+    d.setMonth(d.getMonth() - 1);
+    const year = d.getFullYear();
+    const month = d.getMonth();
+    const start = new Date(year, month, 1);
+    const end = new Date(year, month + 1, 0);
+    return {
+      start: this.formatToLocalISO(start),
+      end: this.formatToLocalISO(end)
+    };
+  },
+
+  /**
+   * Obtiene el rango de fechas previo equivalente al rango actual desplazado hacia atrás la misma cantidad de días.
+   */
+  getPreviousPeriodRangeLocal(startDate: string, endDate: string): { start: string; end: string } {
+    const start = new Date(startDate + 'T00:00:00');
+    const end = new Date(endDate + 'T00:00:00');
+    const durationMs = end.getTime() - start.getTime();
+
+    const pStart = new Date(start.getTime() - durationMs - (1000 * 60 * 60 * 24));
+    const pEnd = new Date(start.getTime() - (1000 * 60 * 60 * 24));
+
+    return {
+      start: this.formatToLocalISO(pStart),
+      end: this.formatToLocalISO(pEnd)
+    };
+  },
+
+  /**
+   * Obtiene la diferencia en días enteros entre dos fechas locales ISO.
+   */
+  getDaysDifference(startDate: string, endDate: string): number {
+    const start = new Date(startDate + 'T00:00:00');
+    const end = new Date(endDate + 'T00:00:00');
+    const diffTime = Math.abs(end.getTime() - start.getTime());
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  },
+
+  /**
+   * Obtiene la fecha y hora actual en formato UTC ISO 8601 completo (ej: '2026-05-24T03:15:30.000Z').
+   * Garantiza el uso de UTC con toISOString().
+   */
+  getCurrentUTCISO(): string {
+    return new Date().toISOString();
+  },
+
+  /**
+   * Convierte un objeto Date dado a formato UTC ISO 8601 completo.
+   */
+  formatToUTCISO(date: Date): string {
+    return date.toISOString();
   }
 };

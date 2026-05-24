@@ -22,14 +22,8 @@ export function useSucursalDetalle({ sucursalCodigo }: UseSucursalDetalleProps) 
   });
 
   // Rango de fechas por defecto (Primer día del mes actual al día de hoy)
-  const defaultDesde = useMemo(() => {
-    const d = new Date();
-    return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0];
-  }, []);
-
-  const defaultHasta = useMemo(() => {
-    return new Date().toISOString().split('T')[0];
-  }, []);
+  const defaultDesde = useMemo(() => dateUtils.getFirstDayOfMonthLocal(), []);
+  const defaultHasta = useMemo(() => dateUtils.getTodayLocal(), []);
 
   const [fechaInicio, setFechaInicio] = useState(defaultDesde);
   const [fechaFin, setFechaFin] = useState(defaultHasta);
@@ -37,25 +31,21 @@ export function useSucursalDetalle({ sucursalCodigo }: UseSucursalDetalleProps) 
 
   const handleShortcutClick = (shortcut: 'hoy' | '7dias' | 'esteMes' | 'mesAnterior') => {
     setFechaShortcut(shortcut);
-    const hoy = new Date();
     if (shortcut === 'hoy') {
-      const dateStr = dateUtils.formatToLocalISO(hoy);
-      setFechaInicio(dateStr);
-      setFechaFin(dateStr);
+      const hoy = dateUtils.getTodayLocal();
+      setFechaInicio(hoy);
+      setFechaFin(hoy);
     } else if (shortcut === '7dias') {
-      const sieteDiasAgo = new Date();
-      sieteDiasAgo.setDate(hoy.getDate() - 6);
-      setFechaInicio(dateUtils.formatToLocalISO(sieteDiasAgo));
-      setFechaFin(dateUtils.formatToLocalISO(hoy));
+      const days = dateUtils.getLastDaysLocal(7);
+      setFechaInicio(days[0]);
+      setFechaFin(days[days.length - 1]);
     } else if (shortcut === 'esteMes') {
-      const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
-      setFechaInicio(dateUtils.formatToLocalISO(primerDiaMes));
-      setFechaFin(dateUtils.formatToLocalISO(hoy));
+      setFechaInicio(dateUtils.getFirstDayOfMonthLocal());
+      setFechaFin(dateUtils.getTodayLocal());
     } else if (shortcut === 'mesAnterior') {
-      const primerDiaMesAnterior = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
-      const ultimoDiaMesAnterior = new Date(hoy.getFullYear(), hoy.getMonth(), 0);
-      setFechaInicio(dateUtils.formatToLocalISO(primerDiaMesAnterior));
-      setFechaFin(dateUtils.formatToLocalISO(ultimoDiaMesAnterior));
+      const { start, end } = dateUtils.getPreviousMonthRangeLocal();
+      setFechaInicio(start);
+      setFechaFin(end);
     }
   };
 
@@ -119,20 +109,8 @@ export function useSucursalDetalle({ sucursalCodigo }: UseSucursalDetalleProps) 
   const { data: reporteFinanzasPrevio = { total_ventas: 0, cant_ventas: 0, total_compras: 0, cant_compras: 0, total_productos: 0 } } = useQuery({
     queryKey: ['sucursal-reporte-finanzas-previo', sucursalCodigo, fechaInicio, fechaFin],
     queryFn: async () => {
-      const start = new Date(fechaInicio);
-      const end = new Date(fechaFin);
-      const diffTime = Math.abs(end.getTime() - start.getTime());
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-
-      const startPrev = new Date(start);
-      startPrev.setDate(start.getDate() - diffDays);
-      const endPrev = new Date(start);
-      endPrev.setDate(start.getDate() - 1);
-
-      const desdePrev = startPrev.toISOString().split('T')[0];
-      const hastaPrev = endPrev.toISOString().split('T')[0];
-
-      return sucursalService.getSucursalReporteFinanzas(sucursalCodigo, desdePrev, hastaPrev);
+      const { start, end } = dateUtils.getPreviousPeriodRangeLocal(fechaInicio, fechaFin);
+      return sucursalService.getSucursalReporteFinanzas(sucursalCodigo, start, end);
     }
   });
 
@@ -264,8 +242,8 @@ export function useSucursalDetalle({ sucursalCodigo }: UseSucursalDetalleProps) 
   };
 
   const chartData = useMemo(() => {
-    const start = new Date(fechaInicio);
-    const end = new Date(fechaFin);
+    const start = new Date(fechaInicio + 'T00:00:00');
+    const end = new Date(fechaFin + 'T00:00:00');
     const datesMap: { [key: string]: number } = {};
 
     ventasDiarias.forEach((item: any) => {
@@ -276,7 +254,7 @@ export function useSucursalDetalle({ sucursalCodigo }: UseSucursalDetalleProps) 
     const curr = new Date(start);
     let limit = 0;
     while (curr <= end && limit < 100) {
-      const dateStr = curr.toISOString().split('T')[0];
+      const dateStr = dateUtils.formatToLocalISO(curr);
       const total = datesMap[dateStr] || 0;
       list.push({
         dateStr,

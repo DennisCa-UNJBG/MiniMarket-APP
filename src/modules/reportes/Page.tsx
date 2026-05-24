@@ -124,23 +124,13 @@ export function Reportes() {
             { label: 'Hoy', getDates: () => ({ start: dateUtils.getTodayLocal(), end: dateUtils.getTodayLocal() }) },
             {
               label: 'Últimos 7 Días', getDates: () => {
-                const end = new Date();
-                const start = new Date();
-                start.setDate(end.getDate() - 6);
-                return { start: dateUtils.formatToLocalISO(start), end: dateUtils.formatToLocalISO(end) };
+                const days = dateUtils.getLastDaysLocal(7);
+                return { start: days[0], end: days[days.length - 1] };
               }
             },
             { label: 'Este Mes', getDates: () => ({ start: dateUtils.getFirstDayOfMonthLocal(), end: dateUtils.getTodayLocal() }) },
             {
-              label: 'Mes Anterior', getDates: () => {
-                const d = new Date();
-                d.setMonth(d.getMonth() - 1);
-                const year = d.getFullYear();
-                const month = d.getMonth();
-                const start = new Date(year, month, 1);
-                const end = new Date(year, month + 1, 0);
-                return { start: dateUtils.formatToLocalISO(start), end: dateUtils.formatToLocalISO(end) };
-              }
+              label: 'Mes Anterior', getDates: () => dateUtils.getPreviousMonthRangeLocal()
             }
           ].map((opt) => {
             const dates = opt.getDates();

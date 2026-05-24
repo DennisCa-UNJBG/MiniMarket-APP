@@ -1,5 +1,6 @@
 import { getDb } from '../../shared/lib/db';
 import { systemConfigService } from '../configuracion/systemConfigService';
+import { dateUtils } from '../../shared/lib/dateUtils';
 
 export interface TopProduct {
   name: string;
@@ -71,10 +72,7 @@ export const reporteService = {
 
     let isDaily = false;
     if (startDate && endDate) {
-      const start = new Date(startDate + 'T00:00:00');
-      const end = new Date(endDate + 'T00:00:00');
-      const diffTime = Math.abs(end.getTime() - start.getTime());
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      const diffDays = dateUtils.getDaysDifference(startDate, endDate);
       if (diffDays <= 31) {
         isDaily = true;
       }
@@ -166,22 +164,9 @@ export const reporteService = {
     const useRange = !!(currentStart && currentEnd);
 
     if (useRange) {
-      const start = new Date(currentStart + 'T00:00:00');
-      const end = new Date(currentEnd + 'T00:00:00');
-      const durationMs = end.getTime() - start.getTime();
-
-      const pStart = new Date(start.getTime() - durationMs - (1000 * 60 * 60 * 24));
-      const pEnd = new Date(start.getTime() - (1000 * 60 * 60 * 24));
-
-      const formatDateStr = (d: Date) => {
-        const year = d.getFullYear();
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-      };
-
-      prevStart = formatDateStr(pStart);
-      prevEnd = formatDateStr(pEnd);
+      const { start, end } = dateUtils.getPreviousPeriodRangeLocal(currentStart, currentEnd);
+      prevStart = start;
+      prevEnd = end;
     }
 
     const currentQuery = useRange
