@@ -89,7 +89,6 @@ export const syncService = {
     const unitMap = new Map<string, number>(unitList.map(u => [u.nombre.toLowerCase(), u.id]));
     const unitByAbrevMap = new Map<string, any>(unitList.map(u => [u.abreviatura.toLowerCase(), u]));
 
-    await db.execute('BEGIN TRANSACTION');
     try {
       // 3. Crear las categorías que falten secuencialmente
       for (const catName of uniqueCats) {
@@ -159,9 +158,7 @@ export const syncService = {
         }
       }
 
-      await db.execute('COMMIT');
     } catch (error) {
-      await db.execute('ROLLBACK');
       throw error;
     }
 
@@ -195,7 +192,6 @@ export const syncService = {
     let actualizados = 0;
     let creados = 0;
 
-    await db.execute('BEGIN TRANSACTION');
     try {
       for (const u of usuariosCentral) {
         const decryptedHash = decryptPasswordHash(u.password_hash, u.username);
@@ -227,9 +223,7 @@ export const syncService = {
           creados++;
         }
       }
-      await db.execute('COMMIT');
     } catch (error) {
-      await db.execute('ROLLBACK');
       throw error;
     }
 
@@ -594,7 +588,6 @@ export const syncService = {
     let actualizados = 0;
     let creados = 0;
 
-    await db.execute('BEGIN TRANSACTION');
     try {
       for (const r of rolesCentral) {
         const rolRes = await db.select<any[]>('SELECT id FROM roles WHERE id = ?', [r.id]);
@@ -613,9 +606,7 @@ export const syncService = {
           creados++;
         }
       }
-      await db.execute('COMMIT');
     } catch (error) {
-      await db.execute('ROLLBACK');
       throw error;
     }
 
@@ -649,7 +640,6 @@ export const syncService = {
     let actualizados = 0;
     let creados = 0;
 
-    await db.execute('BEGIN TRANSACTION');
     try {
       for (const u of unidadesCentral) {
         const unitRes = await db.select<any[]>('SELECT id FROM unidades_medida WHERE id = ?', [u.id]);
@@ -668,9 +658,7 @@ export const syncService = {
           creados++;
         }
       }
-      await db.execute('COMMIT');
     } catch (error) {
-      await db.execute('ROLLBACK');
       throw error;
     }
 
@@ -691,10 +679,10 @@ export const syncService = {
     const stock = await this.pushStockLevels(logs);
 
     // 2. Ejecutar PULL (Descargar datos actualizados de la central) en secuencia estricta para evitar bloqueos en SQLite.
-    const products = await this.pullProducts(stock);
-    const users = await this.pullUsers(products);
-    const roles = await this.pullRoles(users);
-    const units = await this.pullUnidadesMedida(roles);
+    const roles = await this.pullRoles(stock);
+    const users = await this.pullUsers(roles);
+    const units = await this.pullUnidadesMedida(users);
+    const products = await this.pullProducts(units);
 
     return {
       enviadas: sales.enviadas,

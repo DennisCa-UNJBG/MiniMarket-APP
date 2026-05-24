@@ -28,10 +28,36 @@ export const logService = {
 
     const sucursalId = cachedSucursalId;
 
+    // Verificar si el usuario existe para evitar errores de clave foránea
+    let usuarioExiste = false;
+    try {
+      const userRes = await db.select<any[]>('SELECT id FROM usuarios WHERE id = ?', [log.usuario_id]);
+      usuarioExiste = userRes.length > 0;
+    } catch (e) {
+      console.error("Error al verificar existencia de usuario para el log:", e);
+    }
+
+    let finalUsuarioId = log.usuario_id;
+    if (!usuarioExiste) {
+      // Intentar obtener el primer usuario disponible de respaldo
+      try {
+        const firstUser = await db.select<any[]>('SELECT id FROM usuarios LIMIT 1');
+        if (firstUser.length > 0) {
+          finalUsuarioId = firstUser[0].id;
+        } else {
+          console.warn("No hay usuarios en la base de datos local. Se omite el log.");
+          return;
+        }
+      } catch (e) {
+        console.error("Error al obtener usuario de respaldo para el log:", e);
+        return;
+      }
+    }
+
     await db.execute(
       `INSERT INTO logs (usuario_id, sucursal_id, accion, tabla, registro_id, detalles) 
        VALUES (?, ?, ?, ?, ?, ?)`,
-      [log.usuario_id, sucursalId, log.accion, log.tabla, log.registro_id, log.detalles || null]
+      [finalUsuarioId, sucursalId, log.accion, log.tabla, log.registro_id, log.detalles || null]
     );
   },
 

@@ -3,6 +3,7 @@ import type { UserData } from '../../modules/login/Service';
 import { preferenciasService } from '../../modules/configuracion/preferenciasService';
 import { notificationService } from '../lib/notifications';
 import { logService } from '../lib/logService';
+import { getDb } from '../lib/db';
 
 interface AuthContextType {
   user: UserData | null;
@@ -22,15 +23,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const savedUser = localStorage.getItem('user:v1');
     if (savedUser) {
       try {
-        setUser(JSON.parse(savedUser));
+        const parsed = JSON.parse(savedUser);
+        // Validar si el usuario existe y está activo en la base de datos local
+        getDb().then(db => {
+          db.select<any[]>('SELECT id FROM usuarios WHERE id = ? AND estado = ?', [parsed.id, 'activo'])
+            .then(res => {
+              if (res.length > 0) {
+                setUser(parsed);
+              } else {
+                console.warn("Sesión inválida: el usuario ya no existe o está inactivo en la base de datos local.");
+                localStorage.removeItem('user:v1');
+                setUser(null);
+              }
+              setIsLoading(false);
+            })
+            .catch(err => {
+              console.error("Error al validar el usuario en la base de datos:", err);
+              // Fallback: mantener la sesión si hay un error temporal al consultar
+              setUser(parsed);
+              setIsLoading(false);
+            });
+        }).catch(err => {
+          console.error("Error al obtener la base de datos para validar sesión:", err);
+          setUser(parsed);
+          setIsLoading(false);
+        });
       } catch (e) {
         console.error("Error al cargar usuario de localStorage", e);
         localStorage.removeItem('user:v1');
+        setIsLoading(false);
       }
+    } else {
+      setIsLoading(false);
     }
     // Clean up legacy key without version to avoid pollution
     localStorage.removeItem('user');
-    setIsLoading(false);
   }, []);
 
   // Lógica de Cierre de Sesión Automático por Inactividad

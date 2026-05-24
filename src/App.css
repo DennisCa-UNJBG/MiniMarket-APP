@@ -32,3 +32,8 @@ input[type="password"]::-ms-reveal,
 input[type="password"]::-ms-clear {
   display: none;
 }
+
+/* Hacer que SweetAlert2 respete los saltos de línea (\n) y colapse espacios redundantes */
+.swal2-html-container {
+  white-space: pre-line !important;
+}

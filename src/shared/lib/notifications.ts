@@ -56,7 +56,7 @@ export const notificationService = {
       customClass: { popup: 'rounded-2xl', confirmButton: 'px-4 py-2 rounded-xl' },
     });
   },
-  
+
   info(title: string, text: string) {
     return Swal.fire({
       title,
