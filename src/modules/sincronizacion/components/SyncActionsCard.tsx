@@ -6,6 +6,7 @@ import { cajaService } from '../../caja/Service';
 import { inventarioService } from '../../inventario/Service';
 import { useSync } from '../hooks/useSync';
 import { Button } from '../../../shared/components/ui/Button';
+import { logService } from '../../../shared/lib/logService';
 
 export function SyncActionsCard() {
   const { data: isCentral = false } = useQuery({
@@ -31,10 +32,17 @@ export function SyncActionsCard() {
     enabled: !isCentral
   });
 
+  const { data: pendingLogs = 0, refetch: refetchPendingLogs } = useQuery({
+    queryKey: ['pending-logs'],
+    queryFn: () => logService.getLogsPendientes(),
+    enabled: !isCentral
+  });
+
   const refetchPending = () => {
     refetchPendingSales();
     refetchPendingCajas();
     refetchPendingCompras();
+    refetchPendingLogs();
   };
 
   const syncMutation = useSync({
@@ -84,6 +92,13 @@ export function SyncActionsCard() {
               <span className="text-zinc-400 uppercase tracking-wider">Compras pendientes</span>
               <span className="bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 px-3 py-1 rounded-full text-[10px]">
                 {pendingCompras} registros
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between text-xs font-bold border-b border-zinc-50 dark:border-zinc-700 pb-2">
+              <span className="text-zinc-400 uppercase tracking-wider">Logs de Auditoría pendientes</span>
+              <span className="bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 px-3 py-1 rounded-full text-[10px]">
+                {pendingLogs} registros
               </span>
             </div>
 

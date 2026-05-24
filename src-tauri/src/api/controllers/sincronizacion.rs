@@ -6,7 +6,7 @@ use axum::{
 use serde_json::json;
 use sqlx::SqlitePool;
 use crate::api::{ApiResult, db_error, validate_sucursal};
-use crate::api::dtos::{SyncPayloadDto, StockPayloadDto, KardexPayloadDto, CajaPayloadDto, CompraPayloadDto};
+use crate::api::dtos::{SyncPayloadDto, StockPayloadDto, KardexPayloadDto, CajaPayloadDto, CompraPayloadDto, LogPayloadDto};
 
 pub async fn sincronizar_ventas(
     headers: HeaderMap,
@@ -333,6 +333,62 @@ pub async fn sincronizar_compras(
             "status": "ok",
             "mensaje": format!("Sincronización de compras exitosa: {} procesadas", procesadas),
             "procesadas": procesadas
+        })),
+    ))
+}
+
+pub async fn sincronizar_logs(
+    headers: HeaderMap,
+    State(pool): State<SqlitePool>,
+    Json(payload): Json<LogPayloadDto>,
+) -> Result<ApiResult, ApiResult> {
+    let sucursal_id = validate_sucursal(&headers, &pool).await?;
+
+    if sucursal_id != payload.sucursal_id {
+        return Ok((axum::http::StatusCode::FORBIDDEN, Json(json!({ "error": "Llave no coincide con sucursal" }))));
+    }
+
+    let mut procesados = 0;
+    for log in payload.logs {
+        // Idempotencia: si ya existe el log de esta sucursal con este id_local, lo omitimos
+        let existe = sqlx::query("SELECT id FROM logs WHERE sucursal_id = ? AND sucursal_local_id = ?")
+            .bind(&payload.sucursal_id)
+            .bind(log.id_local)
+            .fetch_optional(&pool)
+            .await
+            .map_err(db_error)?;
+
+        if existe.is_some() {
+            procesados += 1;
+            continue;
+        }
+
+        let res = sqlx::query(
+            "INSERT INTO logs (usuario_id, sucursal_id, sucursal_local_id, accion, tabla, registro_id, detalles, sincronizado, created_at) \
+             VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)"
+        )
+        .bind(log.usuario_id)
+        .bind(&payload.sucursal_id)
+        .bind(log.id_local)
+        .bind(&log.accion)
+        .bind(&log.tabla)
+        .bind(log.registro_id)
+        .bind(&log.detalles)
+        .bind(&log.created_at)
+        .execute(&pool)
+        .await;
+
+        if res.is_ok() {
+            procesados += 1;
+        }
+    }
+
+    Ok((
+        axum::http::StatusCode::OK,
+        Json(json!({
+            "status": "ok",
+            "mensaje": format!("{} logs de auditoría sincronizados", procesados),
+            "procesados": procesados
         })),
     ))
 }

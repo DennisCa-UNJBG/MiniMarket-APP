@@ -162,3 +162,20 @@ pub struct RolCrearDto {
     pub descripcion: Option<String>,
     pub permisos: Vec<String>,
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct LogSyncDto {
+    pub id_local: i32,
+    pub usuario_id: i32,
+    pub accion: String,
+    pub tabla: String,
+    pub registro_id: i32,
+    pub detalles: Option<String>,
+    pub created_at: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct LogPayloadDto {
+    pub sucursal_id: String,
+    pub logs: Vec<LogSyncDto>,
+}

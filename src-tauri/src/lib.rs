@@ -7,8 +7,8 @@ use tauri::{AppHandle, Emitter, Manager, State};
 use tokio::sync::Mutex;
 // use axum::Router; // Eliminado por ser innecesario tras la refactorización
 use local_ip_address::local_ip;
-use tower_http::cors::CorsLayer;
 use std::sync::OnceLock;
+use tower_http::cors::CorsLayer;
 
 // Llave de sincronización global cargada de la configuración
 pub static SYNC_KEY: OnceLock<String> = OnceLock::new();
@@ -37,12 +37,16 @@ async fn toggle_server(
 
     if active && !*is_running {
         // Inicializar la llave de sincronización desde tauri.conf.json
-        let sync_key = app_handle.config().plugins.0.get("sync")
+        let sync_key = app_handle
+            .config()
+            .plugins
+            .0
+            .get("sync")
             .and_then(|val| val.get("key"))
             .and_then(|val| val.as_str())
             .unwrap_or("MiniMarket-Secure-Sync-Key-2026")
             .to_string();
-        
+
         // Registrar en el OnceLock si aún no está asignado
         let _ = SYNC_KEY.set(sync_key);
 
@@ -67,22 +71,40 @@ async fn toggle_server(
 
             let app_dir = match app_handle_clone.path().app_data_dir() {
                 Ok(dir) => dir,
-                Err(e) => server_fatal!(app_handle_clone, format!("No se pudo obtener la carpeta de datos: {}", e)),
+                Err(e) => server_fatal!(
+                    app_handle_clone,
+                    format!("No se pudo obtener la carpeta de datos: {}", e)
+                ),
             };
-            let db_path = format!("sqlite:{}", app_dir.join("inventario.db").to_string_lossy());
+
+            // Asegurar que el directorio de datos existe
+            if !app_dir.exists() {
+                let _ = std::fs::create_dir_all(&app_dir);
+            }
+
+            let connection_options = sqlx::sqlite::SqliteConnectOptions::new()
+                .filename(app_dir.join("inventario.db"))
+                .create_if_missing(true);
 
             // Conexión a la DB para el servidor Axum con pool configurado (máx. 5 conexiones)
             let pool = match sqlx::sqlite::SqlitePoolOptions::new()
                 .max_connections(5)
-                .connect(&db_path)
+                .connect_with(connection_options)
                 .await
             {
                 Ok(p) => p,
-                Err(e) => server_fatal!(app_handle_clone, format!("No se pudo conectar a la base de datos del servidor: {}", e)),
+                Err(e) => server_fatal!(
+                    app_handle_clone,
+                    format!("No se pudo conectar a la base de datos del servidor: {}", e)
+                ),
             };
 
             // 1. Obtener puerto configurable desde tauri.conf.json (M-01)
-            let port = app_handle_clone.config().plugins.0.get("sync")
+            let port = app_handle_clone
+                .config()
+                .plugins
+                .0
+                .get("sync")
                 .and_then(|val| val.get("port"))
                 .and_then(|val| val.as_u64())
                 .unwrap_or(8080) as u16;
@@ -106,7 +128,10 @@ async fn toggle_server(
             let addr = format!("0.0.0.0:{}", port);
             let listener = match tokio::net::TcpListener::bind(&addr).await {
                 Ok(l) => l,
-                Err(e) => server_fatal!(app_handle_clone, format!("Puerto {} no disponible: {}", port, e)),
+                Err(e) => server_fatal!(
+                    app_handle_clone,
+                    format!("Puerto {} no disponible: {}", port, e)
+                ),
             };
 
             if let Err(e) = axum::serve(listener, app)
@@ -115,7 +140,10 @@ async fn toggle_server(
                 })
                 .await
             {
-                server_fatal!(app_handle_clone, format!("El servidor HTTP falló inesperadamente: {}", e));
+                server_fatal!(
+                    app_handle_clone,
+                    format!("El servidor HTTP falló inesperadamente: {}", e)
+                );
             }
         });
 
@@ -136,7 +164,6 @@ async fn toggle_server(
 async fn is_server_running(state: State<'_, Arc<ServerState>>) -> Result<bool, String> {
     Ok(*state.is_running.lock().await)
 }
-
 
 #[tauri::command]
 async fn get_db_stats(app_handle: AppHandle) -> Result<serde_json::Value, String> {
@@ -291,14 +318,12 @@ use tauri_plugin_sql::{Migration, MigrationKind};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let migrations = vec![
-        Migration {
-            version: 1,
-            description: "schemadb_init",
-            sql: include_str!("../database/SchemaDB.sql"),
-            kind: MigrationKind::Up,
-        }
-    ];
+    let migrations = vec![Migration {
+        version: 1,
+        description: "schemadb_init",
+        sql: include_str!("../database/SchemaDB.sql"),
+        kind: MigrationKind::Up,
+    }];
 
     tauri::Builder::default()
         .plugin(tauri_plugin_fs::init())

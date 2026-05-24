@@ -316,5 +316,21 @@ export const sucursalService = {
        LIMIT 5`,
       [sucursalId, desdeStr, hastaStr]
     );
+  },
+
+  /**
+   * Obtiene los logs de auditoría asociados a una sucursal específica
+   */
+  async getSucursalLogs(sucursalId: string): Promise<any[]> {
+    const db = await getDb();
+    return await db.select(
+      `SELECT l.id, l.usuario_id, l.sucursal_id, l.sucursal_local_id, l.accion, l.tabla, l.registro_id, l.detalles, l.created_at,
+              u.nombre_completo as usuario_nombre
+       FROM logs l
+       LEFT JOIN usuarios u ON l.usuario_id = u.id
+       WHERE l.sucursal_id = ?
+       ORDER BY l.created_at DESC`,
+      [sucursalId]
+    );
   }
 };

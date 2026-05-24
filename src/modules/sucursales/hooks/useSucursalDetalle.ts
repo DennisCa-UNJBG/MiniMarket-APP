@@ -9,7 +9,7 @@ interface UseSucursalDetalleProps {
 
 export function useSucursalDetalle({ sucursalCodigo }: UseSucursalDetalleProps) {
   // Pestaña activa
-  const [activeTab, setActiveTab] = useState<'stock' | 'ventas' | 'kardex' | 'compras' | 'cajas' | 'reportes'>('stock');
+  const [activeTab, setActiveTab] = useState<'stock' | 'ventas' | 'kardex' | 'compras' | 'cajas' | 'reportes' | 'auditorias'>('stock');
 
   // Filtros de búsqueda
   const [searchTerms, setSearchTerms] = useState({
@@ -17,7 +17,8 @@ export function useSucursalDetalle({ sucursalCodigo }: UseSucursalDetalleProps) 
     ventas: '',
     kardex: '',
     compras: '',
-    cajas: ''
+    cajas: '',
+    auditorias: ''
   });
 
   // Rango de fechas por defecto (Primer día del mes actual al día de hoy)
@@ -92,6 +93,11 @@ export function useSucursalDetalle({ sucursalCodigo }: UseSucursalDetalleProps) 
   const { data: cajas = [], isLoading: loadingCajas } = useQuery({
     queryKey: ['sucursal-cajas', sucursalCodigo],
     queryFn: () => sucursalService.getSucursalCajas(sucursalCodigo),
+  });
+
+  const { data: logs = [], isLoading: loadingLogs } = useQuery({
+    queryKey: ['sucursal-logs', sucursalCodigo],
+    queryFn: () => sucursalService.getSucursalLogs(sucursalCodigo),
   });
 
   // Queries reactivos para Reportes
@@ -204,6 +210,18 @@ export function useSucursalDetalle({ sucursalCodigo }: UseSucursalDetalleProps) 
     );
   }, [cajas, searchTerms.cajas]);
 
+  const filteredLogs = useMemo(() => {
+    const term = searchTerms.auditorias.toLowerCase().trim();
+    if (!term) return logs;
+    return logs.filter(
+      (l: any) =>
+        l.accion?.toLowerCase().includes(term) ||
+        l.tabla?.toLowerCase().includes(term) ||
+        l.usuario_nombre?.toLowerCase().includes(term) ||
+        l.detalles?.toLowerCase().includes(term)
+    );
+  }, [logs, searchTerms.auditorias]);
+
   // Datos de comparación (Reportes)
   const comparisonStats = useMemo(() => {
     const totalVentas = reporteFinanzas.total_ventas || 0;
@@ -283,6 +301,7 @@ export function useSucursalDetalle({ sucursalCodigo }: UseSucursalDetalleProps) 
       loadingKardex ||
       loadingCompras ||
       loadingCajas ||
+      loadingLogs ||
       loadingFinanzas ||
       loadingTopProductos ||
       loadingVentasDiarias
@@ -293,6 +312,7 @@ export function useSucursalDetalle({ sucursalCodigo }: UseSucursalDetalleProps) 
     loadingKardex,
     loadingCompras,
     loadingCajas,
+    loadingLogs,
     loadingFinanzas,
     loadingTopProductos,
     loadingVentasDiarias
@@ -314,6 +334,7 @@ export function useSucursalDetalle({ sucursalCodigo }: UseSucursalDetalleProps) 
     kardex,
     compras,
     cajas,
+    logs,
     refetchStock,
     metrics,
     filteredStock,
@@ -321,6 +342,7 @@ export function useSucursalDetalle({ sucursalCodigo }: UseSucursalDetalleProps) 
     filteredKardex,
     filteredCompras,
     filteredCajas,
+    filteredLogs,
     comparisonStats,
     chartData,
     maxQuantity,

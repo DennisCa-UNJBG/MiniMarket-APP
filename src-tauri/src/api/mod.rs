@@ -104,6 +104,7 @@ pub fn create_router(pool: SqlitePool) -> Router {
         .route("/api/kardex-sync", post(controllers::sincronizar_kardex))
         .route("/api/cajas-sync", post(controllers::sincronizar_cajas))
         .route("/api/compras-sync", post(controllers::sincronizar_compras))
+        .route("/api/logs-sync", post(controllers::sincronizar_logs))
         .route(
             "/api/categorias",
             post(controllers::crear_categoria).put(controllers::verificar_editar_categoria),

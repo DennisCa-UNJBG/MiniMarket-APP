@@ -7,7 +7,8 @@ import {
   History,
   Wallet,
   FileText,
-  BarChart3
+  BarChart3,
+  Fingerprint
 } from 'lucide-react';
 import { Badge } from '../../../shared/components/ui/Badge';
 import { Card } from '../../../shared/components/ui/Card';
@@ -22,6 +23,7 @@ import { TabKardex } from './tabs/TabKardex';
 import { TabCompras } from './tabs/TabCompras';
 import { TabCajas } from './tabs/TabCajas';
 import { TabReportes } from './tabs/TabReportes';
+import { TabAuditorias } from './tabs/TabAuditorias';
 
 interface SucursalDetalleProps {
   sucursal: {
@@ -58,6 +60,7 @@ export function SucursalDetalle({ sucursal, onBack }: SucursalDetalleProps) {
     filteredKardex,
     filteredCompras,
     filteredCajas,
+    filteredLogs,
     comparisonStats,
     chartData,
     maxQuantity,
@@ -238,6 +241,16 @@ export function SucursalDetalle({ sucursal, onBack }: SucursalDetalleProps) {
           <BarChart3 size={16} />
           Reportes
         </button>
+        <button
+          onClick={() => setActiveTab('auditorias')}
+          className={`flex items-center gap-2 px-6 py-3 text-sm font-bold border-b-2 transition-all whitespace-nowrap ${activeTab === 'auditorias'
+              ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+              : 'border-transparent text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300'
+            }`}
+        >
+          <Fingerprint size={16} />
+          Auditoría
+        </button>
       </div>
 
       {/* Contenido de cada pestaña */}
@@ -298,6 +311,14 @@ export function SucursalDetalle({ sucursal, onBack }: SucursalDetalleProps) {
             chartData={chartData}
             topProductos={topProductos}
             maxQuantity={maxQuantity}
+          />
+        )}
+
+        {activeTab === 'auditorias' && (
+          <TabAuditorias
+            filteredLogs={filteredLogs}
+            logsSearchTerm={searchTerms.auditorias}
+            onSearchTermChange={(val) => setSearchTerms((prev) => ({ ...prev, auditorias: val }))}
           />
         )}
       </div>

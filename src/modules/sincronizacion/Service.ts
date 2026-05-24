@@ -518,6 +518,56 @@ export const syncService = {
   },
 
   /**
+   * Envía los logs de auditoría locales no sincronizados a la sede central
+   */
+  async pushLogs(_dep?: any) {
+    const config = await systemConfigService.getConfig();
+    if (!config || !config.api_url_central || !config.sucursal_id) {
+      throw new Error('Configuración de sucursal incompleta');
+    }
+
+    const db = await getDb();
+
+    const logsPendientes = await db.select<any[]>(
+      'SELECT * FROM logs WHERE sincronizado = 0 ORDER BY created_at ASC'
+    );
+
+    if (logsPendientes.length === 0) return { enviadas: 0 };
+
+    const response = await fetchWithTimeout(`${config.api_url_central}/api/logs-sync`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Sucursal-Key': encryptBranchCode(config.sucursal_id)
+      },
+      body: JSON.stringify({
+        sucursal_id: config.sucursal_id,
+        logs: logsPendientes.map(l => ({
+          id_local: l.id,
+          usuario_id: l.usuario_id,
+          accion: l.accion,
+          tabla: l.tabla,
+          registro_id: l.registro_id,
+          detalles: l.detalles || null,
+          created_at: l.created_at
+        }))
+      })
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Error al enviar logs de auditoría');
+    }
+
+    // Marcar como sincronizados localmente
+    await Promise.all(logsPendientes.map(l =>
+      db.execute('UPDATE logs SET sincronizado = 1 WHERE id = ?', [l.id])
+    ));
+
+    return { enviadas: logsPendientes.length };
+  },
+
+  /**
    * Descarga roles desde la sede central
    */
   async pullRoles(_dep?: any) {
@@ -637,7 +687,8 @@ export const syncService = {
     const kardex = await this.pushKardex(sales);
     const cajas = await this.pushCajas(kardex);
     const compras = await this.pushCompras(cajas);
-    const stock = await this.pushStockLevels(compras);
+    const logs = await this.pushLogs(compras);
+    const stock = await this.pushStockLevels(logs);
 
     // 2. Ejecutar PULL (Descargar datos actualizados de la central) en secuencia estricta para evitar bloqueos en SQLite.
     const products = await this.pullProducts(stock);
@@ -650,6 +701,7 @@ export const syncService = {
       kEnviadas: kardex.enviadas,
       cEnviadas: cajas.enviadas,
       coEnviadas: compras.enviadas,
+      lEnviadas: logs.enviadas,
       pCreados: products.creados,
       pActualizados: products.actualizados,
       uCreados: users.creados,

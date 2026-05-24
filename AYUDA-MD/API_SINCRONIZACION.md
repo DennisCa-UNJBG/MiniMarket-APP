@@ -19,7 +19,7 @@ SUCURSAL                               SEDE CENTRAL
    │──── PUSH compras ──────────────────────►│
    │──── PUSH kardex ───────────────────────►│
    │──── PUSH cajas ────────────────────────►│
-   │──── PUSH logs ─────────────────────────►│
+   │──── PUSH logs de auditoría ────────────►│
    │──── PUSH inventario (stock) ───────────►│
    │                                         │
    │──── SOLICITAR crear producto ──────────►│ (central crea, asigna ID, responde)
@@ -35,16 +35,83 @@ SUCURSAL                               SEDE CENTRAL
    │◄─── PULL unidades_medida ──────────────│
 ```
 
+> ℹ️ **Nota:** El endpoint `POST /api/logs-sync` **sí forma parte del flujo de sincronización principal**. Los logs de auditoría son enviados desde cada sucursal a la sede central para centralizar el historial de acciones de todas las sedes.
+
 ---
 
 ## Autenticación
 
 Todos los endpoints requieren el header:
 ```
-X-Sucursal-Key: <codigo_sucursal>
+X-Sucursal-Key: <codigo_sucursal_cifrado_hex>
 ```
-La central valida que el código existe en la tabla `sucursales` y tiene `estado = 'activo'`.  
-Si no es válido → `401 Unauthorized`.
+
+> ⚠️ **Seguridad — Cifrado del Header:** El código de sucursal **NO viaja en texto plano**. La sucursal aplica un cifrado simétrico XOR antes de enviarlo y la central lo descifra antes de validarlo.
+
+**Algoritmo de cifrado (TypeScript — sucursal):**
+```typescript
+// Archivo: src/shared/lib/syncUtils.ts (exportado también desde sincronizacion/Service.ts)
+export function encryptBranchCode(code: string): string {
+  const baseKey = import.meta.env.VITE_SYNC_KEY || "MiniMarket-Secure-Sync-Key-2026";
+  const encryptedBytes = [...code].map((char, i) => {
+    return char.charCodeAt(0) ^ baseKey.charCodeAt(i % baseKey.length);
+  });
+  return encryptedBytes.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+```
+
+**Descifrado en la central (Rust):**
+```rust
+// src-tauri/src/api/mod.rs
+fn decrypt_branch_code(hex: &str) -> Result<String, ()> {
+  let base_key = b"MiniMarket-Secure-Sync-Key-2026";
+  // Decodificar hex → bytes → XOR con base_key → String
+}
+```
+
+La clave de sincronización está configurada en `tauri.conf.json → plugins.sync.key`.
+Si el código descifrado no existe en la tabla `sucursales` con `estado = 'activo'` → `401 Unauthorized`.
+
+---
+
+## Puerto del Servidor Central
+
+El servidor HTTP de la central escucha en el puerto configurado en `tauri.conf.json`:
+
+```json
+// src-tauri/tauri.conf.json
+{
+  "plugins": {
+    "sync": {
+      "key": "MiniMarket-Secure-Sync-Key-2026",
+      "port": 8080
+    }
+  }
+}
+```
+
+Si el campo `port` no existe, se usa `8080` como valor por defecto. Las sucursales apuntan a `http://<IP_CENTRAL>:<PUERTO>`.
+
+---
+
+## Timeouts en Peticiones HTTP
+
+Todas las llamadas desde la sucursal hacia la central usan el helper `fetchWithTimeout` (timeout por defecto: **15 segundos**):
+
+```typescript
+// src/shared/lib/fetch.ts
+export async function fetchWithTimeout(
+  url: string,
+  options: RequestInit & { timeout?: number } = {}
+): Promise<Response> {
+  const { timeout = 15000, ...fetchOptions } = options;
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeout);
+  // ...
+}
+```
+
+Si el servidor no responde en 15 segundos, se lanza un error de timeout y la sincronización se aborta.
 
 ---
 
@@ -68,7 +135,7 @@ Si no es válido → `401 Unauthorized`.
 
 Descarga el catálogo de productos con su precio activo.
 
-**Headers:** `X-Sucursal-Key`
+**Headers:** `X-Sucursal-Key` (cifrado XOR en hex)
 
 **Respuesta 200:**
 ```json
@@ -79,6 +146,7 @@ Descarga el catálogo de productos con su precio activo.
       "codigo_barras": "7750095131003",
       "nombre": "Arroz Extra Superiora 1kg",
       "categoria": "Abarrotes",
+      "unidad_nombre": "Kilogramo",
       "unidad_abreviatura": "KG",
       "stock_minimo": 10,
       "estado": "activo",
@@ -95,6 +163,7 @@ SELECT
   p.codigo_barras,
   p.nombre,
   c.nombre   AS categoria,
+  u.nombre   AS unidad_nombre,
   u.abreviatura AS unidad_abreviatura,
   p.stock_minimo,
   p.estado,
@@ -108,25 +177,30 @@ WHERE p.estado = 'activo'
 ```
 
 **Cómo aplica la sucursal los cambios:**
+
+La sucursal aplica los productos en una **transacción única** para mayor rendimiento y atomicidad:
+
+1. Pre-carga `catMap` y `unitMap` (Maps indexados para lookups O(1))
+2. Inserta categorías y unidades faltantes secuencialmente
+3. Hace upsert de cada producto por `codigo_barras`
+
 ```sql
 -- Upsert por codigo_barras (nunca por id)
+SELECT id FROM productos WHERE codigo_barras = ?;
+-- Si existe: UPDATE, si no: INSERT
+UPDATE productos SET nombre = ?, categoria_id = ?, unidad_id = ?, stock_minimo = ? WHERE id = ?;
+-- O bien:
 INSERT INTO productos (codigo_barras, nombre, categoria_id, unidad_id, stock_minimo, estado)
-VALUES (?, ?, ?, ?, ?, ?)
-ON CONFLICT(codigo_barras) DO UPDATE SET
-  nombre       = excluded.nombre,
-  categoria_id = excluded.categoria_id,
-  unidad_id    = excluded.unidad_id,
-  stock_minimo = excluded.stock_minimo,
-  estado       = excluded.estado,
-  updated_at   = CURRENT_TIMESTAMP;
+VALUES (?, ?, ?, ?, ?, ?);
 ```
 
 ---
 
 ### GET /api/usuarios
 
-Descarga la lista de usuarios activos.  
-⚠ **No se envía `password_hash`** — las contraseñas solo se sincronizan a través de un endpoint dedicado o bien se manda el hash sin exponerlo en texto plano.
+Descarga la lista de usuarios activos.
+
+> ⚠️ **Seguridad — Contraseñas en tránsito:** El campo `password_hash` (hash bcrypt) viaja **cifrado con XOR por usuario**, usando una clave derivada de `baseKey + username`. La sucursal recibe el hex cifrado y lo descifra localmente antes de almacenarlo.
 
 **Respuesta 200:**
 ```json
@@ -134,9 +208,11 @@ Descarga la lista de usuarios activos.
   "ok": true,
   "data": [
     {
+      "id": 3,
       "username": "cajero1",
-      "password_hash": "$2b$10$...",
+      "password_hash": "<hex_cifrado_xor>",
       "nombre_completo": "Juan Pérez",
+      "rol_id": 2,
       "rol_nombre": "Cajero",
       "sucursal_id": "SUC001",
       "estado": "activo"
@@ -145,19 +221,28 @@ Descarga la lista de usuarios activos.
 }
 ```
 
-**Cómo aplica la sucursal los cambios:**
-```sql
--- Upsert por username (nunca por id)
-INSERT INTO usuarios (username, password_hash, nombre_completo, rol_id, sucursal_id, estado)
-VALUES (?, ?, ?, (SELECT id FROM roles WHERE nombre = ?), ?, ?)
-ON CONFLICT(username) DO UPDATE SET
-  password_hash   = excluded.password_hash,
-  nombre_completo = excluded.nombre_completo,
-  rol_id          = excluded.rol_id,
-  sucursal_id     = excluded.sucursal_id,
-  estado          = excluded.estado,
-  updated_at      = CURRENT_TIMESTAMP;
+**Cómo aplica la sucursal los cambios (resolución de conflictos):**
+
+La sucursal usa lógica de tres vías para evitar conflictos de ID/username:
+
+```typescript
+// Para cada usuario de la central:
+const userByUsername = await db.select('SELECT id FROM usuarios WHERE username = ?', [u.username]);
+const userById      = await db.select('SELECT username FROM usuarios WHERE id = ?', [u.id]);
+
+if (userByUsername.length > 0) {
+  // Username coincide → actualizar todos los campos (incluyendo ID central)
+  await db.execute('UPDATE usuarios SET id=?, password_hash=?, ... WHERE username=?', [...]);
+} else if (userById.length > 0) {
+  // ID ya existe con otro username → renombrar username y actualizar datos
+  await db.execute('UPDATE usuarios SET username=?, password_hash=?, ... WHERE id=?', [...]);
+} else {
+  // No existe → insertar limpiamente con el ID de la central
+  await db.execute('INSERT INTO usuarios (id, username, password_hash, ...) VALUES (?, ?, ?, ...)', [...]);
+}
 ```
+
+Todo dentro de una **transacción SQLite** (`BEGIN TRANSACTION / COMMIT / ROLLBACK`).
 
 ---
 
@@ -171,6 +256,7 @@ Descarga los roles y sus permisos.
   "ok": true,
   "data": [
     {
+      "id": 2,
       "nombre": "Cajero",
       "descripcion": "Realiza ventas y visualiza productos",
       "permisos": "[\"pos\", \"ventas\", \"productos\"]",
@@ -181,14 +267,13 @@ Descarga los roles y sus permisos.
 ```
 
 **Cómo aplica la sucursal:**
+
+Upsert por `id` dentro de transacción:
 ```sql
-INSERT INTO roles (nombre, descripcion, permisos, estado)
-VALUES (?, ?, ?, ?)
-ON CONFLICT(nombre) DO UPDATE SET
-  descripcion = excluded.descripcion,
-  permisos    = excluded.permisos,
-  estado      = excluded.estado,
-  updated_at  = CURRENT_TIMESTAMP;
+-- Si existe por ID: UPDATE
+UPDATE roles SET nombre=?, descripcion=?, permisos=?, estado=? WHERE id=?;
+-- Si no: INSERT con el ID de la central
+INSERT INTO roles (id, nombre, descripcion, permisos, estado) VALUES (?, ?, ?, ?, ?);
 ```
 
 ---
@@ -218,9 +303,18 @@ Descarga las unidades de medida.
 {
   "ok": true,
   "data": [
-    { "nombre": "Kilogramo", "abreviatura": "KG", "estado": "activo" }
+    { "id": 1, "nombre": "Kilogramo", "abreviatura": "KG", "estado": "activo" }
   ]
 }
+```
+
+**Cómo aplica la sucursal:**
+
+Upsert por `id` dentro de transacción:
+```sql
+UPDATE unidades_medida SET nombre=?, abreviatura=?, estado=? WHERE id=?;
+-- o INSERT con el ID de la central
+INSERT INTO unidades_medida (id, nombre, abreviatura, estado) VALUES (?, ?, ?, ?);
 ```
 
 ---
@@ -233,7 +327,7 @@ Descarga las unidades de medida.
 
 Envía las ventas pendientes (`sincronizado = 0`).
 
-**Headers:** `X-Sucursal-Key`, `Content-Type: application/json`
+**Headers:** `X-Sucursal-Key` (cifrado XOR), `Content-Type: application/json`
 
 **Body:**
 ```json
@@ -241,20 +335,15 @@ Envía las ventas pendientes (`sincronizado = 0`).
   "sucursal_id": "SUC001",
   "ventas": [
     {
-      "local_id": 45,
+      "id_local": 45,
       "fecha": "2025-05-20T10:30:00",
       "total": 150.50,
+      "usuario_id": 3,
       "metodo_pago": "EFECTIVO",
-      "monto_pagado": 200.00,
-      "vuelto": 49.50,
-      "igv": 23.00,
-      "igv_porcentaje": 18.0,
       "estado": "completado",
-      "usuario_username": "cajero1",
-      "cliente_dni_ruc": "12345678",
       "detalles": [
         {
-          "producto_codigo_barras": "7750095131003",
+          "codigo_barras": "7750095131003",
           "cantidad": 3,
           "precio_unitario": 50.00,
           "subtotal": 150.00
@@ -265,23 +354,24 @@ Envía las ventas pendientes (`sincronizado = 0`).
 }
 ```
 
+> ℹ️ **Nota:** Los campos `cliente_dni_ruc`, `igv`, `igv_porcentaje`, `monto_pagado` y `vuelto` se omiten si no están disponibles. Solo se envían los campos mínimos requeridos.
+
 **Lógica en la central (idempotencia):**
 ```sql
--- Insertar solo si no existe ya esta combinación (sucursal_id + local_id)
-INSERT OR IGNORE INTO ventas
-  (usuario_id, fecha, total, metodo_pago, monto_pagado, vuelto,
-   sucursal_id, igv, igv_porcentaje, estado, cliente_id, sucursal_local_id)
-VALUES
-  ((SELECT id FROM usuarios WHERE username = ?),
-   ?, ?, ?, ?, ?, ?, ?, ?, ?,
-   (SELECT id FROM clientes WHERE dni_ruc = ?),
-   ?);
--- Si ya existía (OR IGNORE), no se crea duplicado.
+-- Antes de insertar, verificar si ya existe por (sucursal_id + id_local)
+SELECT id FROM ventas WHERE sucursal_id = ? AND sucursal_local_id = ?;
+-- Si no existe: INSERT
+-- Si ya existe: verificar si el estado cambió (p.ej. anulación) y UPDATE si difiere
 ```
 
 **Respuesta 200:**
 ```json
 { "ok": true, "procesadas": 3, "duplicadas": 0 }
+```
+
+**Marcado local tras éxito:**
+```sql
+UPDATE ventas SET sincronizado = 1 WHERE id = ?;
 ```
 
 ---
@@ -296,9 +386,9 @@ Envía movimientos de inventario pendientes.
   "sucursal_id": "SUC001",
   "movimientos": [
     {
-      "local_id": 12,
+      "id_local": 12,
       "producto_codigo_barras": "7750095131003",
-      "usuario_username": "cajero1",
+      "usuario_id": 3,
       "fecha": "2025-05-20T10:30:00",
       "tipo_movimiento": "SALIDA",
       "cantidad": 3,
@@ -317,8 +407,7 @@ INSERT OR IGNORE INTO kardex
    saldo_posterior, costo_unitario, referencia, sucursal_id, sucursal_local_id)
 VALUES
   ((SELECT id FROM productos WHERE codigo_barras = ?),
-   (SELECT id FROM usuarios  WHERE username = ?),
-   ?, ?, ?, ?, ?, ?, ?, ?);
+   ?, ?, ?, ?, ?, ?, ?, ?, ?);
 ```
 
 ---
@@ -333,7 +422,7 @@ Envía compras/ingresos de mercadería pendientes.
   "sucursal_id": "SUC001",
   "compras": [
     {
-      "local_id": 8,
+      "id_local": 8,
       "fecha": "2025-05-20T09:00:00",
       "total": 500.00,
       "metodo_pago": "BANCO",
@@ -357,7 +446,7 @@ Envía compras/ingresos de mercadería pendientes.
 
 ### POST /api/cajas-sync — Caja
 
-Envía sesiones de caja cerradas.
+Envía sesiones de caja cerradas (`estado = 'cerrada' AND sincronizado = 0`).
 
 **Body:**
 ```json
@@ -365,8 +454,8 @@ Envía sesiones de caja cerradas.
   "sucursal_id": "SUC001",
   "cajas": [
     {
-      "local_id": 3,
-      "usuario_username": "cajero1",
+      "id_local": 3,
+      "usuario_id": 3,
       "monto_inicial": 200.00,
       "monto_final": 850.00,
       "monto_esperado": 860.50,
@@ -381,7 +470,9 @@ Envía sesiones de caja cerradas.
 
 ### POST /api/logs-sync — Logs de Auditoría
 
-Envía los registros de auditoría pendientes.
+Envía los registros de auditoría pendientes (`sincronizado = 0`) en **orden cronológico** (`ORDER BY created_at ASC`).
+
+**Headers:** `X-Sucursal-Key` (cifrado XOR), `Content-Type: application/json`
 
 **Body:**
 ```json
@@ -389,7 +480,8 @@ Envía los registros de auditoría pendientes.
   "sucursal_id": "SUC001",
   "logs": [
     {
-      "usuario_username": "cajero1",
+      "id_local": 88,
+      "usuario_id": 3,
       "accion": "REGISTRO_VENTA",
       "tabla": "ventas",
       "registro_id": 45,
@@ -398,6 +490,28 @@ Envía los registros de auditoría pendientes.
     }
   ]
 }
+```
+
+**Lógica en la central (idempotencia):**
+```sql
+-- Verificar si ya existe el log por (sucursal_id + id_local)
+SELECT id FROM logs WHERE sucursal_id = ? AND sucursal_local_id = ?;
+-- Si no existe: INSERT preservando el created_at original
+INSERT INTO logs (usuario_id, sucursal_id, sucursal_local_id, accion, tabla, registro_id, detalles, sincronizado, created_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?);
+```
+
+> ℹ️ **Clave de idempotencia:** `sucursal_id + sucursal_local_id` (ID local del log en la sucursal).  
+> Esto requiere la columna `sucursal_local_id` en la tabla `logs`. La **migración v2** la agrega en BD existentes.
+
+**Respuesta 200:**
+```json
+{ "status": "ok", "mensaje": "88 logs de auditoría sincronizados", "procesados": 88 }
+```
+
+**Marcado local tras éxito:**
+```sql
+UPDATE logs SET sincronizado = 1 WHERE id = ?;
 ```
 
 ---
@@ -430,27 +544,30 @@ ON CONFLICT(sucursal_id, codigo_barras) DO UPDATE SET
 
 ---
 
-## Orden recomendado de sincronización
+## Orden de sincronización (syncAllData)
+
+El método `syncAllData()` ejecuta todas las operaciones de forma **secuencial y estricta**, no en paralelo. Esto es intencional para evitar bloqueos de escritura en SQLite local (`SQLITE_BUSY`).
 
 ```
-Al hacer PUSH (sucursal envía a central):
-  1. POST /api/sincronizar      (ventas)
-  2. POST /api/kardex-sync      (kardex)
-  3. POST /api/compras-sync     (compras)
-  4. POST /api/cajas-sync       (cajas)
-  5. POST /api/logs-sync        (logs)
-  6. POST /api/stock-update     (inventario — siempre al final)
+FASE 1 — PUSH (en orden, si uno falla se aborta todo):
+  1. pushSales()          → POST /api/sincronizar
+  2. pushKardex()         → POST /api/kardex-sync
+  3. pushCajas()          → POST /api/cajas-sync
+  4. pushCompras()        → POST /api/compras-sync
+  5. pushLogs()           → POST /api/logs-sync
+  6. pushStockLevels()    → POST /api/stock-update  (siempre al final)
 
-Al hacer PULL (sucursal pide a central):
-  1. GET  /api/roles            (base para usuarios)
-  2. GET  /api/categorias       (base para productos)
-  3. GET  /api/unidades-medida  (base para productos)
-  4. GET  /api/usuarios         (depende de roles)
-  5. GET  /api/productos        (depende de categorias + unidades)
+FASE 2 — PULL (en orden, dependencias de integridad referencial):
+  1. pullProducts()       → GET /api/productos       (incluye categorías/unidades faltantes)
+  2. pullUsers()          → GET /api/usuarios
+  3. pullRoles()          → GET /api/roles
+  4. pullUnidadesMedida() → GET /api/unidades-medida
 ```
 
-> El orden del PULL importa porque los productos dependen de categorías y unidades.  
+> El orden del PULL importa porque los productos dependen de categorías y unidades.
 > Si se insertan en orden incorrecto, los `categoria_id` y `unidad_id` podrían no existir aún.
+
+> ⚠️ **Nota sobre transacciones:** Cada método de pull ejecuta sus operaciones de escritura SQLite dentro de un bloque `BEGIN TRANSACTION / COMMIT / ROLLBACK` para garantizar atomicidad y rendimiento en inserciones por lotes.
 
 ---
 
@@ -462,7 +579,7 @@ Al hacer PULL (sucursal pide a central):
 
 Crea un nuevo producto en la central de manera síncrona.
 
-**Headers:** `X-Sucursal-Key`, `Content-Type: application/json`
+**Headers:** `X-Sucursal-Key` (cifrado XOR), `Content-Type: application/json`
 
 **Body:**
 ```json
@@ -638,14 +755,16 @@ Las creaciones de registros maestros están prohibidas en modo offline para evit
      - Si SÍ hay conexión:
          * Procede al paso 3.
 3. La Sucursal envía una solicitud HTTP POST síncrona al endpoint de la Sede Central (ej. POST /api/productos).
+   - El header X-Sucursal-Key se cifra con XOR antes de enviarse.
 4. La Central procesa la solicitud:
+     - Descifra el header X-Sucursal-Key y valida la sucursal en BD.
      - Valida la integridad y unicidad de los datos.
      - Si los datos son válidos, los inserta en su BD local y genera el ID canónico.
      - Retorna el registro completo con estado de éxito (201 Created).
      - Si no son válidos (ej. código duplicado), retorna un error (400 Bad Request o 409 Conflict).
 5. La Sucursal recibe la respuesta:
      - Si la creación fue exitosa (ok: true):
-         * Inserta/Actualiza de inmediato el registro en su base de datos local (ej. INSERT OR REPLACE INTO productos).
+         * Inserta/Actualiza de inmediato el registro en su base de datos local.
          * Muestra mensaje de éxito y actualiza la pantalla.
      - Si hubo un error en la Central (ok: false):
          * Muestra el mensaje de error devuelto por la central al usuario en la UI.
@@ -657,17 +776,17 @@ Las creaciones de registros maestros están prohibidas en modo offline para evit
 
 | Tabla | Dueño de los datos | Dirección | Conflict resolution |
 |---|---|---|---|
-| `ventas`, `ventas_detalle` | Sucursal | PUSH | Central nunca modifica — acepta todo |
-| `compras_ingresos`, `compras_detalle` | Sucursal | PUSH | Central nunca modifica — acepta todo |
-| `kardex` | Sucursal | PUSH | Central nunca modifica — acepta todo |
-| `cajas` | Sucursal | PUSH | Central nunca modifica — acepta todo |
-| `logs` | Sucursal | PUSH | Central nunca modifica — acepta todo |
+| `ventas`, `ventas_detalle` | Sucursal | PUSH | Idempotencia por `sucursal_id + id_local`; actualiza estado si cambia (anulación) |
+| `compras_ingresos`, `compras_detalle` | Sucursal | PUSH | Idempotencia por `sucursal_id + id_local` |
+| `kardex` | Sucursal | PUSH | `INSERT OR IGNORE` por `sucursal_id + id_local` |
+| `cajas` | Sucursal | PUSH | `INSERT OR IGNORE` por `sucursal_id + id_local` |
+| `logs` | Sucursal | PUSH | `INSERT OR IGNORE` por `sucursal_id + sucursal_local_id`; preserva `created_at` original |
 | `sucursales_stock` | Central (alimentada por sucursales) | PUSH | Última lectura reemplaza anterior |
-| `productos`, `precios_historial` | **Central** | PULL + CREAR | Central siempre gana — `INSERT OR REPLACE` (síncrono online) |
-| `usuarios` | **Central** | PULL + CREAR | Central siempre gana — upsert por username (síncrono online) |
-| `roles` | **Central** | PULL + CREAR | Central siempre gana — upsert por nombre (síncrono online) |
-| `categorias` | **Central** | PULL + CREAR | Central siempre gana — upsert por nombre (síncrono online) |
-| `unidades_medida` | **Central** | PULL + CREAR | Central siempre gana — upsert por abreviatura (síncrono online) |
+| `productos`, `precios_historial` | **Central** | PULL + CREAR | Upsert por `codigo_barras` dentro de transacción (síncrono online) |
+| `usuarios` | **Central** | PULL + CREAR | Resolución por username → ID → INSERT (síncrono online, contraseñas cifradas en tránsito) |
+| `roles` | **Central** | PULL + CREAR | Upsert por `id` dentro de transacción (síncrono online) |
+| `categorias` | **Central** | PULL + CREAR | Upsert por `nombre` dentro de transacción (síncrono online) |
+| `unidades_medida` | **Central** | PULL + CREAR | Upsert por `id` dentro de transacción; índice por abreviatura para O(1) |
 
 ---
 
@@ -676,12 +795,14 @@ Las creaciones de registros maestros están prohibidas en modo offline para evit
 | Escenario | Comportamiento |
 |---|---|
 | Red cortada antes de confirmar (PUSH) | La sucursal NO marca `sincronizado = 1` → reintenta en la próxima sync |
-| Central devuelve error 5xx (PUSH) | La sucursal registra el error en `sync_log` y reintenta |
-| Registro duplicado en central (PUSH) | `INSERT OR IGNORE` → la central lo ignora silenciosamente, devuelve `duplicadas: N` |
-| Producto desconocido en central (PUSH) | La central ignora ese ítem y lo incluye en el campo `errores` de la respuesta |
+| Timeout de 15s (PUSH / PULL) | `fetchWithTimeout` lanza error → sync abortada, se muestra mensaje al usuario |
+| Central devuelve error 5xx (PUSH) | La sucursal lanza excepción → sync abortada (secuencial estricto) |
+| Registro duplicado en central (PUSH) | Idempotencia: se detecta y omite → `procesadas: N, duplicadas: M` |
+| Producto desconocido en central (PUSH) | La central ignora ese ítem e informa en el campo `errores` de la respuesta |
 | Sucursal con clave inválida (General) | `401 Unauthorized` → la sucursal muestra error de conexión |
 | Sin red al crear maestro (CREAR) | Petición síncrona falla inmediatamente. La sucursal aborta y muestra error offline. |
 | Error de validación/duplicado (CREAR) | Central retorna `400 Bad Request` o `409 Conflict`. Sucursal aborta y muestra error en UI. |
+| Error en PUSH durante syncAllData | El error se propaga inmediatamente y se abortan todos los PULL subsiguientes |
 
 ---
 
@@ -692,9 +813,9 @@ Los IDs auto-increment locales no son globales. En todos los payloads se usan **
 | Entidad | Clave de negocio usada en payload |
 |---|---|
 | Producto | `codigo_barras` |
-| Usuario | `username` |
-| Rol | `nombre` |
+| Usuario | `username` (en CREAR); upsert por `id` central en PULL |
+| Rol | `nombre` (en CREAR); upsert por `id` central en PULL |
 | Categoría | `nombre` |
-| Unidad de medida | `abreviatura` |
+| Unidad de medida | `abreviatura` (en CREAR); upsert por `id` central en PULL |
 | Cliente | `dni_ruc` |
-| Venta/Compra/Caja/Kardex | `local_id` + `sucursal_id` (para idempotencia) |
+| Venta/Compra/Caja/Kardex | `id_local` + `sucursal_id` (para idempotencia) |

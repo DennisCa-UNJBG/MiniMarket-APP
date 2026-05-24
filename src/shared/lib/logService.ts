@@ -100,5 +100,11 @@ export const logService = {
     const db = await getDb();
     const result = await db.select<any[]>('SELECT DISTINCT accion FROM logs ORDER BY accion ASC');
     return result.map(r => r.accion);
+  },
+
+  async getLogsPendientes(): Promise<number> {
+    const db = await getDb();
+    const res = await db.select<any[]>('SELECT COUNT(*) as count FROM logs WHERE sincronizado = 0');
+    return res[0]?.count || 0;
   }
 };
