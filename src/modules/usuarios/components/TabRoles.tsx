@@ -23,7 +23,10 @@ const AVAILABLE_PERMISSIONS = [
   { id: 'clientes', label: 'Gestión de Clientes' },
   { id: 'kardex', label: 'Kardex de Movimientos' },
   { id: 'reportes', label: 'Generación de Reportes' },
-  { id: 'admin', label: 'Ajustes y Administración (Usuarios, Sucursales, etc)' },
+  { id: 'usuarios', label: 'Gestión de Usuarios' },
+  { id: 'sucursales', label: 'Gestión de Sucursales' },
+  { id: 'sincronizacion', label: 'Sincronización de Datos' },
+  { id: 'auditoria', label: 'Auditoría de Acciones' },
   { id: 'configuracion', label: 'Configuración del Sistema' },
   { id: '*', label: 'Acceso Total (Superadmin)' }
 ];

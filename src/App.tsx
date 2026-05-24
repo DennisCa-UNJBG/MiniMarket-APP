@@ -120,7 +120,7 @@ function AppContent() {
                 key={item.to}
                 path={item.to}
                 element={
-                  <ProtectedRoute requiredPermission={item.requiredPermission}>
+                  <ProtectedRoute requiredPermission={item.requiredPermission} path={item.to}>
                     <item.component />
                   </ProtectedRoute>
                 }

@@ -78,7 +78,18 @@ export function SedesSection({ initialData }: { initialData: SucursalConfig | nu
   };
 
   return (
-    <div className="bg-white dark:bg-zinc-800 rounded-3xl border border-zinc-100 dark:border-zinc-700 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+    <div className="bg-white dark:bg-zinc-800 rounded-3xl border border-zinc-100 dark:border-zinc-700 shadow-sm overflow-hidden hover:shadow-md transition-shadow relative">
+      {isCentral && (
+        <div className="absolute inset-0 bg-white/70 dark:bg-zinc-800/70 backdrop-blur-[1.5px] z-20 flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-300">
+          <div className="p-3.5 bg-amber-50 dark:bg-amber-950/20 text-amber-500 dark:text-amber-400 rounded-2xl mb-3 border border-amber-100 dark:border-amber-900/30">
+            <Server size={24} />
+          </div>
+          <h4 className="text-sm font-bold text-zinc-800 dark:text-white mb-1">Sección Bloqueada</h4>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-[280px]">
+            Esta sección está deshabilitada porque el equipo está configurado como <strong>Sede Central</strong> (Servidor activo).
+          </p>
+        </div>
+      )}
       <div className="p-6 border-b border-zinc-50 dark:border-zinc-700/50 bg-zinc-50/30 dark:bg-zinc-800/50">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-xl text-blue-600 dark:text-blue-400">

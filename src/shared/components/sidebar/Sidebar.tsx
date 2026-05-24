@@ -7,6 +7,9 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { SidebarItem } from './SidebarItem';
 import { mainNavItems, bottomNavItems } from '../../../config/navigation';
+import { useQuery } from '@tanstack/react-query';
+import { invoke } from '@tauri-apps/api/core';
+import { systemConfigService } from '../../../modules/configuracion/systemConfigService';
 
 export function Sidebar() {
   const { isCollapsed, toggleSidebar } = useSidebar();
@@ -16,6 +19,20 @@ export function Sidebar() {
   const [showThemeTooltip, setShowThemeTooltip] = useState(false);
   const [themeTooltipCoords, setThemeTooltipCoords] = useState({ top: 0, left: 0 });
   const themeBtnRef = useRef<HTMLButtonElement>(null);
+
+  const { data: config } = useQuery({
+    queryKey: ['sucursal-config'],
+    queryFn: () => systemConfigService.getConfig(),
+    enabled: !!user
+  });
+
+  const { data: isCentral = false } = useQuery({
+    queryKey: ['server-status'],
+    queryFn: () => invoke<boolean>('is_server_running'),
+    enabled: !!user
+  });
+
+  const isBranchMode = !!config?.api_url_central && !isCentral;
 
   const handleThemeMouseEnter = () => {
     if (!isCollapsed || !themeBtnRef.current) return;
@@ -35,9 +52,14 @@ export function Sidebar() {
     getVersion().then(v => setAppVersion(v)).catch(console.error);
   }, []);
 
-  // Filtramos los items de navegación según el rol del usuario
+  // Filtramos los items de navegación según el rol del usuario y el modo del sistema
   const filterItems = (items: typeof mainNavItems) => {
     return items.filter(item => {
+      // Bloquear vistas específicas en modo sucursal
+      if (isBranchMode && (item.to === '/usuarios' || item.to === '/sincronizacion' || item.to === '/sucursales')) {
+        return false;
+      }
+
       if (!item.requiredPermission) return true; // Visible para todos si no hay restricciones
       if (!user || !user.permisos) return false;
 
