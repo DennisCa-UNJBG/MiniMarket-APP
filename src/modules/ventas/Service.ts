@@ -47,11 +47,16 @@ export const ventaService = {
     await Promise.all(venta.items.map(async (item) => {
       const subtotal = item.cantidad * item.precio_unitario;
 
+      // Consultar costo actual (precio de compra activo) del producto
+      const costResult = await db.select<any[]>('SELECT precio_compra FROM precios_historial WHERE producto_id = ? AND activo = 1', [item.producto_id]);
+      const costoUnitario = costResult[0]?.precio_compra || 0;
+      const gananciaUnitaria = item.precio_unitario - costoUnitario;
+
       // 2. Insertar Detalle
       await db.execute(
-        `INSERT INTO ventas_detalle (venta_id, producto_id, cantidad, precio_unitario, subtotal) 
-         VALUES (?, ?, ?, ?, ?)`,
-        [ventaId, item.producto_id, item.cantidad, item.precio_unitario, subtotal]
+        `INSERT INTO ventas_detalle (venta_id, producto_id, cantidad, precio_unitario, subtotal, costo_unitario, ganancia_unitaria) 
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [ventaId, item.producto_id, item.cantidad, item.precio_unitario, subtotal, costoUnitario, gananciaUnitaria]
       );
 
       // 3. Actualizar Stock de forma atómica y validar existencias

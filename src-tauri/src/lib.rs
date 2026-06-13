@@ -318,12 +318,30 @@ use tauri_plugin_sql::{Migration, MigrationKind};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let migrations = vec![Migration {
-        version: 1,
-        description: "schemadb_init",
-        sql: include_str!("../database/SchemaDB.sql"),
-        kind: MigrationKind::Up,
-    }];
+    let migrations = vec![
+        Migration {
+            version: 1,
+            description: "schemadb_init",
+            sql: include_str!("../database/SchemaDB.sql"),
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 2,
+            description: "add_costo_y_ganancia_ventas_detalle",
+            sql: "
+                ALTER TABLE ventas_detalle ADD COLUMN costo_unitario REAL DEFAULT 0;
+                ALTER TABLE ventas_detalle ADD COLUMN ganancia_unitaria REAL DEFAULT 0;
+                
+                UPDATE ventas_detalle SET costo_unitario = (
+                    SELECT COALESCE(precio_compra, 0) FROM precios_historial 
+                    WHERE precios_historial.producto_id = ventas_detalle.producto_id AND activo = 1
+                ) WHERE costo_unitario = 0;
+                
+                UPDATE ventas_detalle SET ganancia_unitaria = (precio_unitario - costo_unitario);
+            ",
+            kind: MigrationKind::Up,
+        }
+    ];
 
     tauri::Builder::default()
         .plugin(tauri_plugin_fs::init())

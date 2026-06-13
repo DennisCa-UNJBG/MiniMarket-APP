@@ -7,6 +7,8 @@ export interface DashboardStats {
   transaccionesHoy: number;
   comprasHoy: number;
   ventasMes: number;
+  gananciaMes: number;
+  gananciaHoy: number;
 }
 
 export interface RecentActivity {
@@ -20,6 +22,8 @@ export interface RecentActivity {
 export interface ChartData {
   dia: string;
   total: number;
+  compras: number;
+  ganancias: number;
 }
 
 export const dashboardService = {
@@ -34,25 +38,44 @@ export const dashboardService = {
     const sucursalId = config?.sucursal_id || 'LOCAL';
 
     // Obtener estadísticas de dashboard en paralelo
-    const [stockData, todaySales, todayPurchases, monthSales] = await Promise.all([
+    const [stockData, todaySales, todayPurchases, monthSales, monthProfit, todayProfit] = await Promise.all([
       db.select<any[]>('SELECT COUNT(*) as total FROM productos WHERE stock_actual > 0'),
       db.select<any[]>(`
         SELECT COALESCE(SUM(total), 0) as total, COUNT(*) as count 
         FROM ventas 
         WHERE date(fecha, 'localtime') = date('now', 'localtime')
         AND (sucursal_id = ? OR sucursal_id IS NULL)
+        AND estado = 'completado'
       `, [sucursalId]),
       db.select<any[]>(`
         SELECT COALESCE(SUM(total), 0) as total 
         FROM compras_ingresos 
         WHERE date(fecha, 'localtime') = date('now', 'localtime')
         AND (sucursal_id = ? OR sucursal_id IS NULL)
+        AND estado = 'completado'
       `, [sucursalId]),
       db.select<any[]>(`
         SELECT COALESCE(SUM(total), 0) as total 
         FROM ventas 
         WHERE strftime('%Y-%m', fecha, 'localtime') = strftime('%Y-%m', 'now', 'localtime')
         AND (sucursal_id = ? OR sucursal_id IS NULL)
+        AND estado = 'completado'
+      `, [sucursalId]),
+      db.select<any[]>(`
+        SELECT COALESCE(SUM(vd.cantidad * vd.ganancia_unitaria), 0) as total
+        FROM ventas_detalle vd
+        JOIN ventas v ON v.id = vd.venta_id
+        WHERE strftime('%Y-%m', v.fecha, 'localtime') = strftime('%Y-%m', 'now', 'localtime')
+        AND (v.sucursal_id = ? OR v.sucursal_id IS NULL)
+        AND v.estado = 'completado'
+      `, [sucursalId]),
+      db.select<any[]>(`
+        SELECT COALESCE(SUM(vd.cantidad * vd.ganancia_unitaria), 0) as total
+        FROM ventas_detalle vd
+        JOIN ventas v ON v.id = vd.venta_id
+        WHERE date(v.fecha, 'localtime') = date('now', 'localtime')
+        AND (v.sucursal_id = ? OR v.sucursal_id IS NULL)
+        AND v.estado = 'completado'
       `, [sucursalId])
     ]);
 
@@ -61,7 +84,9 @@ export const dashboardService = {
       ventasHoy: todaySales[0].total,
       transaccionesHoy: todaySales[0].count,
       comprasHoy: todayPurchases[0].total,
-      ventasMes: monthSales[0].total
+      ventasMes: monthSales[0].total,
+      gananciaMes: monthProfit[0].total,
+      gananciaHoy: todayProfit[0].total
     };
   },
 
@@ -90,7 +115,7 @@ export const dashboardService = {
   },
 
   /**
-   * Obtiene datos para el gráfico de ventas de los últimos 7 días
+   * Obtiene datos para el gráfico de los últimos 7 días (ventas, compras, ganancias)
    */
   async getSalesChartData(): Promise<ChartData[]> {
     const [db, config] = await Promise.all([
@@ -99,14 +124,51 @@ export const dashboardService = {
     ]);
     const sucursalId = config?.sucursal_id || 'LOCAL';
 
-    return db.select(`
-      SELECT date(fecha, 'localtime') as dia, SUM(total) as total
-      FROM ventas
-      WHERE date(fecha, 'localtime') >= date('now', 'localtime', '-7 days')
-      AND (sucursal_id = ? OR sucursal_id IS NULL)
-      GROUP BY dia
-      ORDER BY dia ASC
-    `, [sucursalId]);
+    const [ventas, compras, ganancias] = await Promise.all([
+      db.select<any[]>(`
+        SELECT date(fecha, 'localtime') as dia, SUM(total) as total
+        FROM ventas
+        WHERE date(fecha, 'localtime') >= date('now', 'localtime', '-7 days')
+        AND estado = 'completado'
+        AND (sucursal_id = ? OR sucursal_id IS NULL)
+        GROUP BY dia
+      `, [sucursalId]),
+      db.select<any[]>(`
+        SELECT date(fecha, 'localtime') as dia, SUM(total) as total
+        FROM compras_ingresos
+        WHERE date(fecha, 'localtime') >= date('now', 'localtime', '-7 days')
+        AND estado = 'completado'
+        AND (sucursal_id = ? OR sucursal_id IS NULL)
+        GROUP BY dia
+      `, [sucursalId]),
+      db.select<any[]>(`
+        SELECT date(v.fecha, 'localtime') as dia, SUM(vd.cantidad * vd.ganancia_unitaria) as total
+        FROM ventas_detalle vd
+        JOIN ventas v ON v.id = vd.venta_id
+        WHERE date(v.fecha, 'localtime') >= date('now', 'localtime', '-7 days')
+        AND v.estado = 'completado'
+        AND (v.sucursal_id = ? OR v.sucursal_id IS NULL)
+        GROUP BY dia
+      `, [sucursalId])
+    ]);
+
+    // Combinar los resultados por día
+    const mergedData = new Map<string, ChartData>();
+
+    const mergeResult = (data: any[], key: 'total' | 'compras' | 'ganancias') => {
+      for (const row of data) {
+        if (!mergedData.has(row.dia)) {
+          mergedData.set(row.dia, { dia: row.dia, total: 0, compras: 0, ganancias: 0 });
+        }
+        mergedData.get(row.dia)![key] = row.total || 0;
+      }
+    };
+
+    mergeResult(ventas, 'total');
+    mergeResult(compras, 'compras');
+    mergeResult(ganancias, 'ganancias');
+
+    return Array.from(mergedData.values()).sort((a, b) => a.dia.localeCompare(b.dia));
   },
 
   /**

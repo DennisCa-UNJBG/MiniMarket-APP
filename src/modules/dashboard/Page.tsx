@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Package,
   ShoppingCart,
@@ -33,6 +33,8 @@ export function Dashboard() {
   const firstName = user?.nombre_completo?.split(' ')[0] || 'Administrador';
   const roleLabel = user?.rol_nombre || 'Usuario';
 
+  const [chartType, setChartType] = useState<'total' | 'compras' | 'ganancias'>('total');
+
   // Queries
   const { data: stats, isLoading: isLoadingStats } = useQuery({
     queryKey: ['dashboard-stats'],
@@ -62,7 +64,7 @@ export function Dashboard() {
   const cards = useMemo(() => {
     if (!stats) return [];
 
-    const gananciaHoy = stats.ventasHoy - stats.comprasHoy;
+    const gananciaHoy = stats.gananciaHoy;
     const isPositive = gananciaHoy >= 0;
 
     return [
@@ -85,7 +87,7 @@ export function Dashboard() {
         color: 'bg-amber-500 shadow-amber-200'
       },
       {
-        label: 'Ganancia del día',
+        label: 'Ganancia del día (Productos)',
         value: `S/ ${gananciaHoy.toFixed(2)}`,
         icon: TrendingUp,
         color: isPositive ? 'bg-emerald-500 shadow-emerald-200' : 'bg-rose-500 shadow-rose-200',
@@ -96,8 +98,8 @@ export function Dashboard() {
         badgeVariant: isPositive ? 'emerald' : 'red'
       },
       {
-        label: 'Ingresos del mes',
-        value: `S/ ${stats.ventasMes.toFixed(2)}`,
+        label: 'Ganancia del mes (Productos)',
+        value: `S/ ${stats.gananciaMes.toFixed(2)}`,
         icon: TrendingUp,
         color: 'bg-sky-500 shadow-sky-200'
       },
@@ -114,6 +116,8 @@ export function Dashboard() {
       return {
         dia: day,
         total: match ? match.total : 0,
+        compras: match ? match.compras : 0,
+        ganancias: match ? match.ganancias : 0,
         diaNombre: dateUtils.getShortWeekday(day)
       };
     });
@@ -211,8 +215,16 @@ export function Dashboard() {
         <div className="lg:col-span-2 bg-white dark:bg-zinc-800 rounded-3xl p-6 shadow-sm border border-zinc-100 dark:border-zinc-700">
           <div className="flex items-center justify-between mb-8">
             <h3 className="text-lg font-semibold text-zinc-800 dark:text-white flex items-center gap-2">
-              <TrendingUp size={20} className="text-blue-500" />
-              Ventas de la Semana
+              <TrendingUp size={20} className={chartType === 'total' ? "text-blue-500" : chartType === 'compras' ? "text-amber-500" : "text-sky-500"} />
+              <select 
+                value={chartType} 
+                onChange={(e) => setChartType(e.target.value as any)}
+                className="bg-transparent border-none font-semibold text-zinc-800 dark:text-white cursor-pointer focus:ring-0 outline-none hover:text-blue-600 transition-colors"
+              >
+                <option className="bg-white dark:bg-zinc-800 text-zinc-800 dark:text-white" value="total">Ventas de la Semana</option>
+                <option className="bg-white dark:bg-zinc-800 text-zinc-800 dark:text-white" value="compras">Compras de la Semana</option>
+                <option className="bg-white dark:bg-zinc-800 text-zinc-800 dark:text-white" value="ganancias">Ganancias de la Semana</option>
+              </select>
             </h3>
             <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Últimos 7 días</span>
           </div>
@@ -225,9 +237,9 @@ export function Dashboard() {
                   margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
                 >
                   <defs>
-                    <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                    <linearGradient id="colorChart" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={chartType === 'total' ? '#6366f1' : chartType === 'compras' ? '#f59e0b' : '#0ea5e9'} stopOpacity={0.3} />
+                      <stop offset="95%" stopColor={chartType === 'total' ? '#6366f1' : chartType === 'compras' ? '#f59e0b' : '#0ea5e9'} stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
@@ -251,18 +263,18 @@ export function Dashboard() {
                       fontSize: '12px',
                       fontWeight: 'bold'
                     }}
-                    formatter={(value: any) => [`S/ ${Number(value).toFixed(2)}`, 'Ventas']}
-                    labelStyle={{ color: '#6366f1', marginBottom: '4px' }}
+                    formatter={(value: any) => [`S/ ${Number(value).toFixed(2)}`, chartType === 'total' ? 'Ventas' : chartType === 'compras' ? 'Compras' : 'Ganancias']}
+                    labelStyle={{ color: chartType === 'total' ? '#6366f1' : chartType === 'compras' ? '#f59e0b' : '#0ea5e9', marginBottom: '4px' }}
                   />
                   <Area
                     type="monotone"
-                    dataKey="total"
-                    stroke="#6366f1"
+                    dataKey={chartType}
+                    stroke={chartType === 'total' ? '#6366f1' : chartType === 'compras' ? '#f59e0b' : '#0ea5e9'}
                     strokeWidth={3}
                     fillOpacity={1}
-                    fill="url(#colorTotal)"
-                    activeDot={{ r: 6, strokeWidth: 0, fill: '#6366f1' }}
-                    dot={{ r: 4, strokeWidth: 2, fill: '#fff', stroke: '#6366f1' }}
+                    fill="url(#colorChart)"
+                    activeDot={{ r: 6, strokeWidth: 0, fill: chartType === 'total' ? '#6366f1' : chartType === 'compras' ? '#f59e0b' : '#0ea5e9' }}
+                    dot={{ r: 4, strokeWidth: 2, fill: '#fff', stroke: chartType === 'total' ? '#6366f1' : chartType === 'compras' ? '#f59e0b' : '#0ea5e9' }}
                   />
                 </AreaChart>
               </ResponsiveContainer>
