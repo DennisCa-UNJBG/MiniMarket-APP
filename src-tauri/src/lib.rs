@@ -1,4 +1,5 @@
 mod api;
+mod import_excel;
 
 use serde_json::json;
 use std::fs;
@@ -346,6 +347,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .manage(Arc::new(ServerState {
             shutdown_tx: Mutex::new(None),
             is_running: Mutex::new(false),
@@ -364,7 +366,8 @@ pub fn run() {
             is_server_running,
             save_perudevs_key,
             has_perudevs_key,
-            query_perudevs_document
+            query_perudevs_document,
+            import_excel::import_productos_excel
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

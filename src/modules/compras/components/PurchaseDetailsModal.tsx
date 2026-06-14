@@ -63,9 +63,9 @@ export function PurchaseDetailsModal({ isOpen, onClose, purchase }: PurchaseDeta
           </div>
         </div>
 
-        <div className="border border-zinc-100 dark:border-zinc-700 rounded-xl overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-zinc-50 dark:bg-zinc-800/50 text-zinc-500 dark:text-zinc-400 text-xs uppercase tracking-wider">
+        <div className="border border-zinc-100 dark:border-zinc-700 rounded-xl overflow-y-auto max-h-[50vh]">
+          <table className="w-full text-sm relative">
+            <thead className="bg-zinc-50 dark:bg-zinc-800/50 text-zinc-500 dark:text-zinc-400 text-xs uppercase tracking-wider sticky top-0 z-10 backdrop-blur-sm shadow-sm">
               <tr>
                 <th className="px-4 py-2 text-left font-medium">Producto</th>
                 <th className="px-4 py-2 text-right font-medium">Cant.</th>

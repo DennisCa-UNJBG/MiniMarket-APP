@@ -320,7 +320,7 @@ export function TabProductos({ categories }: { categories: Category[] }) {
             }
           />
         }
-        defaultPageSize={5}
+        defaultPageSize={10}
       />
 
       {inactiveProducts.length > 0 && (
