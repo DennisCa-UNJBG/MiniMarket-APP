@@ -101,7 +101,7 @@ export function TopBar() {
                     {alerts.map((alerta) => (
                       <Link
                         key={alerta.id}
-                        to="/inventario"
+                        to={`/inventario?search=${encodeURIComponent(alerta.nombre)}`}
                         onClick={() => setShowDropdown(false)}
                         className="flex items-start gap-3 p-4 hover:bg-zinc-50 dark:hover:bg-zinc-700/30 transition-colors"
                       >

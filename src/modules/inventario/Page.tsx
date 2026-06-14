@@ -1,15 +1,35 @@
-import { useReducer } from 'react';
+import { useReducer, useEffect, useState, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Search,
   Filter,
-  AlertTriangle
+  AlertTriangle,
+  Eye,
+  TrendingUp,
+  ArrowUpRight,
+  ArrowDownLeft,
+  Calendar
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { DataTable, type TableColumn } from '../../shared/components/ui/DataTable';
 import { Badge } from '../../shared/components/ui/Badge';
 import { PageHeader } from '../../shared/components/ui/PageHeader';
 import { Button } from '../../shared/components/ui/Button';
+import { Modal } from '../../shared/components/ui/Modal';
 import { productoService, type Product } from '../productos/Service';
+import { inventarioService } from './Service';
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  Legend,
+  BarChart,
+  Bar
+} from 'recharts';
 
 type StockStatus = 'ok' | 'low' | 'out';
 
@@ -72,6 +92,7 @@ const initialInventarioState: InventarioState = {
 
 export function Inventario() {
   const [state, dispatch] = useReducer(inventarioReducer, initialInventarioState);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
   const {
     search,
@@ -88,6 +109,13 @@ export function Inventario() {
   const setCategoryFilter = (payload: number | 'all') => dispatch({ type: 'SET_CATEGORY_FILTER', payload });
   const setCatSearch = (payload: string) => dispatch({ type: 'SET_CAT_SEARCH', payload });
   const setShowCatList = (payload: boolean) => dispatch({ type: 'SET_SHOW_CAT_LIST', payload });
+
+  const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    const searchVal = searchParams.get('search');
+    setSearch(searchVal || '');
+  }, [searchParams]);
 
   const { data: products = [], isLoading: loading } = useQuery({
     queryKey: ['products', true],
@@ -141,6 +169,22 @@ export function Inventario() {
         const { label, variant } = statusBadge[getStatus(row.stock_actual, row.stock_minimo)];
         return <Badge label={label} variant={variant} />;
       },
+    },
+    {
+      key: 'acciones',
+      header: 'Acciones',
+      align: 'center',
+      render: (row) => (
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => setSelectedProduct(row)}
+          icon={<Eye size={14} />}
+          className="p-1 px-2 rounded-xl text-xs font-semibold"
+        >
+          Detalle
+        </Button>
+      ),
     }
   ];
 
@@ -303,6 +347,246 @@ export function Inventario() {
         emptyMessage={loading ? "Consultando base de datos..." : "No se encontraron productos con los filtros seleccionados."}
         defaultPageSize={10}
       />
+      {selectedProduct && (
+        <ProductDetailModal
+          product={selectedProduct}
+          onClose={() => setSelectedProduct(null)}
+        />
+      )}
     </div>
+  );
+}
+
+interface ProductDetailModalProps {
+  product: Product;
+  onClose: () => void;
+}
+
+function ProductDetailModal({ product, onClose }: ProductDetailModalProps) {
+  const [startDate, setStartDate] = useState(() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() - 1);
+    return d.toISOString().split('T')[0];
+  });
+  const [endDate, setEndDate] = useState(() => {
+    return new Date().toISOString().split('T')[0];
+  });
+
+  const { data: rawPrecios = [], isLoading: loadingPrecios } = useQuery({
+    queryKey: ['historial-precios', product.id],
+    queryFn: () => inventarioService.getHistorialPrecios(product.id),
+    staleTime: 0,
+    gcTime: 0,
+  });
+
+  const { data: rawMovimientos = [], isLoading: loadingMovimientos } = useQuery({
+    queryKey: ['movimientos-kardex', product.id],
+    queryFn: () => inventarioService.getMovimientosKardexProducto(product.id),
+    staleTime: 0,
+    gcTime: 0,
+  });
+
+  // Filtrar precios
+  const filteredPrecios = useMemo(() => {
+    return rawPrecios.filter((p: any) => {
+      const dateStr = p.fecha_inicio.split(' ')[0]; // SQLite timestamp "YYYY-MM-DD HH:MM:SS"
+      return dateStr >= startDate && dateStr <= endDate;
+    }).map((p: any) => ({
+      ...p,
+      fechaFormateada: new Date(p.fecha_inicio).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' }),
+    }));
+  }, [rawPrecios, startDate, endDate]);
+
+  // Filtrar movimientos
+  const filteredMovimientos = useMemo(() => {
+    return rawMovimientos.filter((m: any) => {
+      const dateStr = m.fecha.split(' ')[0];
+      return dateStr >= startDate && dateStr <= endDate;
+    });
+  }, [rawMovimientos, startDate, endDate]);
+
+  // Totales
+  const resumen = useMemo(() => {
+    let ingresos = 0;
+    let salidas = 0;
+    filteredMovimientos.forEach((m: any) => {
+      if (m.tipo_movimiento === 'INGRESO') ingresos += m.cantidad;
+      else if (m.tipo_movimiento === 'SALIDA') salidas += m.cantidad;
+    });
+    return { ingresos, salidas };
+  }, [filteredMovimientos]);
+
+  // Agrupar movimientos por día para el gráfico de barras
+  const chartMovimientosData = useMemo(() => {
+    const groups: Record<string, { fecha: string; Ingresos: number; Salidas: number }> = {};
+    
+    // Inicializar rango de fechas para que muestre días sin movimientos también
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      const dateStr = d.toISOString().split('T')[0];
+      const label = d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' });
+      groups[dateStr] = { fecha: label, Ingresos: 0, Salidas: 0 };
+    }
+
+    filteredMovimientos.forEach((m: any) => {
+      const dateStr = m.fecha.split(' ')[0];
+      if (groups[dateStr]) {
+        if (m.tipo_movimiento === 'INGRESO') {
+          groups[dateStr].Ingresos += m.cantidad;
+        } else if (m.tipo_movimiento === 'SALIDA') {
+          groups[dateStr].Salidas += m.cantidad;
+        }
+      }
+    });
+
+    return Object.values(groups);
+  }, [filteredMovimientos, startDate, endDate]);
+
+  const loading = loadingPrecios || loadingMovimientos;
+
+  return (
+    <Modal title={`Detalles de: ${product.nombre}`} onClose={onClose} maxWidth="4xl">
+      <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-1">
+        {/* Selector de Rango de Fechas */}
+        <div className="flex flex-wrap gap-4 items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-700/30 rounded-2xl border border-zinc-100 dark:border-zinc-700/50">
+          <div className="flex items-center gap-2 text-zinc-600 dark:text-zinc-300">
+            <Calendar size={18} />
+            <span className="text-sm font-semibold">Rango de tiempo para los gráficos</span>
+          </div>
+          <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto justify-between sm:justify-start">
+            <div className="flex items-center gap-2">
+              <label htmlFor="modal-date-start" className="text-xs text-zinc-400 font-bold uppercase">Desde</label>
+              <input
+                id="modal-date-start"
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="px-3 py-1.5 text-xs border border-zinc-200 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-400"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <label htmlFor="modal-date-end" className="text-xs text-zinc-400 font-bold uppercase">Hasta</label>
+              <input
+                id="modal-date-end"
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="px-3 py-1.5 text-xs border border-zinc-200 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-400"
+              />
+            </div>
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <div className="animate-spin rounded-full size-10 border-b-2 border-blue-600"></div>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {/* Tarjetas de Resumen */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-5 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-950 rounded-2xl flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Total Ingresos</p>
+                  <p className="text-2xl font-black text-emerald-700 dark:text-emerald-300 mt-1">
+                    {resumen.ingresos} {product.unidad_medida || 'UND'}
+                  </p>
+                </div>
+                <div className="p-3 bg-emerald-500 text-white rounded-xl">
+                  <ArrowUpRight size={24} />
+                </div>
+              </div>
+              <div className="p-5 bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-950 rounded-2xl flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider">Total Salidas</p>
+                  <p className="text-2xl font-black text-rose-700 dark:text-rose-300 mt-1">
+                    {resumen.salidas} {product.unidad_medida || 'UND'}
+                  </p>
+                </div>
+                <div className="p-3 bg-rose-500 text-white rounded-xl">
+                  <ArrowDownLeft size={24} />
+                </div>
+              </div>
+            </div>
+
+            {/* Gráficos */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Gráfico 1: Fluctuación de Precios */}
+              <div className="bg-white dark:bg-zinc-800 rounded-2xl p-5 border border-zinc-100 dark:border-zinc-700 shadow-sm space-y-4">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="text-blue-500" size={18} />
+                  <h4 className="text-sm font-bold text-zinc-800 dark:text-zinc-200">Fluctuación de Precios</h4>
+                </div>
+                <div className="h-64 w-full">
+                  {filteredPrecios.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={filteredPrecios} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="compraColor" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.2}/>
+                            <stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/>
+                          </linearGradient>
+                          <linearGradient id="ventaColor" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2}/>
+                            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                        <XAxis dataKey="fechaFormateada" axisLine={false} tickLine={false} tick={{ fontSize: 9, fontWeight: 600, fill: '#94a3b8' }} />
+                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fontWeight: 600, fill: '#94a3b8' }} />
+                        <RechartsTooltip
+                          contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '11px', fontWeight: 'bold' }}
+                          formatter={(value: any, name: any) => [`S/ ${Number(value).toFixed(2)}`, name === 'precio_compra' ? 'Costo Compra' : 'Precio Venta']}
+                        />
+                        <Legend iconSize={8} iconType="circle" wrapperStyle={{ fontSize: '10px', fontWeight: 'bold', paddingTop: '10px' }} />
+                        <Area type="monotone" name="precio_compra" dataKey="precio_compra" stroke="#f59e0b" strokeWidth={2} fillOpacity={1} fill="url(#compraColor)" />
+                        <Area type="monotone" name="precio_venta" dataKey="precio_venta" stroke="#3b82f6" strokeWidth={2} fillOpacity={1} fill="url(#ventaColor)" />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center text-zinc-400 gap-1.5">
+                      <TrendingUp size={32} strokeWidth={1} />
+                      <p className="text-xs italic font-medium">Sin variaciones de precio en este rango</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Gráfico 2: Ingresos y Salidas */}
+              <div className="bg-white dark:bg-zinc-800 rounded-2xl p-5 border border-zinc-100 dark:border-zinc-700 shadow-sm space-y-4">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="text-emerald-500" size={18} />
+                  <h4 className="text-sm font-bold text-zinc-800 dark:text-zinc-200">Volumen de Movimientos</h4>
+                </div>
+                <div className="h-64 w-full">
+                  {filteredMovimientos.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={chartMovimientosData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                        <XAxis dataKey="fecha" axisLine={false} tickLine={false} tick={{ fontSize: 9, fontWeight: 600, fill: '#94a3b8' }} />
+                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fontWeight: 600, fill: '#94a3b8' }} />
+                        <RechartsTooltip
+                          contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '11px', fontWeight: 'bold' }}
+                          formatter={(value: any) => [`${value} ${product.unidad_medida || 'UND'}`]}
+                        />
+                        <Legend iconSize={8} iconType="circle" wrapperStyle={{ fontSize: '10px', fontWeight: 'bold', paddingTop: '10px' }} />
+                        <Bar dataKey="Ingresos" fill="#10b981" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="Salidas" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center text-zinc-400 gap-1.5">
+                      <Calendar size={32} strokeWidth={1} />
+                      <p className="text-xs italic font-medium">No se registraron movimientos en este rango</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </Modal>
   );
 }

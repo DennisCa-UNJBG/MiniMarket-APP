@@ -317,5 +317,25 @@ export const inventarioService = {
       "SELECT COUNT(*) as count FROM compras_ingresos WHERE (sincronizado = 0 OR sincronizado IS NULL) AND estado != 'anulado'"
     );
     return result.length > 0 ? result[0].count : 0;
+  },
+
+  async getHistorialPrecios(productoId: number): Promise<any[]> {
+    const db = await getDb();
+    return db.select(`
+      SELECT id, precio_compra, precio_venta, fecha_inicio, activo
+      FROM precios_historial
+      WHERE producto_id = ?
+      ORDER BY fecha_inicio ASC
+    `, [productoId]);
+  },
+
+  async getMovimientosKardexProducto(productoId: number): Promise<any[]> {
+    const db = await getDb();
+    return db.select(`
+      SELECT id, tipo_movimiento, cantidad, fecha, saldo_posterior
+      FROM kardex
+      WHERE producto_id = ?
+      ORDER BY fecha ASC
+    `, [productoId]);
   }
 };
