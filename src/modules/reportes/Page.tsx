@@ -3,8 +3,13 @@ import {
   TrendingUp,
   Package,
   ShoppingCart,
-  Info,
-  Download
+  Download,
+  DollarSign,
+  Tag,
+  Truck,
+  Receipt,
+  Archive,
+  Trophy
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { reporteService } from './Service';
@@ -13,7 +18,7 @@ import { Tooltip } from '../../shared/components/ui/Tooltip';
 import { Button } from '../../shared/components/ui/Button';
 import { notificationService } from '../../shared/lib/notifications';
 import { ReporteDocumento } from './components/ReporteDocumento';
-import { VentasBarChart, RankingProductos } from './components/ReportComponents';
+import { RendimientoChart, RankingProductos, CategoryChart } from './components/ReportComponents';
 import { logService } from '../../shared/lib/logService';
 import { useAuth } from '../../shared/contexts/AuthContext';
 import { dateUtils } from '../../shared/lib/dateUtils';
@@ -35,6 +40,11 @@ export function Reportes() {
   const { data: monthlySales = [] } = useQuery({
     queryKey: ['report-monthly-revenue', startDate, endDate],
     queryFn: () => reporteService.getMonthlyRevenue(startDate, endDate)
+  });
+
+  const { data: categorySales = [] } = useQuery({
+    queryKey: ['report-category-sales', startDate, endDate],
+    queryFn: () => reporteService.getCategorySales(startDate, endDate)
   });
 
   const { data: kpis = null, isLoading: loading } = useQuery({
@@ -89,10 +99,15 @@ export function Reportes() {
   );
 
   const kpiCards = kpis ? [
-    { label: 'Ingresos del período', value: `S/ ${kpis.revenue.toFixed(2)}`, change: `${kpis.revenueChange >= 0 ? '+' : ''}${kpis.revenueChange.toFixed(1)}%`, up: kpis.revenueChange >= 0, icon: TrendingUp, color: 'bg-blue-500' },
-    { label: 'Productos vendidos', value: kpis.productsSold, change: `Período actual`, up: true, icon: Package, color: 'bg-emerald-500' },
-    { label: 'N° de ventas', value: kpis.salesCount, change: `${kpis.salesCountChange >= 0 ? '+' : ''}${kpis.salesCountChange.toFixed(1)}%`, up: kpis.salesCountChange >= 0, icon: ShoppingCart, color: 'bg-sky-500' },
-    { label: 'Gasto Promedio por Cliente', value: `S/ ${kpis.salesCount > 0 ? (kpis.revenue / kpis.salesCount).toFixed(2) : '0.00'}`, change: 'Ingreso Total / N° Ventas', up: true, icon: Info, color: 'bg-amber-500' },
+    { label: 'Cat. más Rentable', value: kpis.topCategory, change: `Por ganancia`, up: true, icon: Trophy, color: 'bg-emerald-500' },
+    { label: 'Ganancia Neta', value: `S/ ${kpis.profit.toFixed(2)}`, change: `${kpis.profitChange >= 0 ? '+' : ''}${kpis.profitChange.toFixed(1)}%`, up: kpis.profitChange >= 0, icon: DollarSign, color: 'bg-emerald-500' },
+    { label: 'Ticket Promedio', value: `S/ ${kpis.salesCount > 0 ? (kpis.revenue / kpis.salesCount).toFixed(2) : '0.00'}`, change: 'Ingreso / N° Ventas', up: true, icon: Tag, color: 'bg-amber-500' },
+    { label: 'Ingresos Totales', value: `S/ ${kpis.revenue.toFixed(2)}`, change: `${kpis.revenueChange >= 0 ? '+' : ''}${kpis.revenueChange.toFixed(1)}%`, up: kpis.revenueChange >= 0, icon: TrendingUp, color: 'bg-blue-500' },
+    { label: 'N° de Ventas', value: kpis.salesCount, change: `${kpis.salesCountChange >= 0 ? '+' : ''}${kpis.salesCountChange.toFixed(1)}%`, up: kpis.salesCountChange >= 0, icon: ShoppingCart, color: 'bg-purple-500' },
+    { label: 'Productos Vendidos', value: kpis.productsSold, change: `Período actual`, up: true, icon: Package, color: 'bg-violet-500' },
+    { label: 'Inversión en Compras', value: `S/ ${kpis.purchasesAmount.toFixed(2)}`, change: `${kpis.purchasesAmountChange >= 0 ? '+' : ''}${kpis.purchasesAmountChange.toFixed(1)}%`, up: kpis.purchasesAmountChange <= 0, icon: Truck, color: 'bg-orange-500' },
+    { label: 'N° de Compras', value: kpis.purchasesCount, change: `${kpis.purchasesCountChange >= 0 ? '+' : ''}${kpis.purchasesCountChange.toFixed(1)}%`, up: kpis.purchasesCountChange <= 0, icon: Receipt, color: 'bg-red-500' },
+    { label: 'Productos Comprados', value: kpis.productsBought, change: `Período actual`, up: true, icon: Archive, color: 'bg-rose-500' },
   ] : [];
 
   return (
@@ -104,7 +119,7 @@ export function Reportes() {
           <p className="text-sm text-zinc-500 dark:text-zinc-400">Análisis detallado de tus ventas y productos</p>
         </div>
         <div className="flex items-center gap-2">
-          <Tooltip text="Exportar reporte del período filtrado" position="bottom">
+          <Tooltip text="Exportar reporte del período filtrado" position="left">
             <Button
               onClick={handleExportPDF}
               icon={<Download size={16} />}
@@ -143,8 +158,8 @@ export function Reportes() {
                   setEndDate(dates.end);
                 }}
                 className={`px-3.5 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${isActive
-                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-100 dark:shadow-none scale-105'
-                    : 'bg-zinc-50 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-600'
+                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-100 dark:shadow-none scale-105'
+                  : 'bg-zinc-50 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-600'
                   }`}
               >
                 {opt.label}
@@ -177,7 +192,7 @@ export function Reportes() {
       </div>
 
       {/* KPI cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {kpiCards.map(({ label, value, change, up, icon: Icon, color }) => (
           <div key={label} className="bg-white dark:bg-zinc-800 rounded-3xl p-6 border border-zinc-100 dark:border-zinc-700 shadow-sm hover:shadow-md transition-shadow">
             <div className={`${color} w-10 h-10 rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-${color.split('-')[1]}-100 dark:shadow-none`}>
@@ -195,25 +210,44 @@ export function Reportes() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        {/* Gráfico de ventas mensuales */}
+      <div className="space-y-6">
+        {/* Gráfico de rendimiento principal */}
         <div className="bg-white dark:bg-zinc-800 rounded-3xl border border-zinc-100 dark:border-zinc-700 shadow-sm p-6">
           <div className="flex items-center justify-between mb-8">
-            <h3 className="text-lg font-semibold text-zinc-800 dark:text-white">Ingresos del Período</h3>
-            <Badge label="Historial" variant="blue" />
+            <h3 className="text-lg font-semibold text-zinc-800 dark:text-white">Rendimiento General</h3>
+            <Badge label="Ingresos vs Compras vs Ganancias" variant="blue" />
           </div>
-          <div className="h-64 w-full">
-            <VentasBarChart data={monthlySales} />
+          <div className="h-72 w-full">
+            <RendimientoChart data={monthlySales} />
           </div>
         </div>
 
-        {/* Top productos */}
-        <div className="bg-white dark:bg-zinc-800 rounded-3xl border border-zinc-100 dark:border-zinc-700 shadow-sm p-6">
-          <div className="flex items-center justify-between mb-8">
-            <h3 className="text-lg font-semibold text-zinc-800 dark:text-white">Ranking de Productos</h3>
-            <Badge label="Top 5 Vendidos" variant="emerald" />
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          {/* Top productos */}
+          <div className="bg-white dark:bg-zinc-800 rounded-3xl border border-zinc-100 dark:border-zinc-700 shadow-sm p-6">
+            <div className="flex items-center justify-between mb-8">
+              <h3 className="text-lg font-semibold text-zinc-800 dark:text-white">Ranking de Productos</h3>
+              <Badge label="Top 5 Vendidos" variant="emerald" />
+            </div>
+            <RankingProductos products={topProducts} />
           </div>
-          <RankingProductos products={topProducts} />
+
+          {/* Categorías */}
+          <div className="bg-white dark:bg-zinc-800 rounded-3xl border border-zinc-100 dark:border-zinc-700 shadow-sm p-6">
+            <div className="flex items-center justify-between mb-8">
+              <h3 className="text-lg font-semibold text-zinc-800 dark:text-white">Ventas por Categoría</h3>
+              <Badge label="Desglose" variant="amber" />
+            </div>
+            <div className="h-64 w-full">
+              {categorySales.length > 0 ? (
+                <CategoryChart data={categorySales} />
+              ) : (
+                <div className="h-full flex items-center justify-center text-zinc-400 text-sm">
+                  No hay datos suficientes
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -224,6 +258,7 @@ export function Reportes() {
           kpis={kpis}
           topProducts={topProducts}
           monthlySales={monthlySales}
+          categorySales={categorySales}
           startDate={startDate}
           endDate={endDate}
         />

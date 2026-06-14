@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LabelList
+  Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Line, ComposedChart, PieChart, Pie, Legend, LabelList
 } from 'recharts';
 import { type TopProduct, type MonthlyRevenue } from '../Service';
 import { useTheme } from '../../../shared/contexts/ThemeContext';
@@ -10,11 +10,11 @@ interface ChartProps {
   isPrint?: boolean;
 }
 
-export const VentasBarChart: React.FC<ChartProps> = ({ data, isPrint }) => {
+export const RendimientoChart: React.FC<ChartProps> = ({ data, isPrint }) => {
   const { theme } = useTheme();
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <BarChart data={data}>
+      <ComposedChart data={data} margin={{ top: 20, right: 20, bottom: 0, left: 0 }}>
         <CartesianGrid
           strokeDasharray="3 3"
           vertical={false}
@@ -25,6 +25,7 @@ export const VentasBarChart: React.FC<ChartProps> = ({ data, isPrint }) => {
           axisLine={false}
           tickLine={false}
           tick={{ fontSize: isPrint ? 10 : 11, fontWeight: 600, fill: '#94a3b8' }}
+          dy={10}
         />
         <YAxis
           axisLine={false}
@@ -41,30 +42,86 @@ export const VentasBarChart: React.FC<ChartProps> = ({ data, isPrint }) => {
               backgroundColor: theme === 'dark' ? '#181922' : '#ffffff',
               color: theme === 'dark' ? '#f3f4f6' : '#1f2937'
             }}
-            itemStyle={{ color: theme === 'dark' ? '#f3f4f6' : '#1f2937' }}
-            labelStyle={{ color: theme === 'dark' ? '#9ca3af' : '#4b5563', fontWeight: 'bold' }}
-            formatter={(value: any) => [`S/ ${Number(value).toFixed(2)}`, 'Ingresos']}
+            itemStyle={{ fontWeight: 'bold' }}
+            labelStyle={{ color: theme === 'dark' ? '#9ca3af' : '#4b5563', fontWeight: 'bold', marginBottom: '8px' }}
+            formatter={(value: any, name: any) => [`S/ ${Number(value).toFixed(2)}`, String(name).charAt(0).toUpperCase() + String(name).slice(1)]}
           />
         )}
-        <Bar dataKey="amount" radius={[6, 6, 0, 0]}>
-          <LabelList
-            dataKey="amount"
-            position="center"
-            style={{
-              fill: '#FFFFFF',
-              fontSize: isPrint ? '12px' : '14px',
-              fontWeight: 'bold'
-            }}
-            formatter={(v: any) => Number(v) > 0 ? `S/ ${Number(v).toFixed(2)}` : ''}
-          />
-          {data.map((entry, index) => (
-            <Cell
-              key={entry.month}
-              fill={index === data.length - 1 ? '#2563eb' : (isPrint ? '#FFFFFF' : '#5886ED')}
-            />
-          ))}
+        <Legend wrapperStyle={{ fontSize: '12px', fontWeight: 'bold', marginTop: '10px' }} />
+        <Bar dataKey="ventas" name="Ventas" fill="#6366f1" radius={[4, 4, 0, 0]} barSize={isPrint ? 20 : 30}>
+          {isPrint && <LabelList dataKey="ventas" position="top" fill="#6366f1" fontSize={9} fontWeight="bold" formatter={(val: any) => val > 0 ? Number(val).toFixed(2) : ''} />}
         </Bar>
-      </BarChart>
+        <Bar dataKey="compras" name="Compras" fill="#f59e0b" radius={[4, 4, 0, 0]} barSize={isPrint ? 20 : 30}>
+          {isPrint && <LabelList dataKey="compras" position="top" fill="#f59e0b" fontSize={9} fontWeight="bold" formatter={(val: any) => val > 0 ? Number(val).toFixed(2) : ''} />}
+        </Bar>
+        <Line type="monotone" dataKey="ganancias" name="Ganancias Neta" stroke="#0ea5e9" strokeWidth={3} dot={{ r: 4, strokeWidth: 2 }}>
+          {isPrint && <LabelList dataKey="ganancias" position="bottom" fill="#0ea5e9" fontSize={9} fontWeight="bold" formatter={(val: any) => val > 0 ? Number(val).toFixed(2) : ''} />}
+        </Line>
+      </ComposedChart>
+    </ResponsiveContainer>
+  );
+};
+
+interface CategoryProps {
+  data: any[];
+  isPrint?: boolean;
+}
+
+const COLORS = [
+  '#6366f1', '#0ea5e9', '#f59e0b', '#10b981', '#8b5cf6', '#ec4899', '#f43f5e',
+  '#14b8a6', '#84cc16', '#eab308', '#f97316', '#06b6d4', '#a855f7'
+];
+
+export const CategoryChart: React.FC<CategoryProps> = ({ data, isPrint }) => {
+  const { theme } = useTheme();
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <PieChart>
+        <Pie
+          data={data}
+          cx="50%"
+          cy="50%"
+          innerRadius={isPrint ? 35 : 60}
+          outerRadius={isPrint ? 60 : 80}
+          paddingAngle={5}
+          dataKey="revenue"
+          nameKey="category"
+          label={isPrint 
+            ? (props: any) => {
+                const { cx, cy, midAngle, outerRadius, percent } = props;
+                const RADIAN = Math.PI / 180;
+                const radius = outerRadius + 15;
+                const x = cx + radius * Math.cos(-midAngle * RADIAN);
+                const y = cy + radius * Math.sin(-midAngle * RADIAN);
+                return (
+                  <text x={x} y={y} fill="#3f3f46" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" fontSize={9} fontWeight="bold">
+                    {`${((percent || 0) * 100).toFixed(2)}%`}
+                  </text>
+                );
+              }
+            : (props: any) => `${props.category || props.name} ${((props.percent || 0) * 100).toFixed(2)}%`
+          }
+          labelLine={isPrint ? { stroke: '#a1a1aa', strokeWidth: 1 } : true}
+        >
+          {data.map((_entry, index) => (
+            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+          ))}
+        </Pie>
+        <Legend layout="vertical" verticalAlign="middle" align="right" wrapperStyle={{ fontSize: isPrint ? '9px' : '12px', fontWeight: 'bold' }} />
+        {!isPrint && (
+          <Tooltip
+            contentStyle={{
+              borderRadius: '12px',
+              border: 'none',
+              boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
+              backgroundColor: theme === 'dark' ? '#181922' : '#ffffff',
+              color: theme === 'dark' ? '#f3f4f6' : '#1f2937'
+            }}
+            itemStyle={{ fontWeight: 'bold' }}
+            formatter={(value: any) => [`S/ ${Number(value).toFixed(2)}`, 'Ventas']}
+          />
+        )}
+      </PieChart>
     </ResponsiveContainer>
   );
 };
