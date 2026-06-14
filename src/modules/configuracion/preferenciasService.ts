@@ -4,6 +4,7 @@ export interface AppPreferences {
   enableAutoLogout: boolean;
   shortcuts: Record<string, string>;
   brightness: number;
+  userMenuOrder?: Record<string, string[]>;
 }
 
 const PREFS_KEY = 'minimarket_prefs';
@@ -14,6 +15,7 @@ const defaultPrefs: AppPreferences = {
   enableAutoLogout: false,
   shortcuts: {},
   brightness: 100,
+  userMenuOrder: {},
 };
 
 export const preferenciasService = {

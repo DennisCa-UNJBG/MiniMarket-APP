@@ -10,6 +10,7 @@ import { mainNavItems, bottomNavItems } from '../../../config/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { invoke } from '@tauri-apps/api/core';
 import { systemConfigService } from '../../../modules/configuracion/systemConfigService';
+import { preferenciasService } from '../../../modules/configuracion/preferenciasService';
 
 export function Sidebar() {
   const { isCollapsed, toggleSidebar } = useSidebar();
@@ -19,6 +20,20 @@ export function Sidebar() {
   const [showThemeTooltip, setShowThemeTooltip] = useState(false);
   const [themeTooltipCoords, setThemeTooltipCoords] = useState({ top: 0, left: 0 });
   const themeBtnRef = useRef<HTMLButtonElement>(null);
+  const [menuOrder, setMenuOrder] = useState<string[]>([]);
+
+  useEffect(() => {
+    const updateOrder = () => {
+      if (user) {
+        const prefs = preferenciasService.get();
+        setMenuOrder(prefs.userMenuOrder?.[user.username] || []);
+      }
+    };
+    
+    updateOrder();
+    window.addEventListener('preferences-updated', updateOrder);
+    return () => window.removeEventListener('preferences-updated', updateOrder);
+  }, [user]);
 
   const { data: config } = useQuery({
     queryKey: ['sucursal-config'],
@@ -71,7 +86,24 @@ export function Sidebar() {
     });
   };
 
-  const filteredMainItems = filterItems(mainNavItems);
+  let filteredMainItems = filterItems(mainNavItems);
+  
+  if (menuOrder.length > 0) {
+    filteredMainItems = [...filteredMainItems].sort((a, b) => {
+      const indexA = menuOrder.indexOf(a.to);
+      const indexB = menuOrder.indexOf(b.to);
+      
+      // Si ambos están en el orden guardado, ordenar según eso
+      if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+      // Si solo A está, va primero
+      if (indexA !== -1) return -1;
+      // Si solo B está, va primero
+      if (indexB !== -1) return 1;
+      // Si ninguno está, mantener orden original
+      return 0;
+    });
+  }
+
   const filteredBottomItems = filterItems(bottomNavItems);
 
   return (

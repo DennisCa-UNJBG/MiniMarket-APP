@@ -5,6 +5,7 @@ import { BusinessSection } from './components/BusinessSection';
 import { SecuritySection } from './components/SecuritySection';
 import { PreferencesSection } from './components/PreferencesSection';
 import { KeyboardShortcutsSection } from './components/KeyboardShortcutsSection';
+import { MenuOrderSection } from './components/MenuOrderSection';
 import { systemConfigService } from './systemConfigService';
 import { negocioService } from './negocioService';
 
@@ -47,6 +48,7 @@ export function Configuracion() {
         <SecuritySection />
         <KeyboardShortcutsSection />
         <PreferencesSection />
+        <MenuOrderSection />
       </div>
     </div>
   );
