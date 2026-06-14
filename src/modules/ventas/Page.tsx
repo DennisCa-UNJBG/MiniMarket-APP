@@ -223,6 +223,10 @@ export function Ventas() {
       queryClient.invalidateQueries({ queryKey: ['sales-summary'] });
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['movements'] });
+      queryClient.invalidateQueries({ queryKey: ['report-kpis'] });
+      queryClient.invalidateQueries({ queryKey: ['report-top-products'] });
+      queryClient.invalidateQueries({ queryKey: ['report-monthly-revenue'] });
+      queryClient.invalidateQueries({ queryKey: ['report-category-sales'] });
       notificationService.successWithConfirm('Venta Anulada', 'El stock ha sido revertido y el movimiento eliminado del kardex.');
     }
   });

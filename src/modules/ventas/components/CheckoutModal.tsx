@@ -133,6 +133,10 @@ export function CheckoutModal({
       queryClient.invalidateQueries({ queryKey: ['low-stock'] });
       queryClient.invalidateQueries({ queryKey: ['movements'] });
       queryClient.invalidateQueries({ queryKey: ['clientes'] });
+      queryClient.invalidateQueries({ queryKey: ['report-kpis'] });
+      queryClient.invalidateQueries({ queryKey: ['report-top-products'] });
+      queryClient.invalidateQueries({ queryKey: ['report-monthly-revenue'] });
+      queryClient.invalidateQueries({ queryKey: ['report-category-sales'] });
 
       // Limpiar estados locales de cliente al tener éxito
       dispatch({ type: 'RESET' });
