@@ -8,9 +8,12 @@ import {
   TrendingUp,
   ArrowUpRight,
   ArrowDownLeft,
-  Calendar
+  Calendar,
+  PowerOff
 } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '../../shared/contexts/AuthContext';
+import { notificationService } from '../../shared/lib/notifications';
 import { DataTable, type TableColumn } from '../../shared/components/ui/DataTable';
 import { Badge } from '../../shared/components/ui/Badge';
 import { PageHeader } from '../../shared/components/ui/PageHeader';
@@ -91,6 +94,18 @@ const initialInventarioState: InventarioState = {
 };
 
 export function Inventario() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  
+  const statusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: number, status: 'activo' | 'inactivo' }) =>
+      productoService.updateStatus(id, status, user?.id || 1),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      notificationService.success('Producto desactivado', 'El producto ha sido ocultado del inventario activo.');
+    }
+  });
+
   const [state, dispatch] = useReducer(inventarioReducer, initialInventarioState);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
@@ -175,15 +190,30 @@ export function Inventario() {
       header: 'Acciones',
       align: 'center',
       render: (row) => (
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={() => setSelectedProduct(row)}
-          icon={<Eye size={14} />}
-          className="p-1 px-2 rounded-xl text-xs font-semibold"
-        >
-          Detalle
-        </Button>
+        <div className="flex items-center justify-center gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setSelectedProduct(row)}
+            icon={<Eye size={14} />}
+            className="p-1 px-2 rounded-xl text-xs font-semibold"
+          >
+            Detalle
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              if (window.confirm(`¿Estás seguro de desactivar "${row.nombre}"?`)) {
+                statusMutation.mutate({ id: row.id, status: 'inactivo' });
+              }
+            }}
+            icon={<PowerOff size={14} />}
+            className="p-1 px-2 rounded-xl text-xs font-semibold text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-500/10"
+          >
+            Desactivar
+          </Button>
+        </div>
       ),
     }
   ];

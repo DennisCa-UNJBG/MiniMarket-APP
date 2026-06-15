@@ -134,7 +134,7 @@ export function CentralServerCard() {
                 isLoading={toggleServerMutation.isPending}
                 variant={isCentral ? 'warning' : 'primary'}
                 className={`group relative flex-1 w-full sm:w-auto px-8 py-4 font-black ${isCentral
-                  ? 'bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/10 dark:text-red-400'
+                  ? 'bg-red-600 text-red-600 hover:bg-red-400 dark:bg-red-900/10 dark:text-red-400'
                   : 'shadow-xl shadow-blue-200 dark:shadow-none'
                   }`}
                 icon={!isCentral && !toggleServerMutation.isPending ? <Wifi className="animate-pulse" size={20} /> : undefined}

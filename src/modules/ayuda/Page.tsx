@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { 
+import { useState, useEffect } from 'react';
+import { getVersion } from '@tauri-apps/api/app';
+import {
   HelpCircle,
   Lightbulb,
   MessageSquare,
@@ -8,10 +9,15 @@ import {
   CheckCircle2,
   FileText
 } from 'lucide-react';
-import { flowSteps, detailedGuides } from './components/GuidesData';
+import { flowSteps, detailedGuides } from './GuidesData';
 
 export function Ayuda() {
   const [expandedGuide, setExpandedGuide] = useState<string | null>(null);
+  const [appVersion, setAppVersion] = useState<string>('...');
+
+  useEffect(() => {
+    getVersion().then(version => setAppVersion(version)).catch(() => setAppVersion('1.0.0'));
+  }, []);
 
   const toggleGuide = (id: string) => {
     setExpandedGuide(expandedGuide === id ? null : id);
@@ -51,7 +57,7 @@ export function Ayuda() {
                 <div className="p-4 bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl group-hover:scale-110 transition-transform">
                   {step.icon}
                 </div>
-                <span className="text-4xl font-black text-zinc-100 dark:text-zinc-700/50">0{idx + 1}</span>
+                <span className="text-4xl font-black text-stone-950 dark:text-slate-200">0{idx + 1}</span>
               </div>
               <div className="space-y-4 flex-1">
                 <h3 className="text-2xl font-semibold text-zinc-900 dark:text-white">{step.title}</h3>
@@ -83,38 +89,34 @@ export function Ayuda() {
         </div>
 
         <div className="grid grid-cols-1 gap-4 px-2">
-          {detailedGuides.map((guide) => (
-            <div 
-              key={guide.id} 
-              className={`bg-white dark:bg-zinc-800 rounded-3xl border transition-all duration-300 overflow-hidden ${
-                expandedGuide === guide.id 
-                ? 'border-blue-500 shadow-lg shadow-blue-100 dark:shadow-none' 
+          {detailedGuides.map((guide, idx) => (
+            <div
+              key={guide.id}
+              className={`bg-white dark:bg-zinc-800 rounded-3xl border transition-all duration-300 overflow-hidden ${expandedGuide === guide.id
+                ? 'border-blue-500 shadow-lg shadow-blue-100 dark:shadow-none'
                 : 'border-zinc-100 dark:border-zinc-700 shadow-sm'
-              }`}
+                }`}
             >
-              <button 
+              <button
                 onClick={() => toggleGuide(guide.id)}
                 className="w-full flex items-center justify-between p-6 text-left group"
               >
                 <div className="flex items-center gap-4">
-                  <div className={`p-3 rounded-2xl transition-colors ${
-                    expandedGuide === guide.id ? 'bg-blue-600 text-white' : 'bg-zinc-50 dark:bg-zinc-900/50 group-hover:bg-blue-50 dark:group-hover:bg-blue-900/20'
-                  }`}>
+                  <div className={`p-3 rounded-2xl transition-colors ${expandedGuide === guide.id ? 'bg-blue-600 text-white' : 'bg-zinc-50 dark:bg-zinc-900/50 group-hover:bg-blue-50 dark:group-hover:bg-blue-900/20'
+                    }`}>
                     {guide.icon}
                   </div>
-                  <span className={`font-black text-lg tracking-tight ${
-                    expandedGuide === guide.id ? 'text-blue-600 dark:text-blue-400' : 'text-zinc-800 dark:text-white'
-                  }`}>
-                    {guide.title}
+                  <span className={`font-black text-lg tracking-tight ${expandedGuide === guide.id ? 'text-blue-600 dark:text-blue-400' : 'text-zinc-800 dark:text-white'
+                    }`}>
+                    {String(idx).padStart(2, '0')}. {guide.title}
                   </span>
                 </div>
                 {expandedGuide === guide.id ? <ChevronDown className="text-blue-500" /> : <ChevronRight className="text-zinc-400" />}
               </button>
-              
-              <div 
-                className={`transition-all duration-500 ease-in-out ${
-                  expandedGuide === guide.id ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'
-                }`}
+
+              <div
+                className={`transition-all duration-500 ease-in-out ${expandedGuide === guide.id ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'
+                  }`}
               >
                 <div className="px-6 pb-8 pt-2 border-t border-zinc-50 dark:border-zinc-700/50">
                   <div className="text-zinc-600 dark:text-zinc-400 text-sm leading-relaxed">
@@ -149,7 +151,7 @@ export function Ayuda() {
               </div>
             </div>
           </div>
-          
+
           <div className="bg-white/5 dark:bg-black/20 backdrop-blur-xl p-8 rounded-[2.5rem] border border-white/10 space-y-6">
             <h3 className="text-2xl font-semibold flex items-center gap-2">
               <MessageSquare size={24} />
@@ -171,7 +173,7 @@ export function Ayuda() {
 
       <footer className="text-center pt-8 border-t border-zinc-100 dark:border-zinc-700">
         <p className="text-zinc-400 dark:text-zinc-500 text-sm">
-          MiniMarket Pro v1.0.0 • Manual de Usuario Detallado • 2026
+          MiniMarket Pro v{appVersion} • Manual de Usuario Detallado • 2026
         </p>
       </footer>
     </div>
