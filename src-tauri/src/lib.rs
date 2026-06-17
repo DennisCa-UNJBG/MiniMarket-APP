@@ -1,5 +1,6 @@
 mod api;
 mod import_excel;
+mod license;
 
 use serde_json::json;
 use std::fs;
@@ -367,7 +368,11 @@ pub fn run() {
             save_perudevs_key,
             has_perudevs_key,
             query_perudevs_document,
-            import_excel::import_productos_excel
+            import_excel::import_productos_excel,
+            license::verify_license,
+            license::check_local_license,
+            license::get_hardware_id,
+            license::clear_license
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

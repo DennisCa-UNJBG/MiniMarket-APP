@@ -27,6 +27,10 @@
     "sync": {
       "key": "MiniMarket-Secure-Sync-Key-2026",
       "port": 8080
+    },
+    "supabase": {
+      "url": "https://ddldvhrnfsbpxgxrfcqp.supabase.co/rest/v1/licenses",
+      "anon_key": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGR2aHJuZnNicHhneHJmY3FwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2ODgyMjAsImV4cCI6MjA5NzI2NDIyMH0.EsjhSuCRFNECyh1XmhNZQnOYX_eBSO8Ej3w-3UG0ipA"
     }
   },
   "bundle": {

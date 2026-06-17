@@ -2,6 +2,10 @@
 
 This template should help get you started developing with Tauri, React and Typescript in Vite.
 
+## Características Destacadas
+
+- **Sistema de Licencias Online:** Integración con Supabase para validación de suscripciones por tiempo de uso con anclaje a hardware (Hardware ID) y soporte caché offline.
+
 ## Requisitos de Software
 
 Para poder desarrollar, ejecutar y compilar este proyecto en un entorno local, asegúrate de tener instalado el siguiente software:

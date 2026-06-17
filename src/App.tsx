@@ -14,6 +14,7 @@ import { notificationService } from './shared/lib/notifications';
 import { ConnectionError } from './shared/lib/errors';
 import { useGlobalShortcuts } from './shared/hooks/useGlobalShortcuts';
 import { GlobalBrightnessOverlay } from './shared/hooks/useGlobalBrightnessOverlay';
+import { LicenseGuard } from './shared/components/auth/LicenseGuard';
 
 function GlobalShortcutsHandler() {
   useGlobalShortcuts();
@@ -140,7 +141,9 @@ function App() {
         <SidebarProvider>
           <AuthProvider>
             <GlobalBrightnessOverlay />
-            <AppContent />
+            <LicenseGuard>
+              <AppContent />
+            </LicenseGuard>
           </AuthProvider>
         </SidebarProvider>
       </ThemeProvider>
