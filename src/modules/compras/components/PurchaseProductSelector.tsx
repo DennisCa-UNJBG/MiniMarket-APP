@@ -47,6 +47,7 @@ export function PurchaseProductSelector({
           <input
             id="compra-buscar-producto"
             type="text"
+            autoComplete="off"
             className={`${inputCls} uppercase`}
             placeholder="Buscar producto..."
             value={prodSearch}

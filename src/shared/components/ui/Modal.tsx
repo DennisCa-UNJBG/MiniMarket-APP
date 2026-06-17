@@ -20,9 +20,10 @@ const maxWidthClasses = {
 
 export function Modal({ title, onClose, children, maxWidth = 'lg' }: ModalProps) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto">
-      <div className={`bg-white dark:bg-zinc-800 rounded-2xl shadow-2xl w-full ${maxWidthClasses[maxWidth]} border border-zinc-100 dark:border-zinc-700 my-8`}>
-        <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-100 dark:border-zinc-700 sticky top-0 bg-white dark:bg-zinc-800 rounded-t-2xl z-10">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 backdrop-blur-sm">
+      <div className="flex min-h-full items-center justify-center p-4 sm:p-6">
+        <div className={`bg-white dark:bg-zinc-800 rounded-2xl shadow-2xl w-full ${maxWidthClasses[maxWidth]} border border-zinc-100 dark:border-zinc-700`}>
+          <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-100 dark:border-zinc-700 sticky top-0 bg-white dark:bg-zinc-800 rounded-t-2xl z-10">
           <h3 className="text-base font-semibold text-zinc-800 dark:text-white">{title}</h3>
           <button
             onClick={onClose}
@@ -32,6 +33,7 @@ export function Modal({ title, onClose, children, maxWidth = 'lg' }: ModalProps)
           </button>
         </div>
         <div className="px-6 py-5">{children}</div>
+        </div>
       </div>
     </div>
   );

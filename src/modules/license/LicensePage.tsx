@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ShieldAlert, Key, ArrowRight, Loader2, RefreshCcw } from 'lucide-react';
+import { ShieldAlert, Key, ArrowRight } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import { notificationService } from '../../shared/lib/notifications';
 import { Input } from '../../shared/components/ui/Input';
@@ -41,9 +41,9 @@ export function LicensePage({ onValidated }: LicensePageProps) {
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-zinc-50 dark:bg-zinc-900 overflow-hidden relative p-4">
       <div className="absolute top-[-10%] left-[-10%] size-96 bg-red-500/20 rounded-full blur-3xl opacity-50 dark:opacity-20 animate-pulse"></div>
-      
+
       <div className="relative w-full max-w-md bg-white dark:bg-zinc-800 rounded-3xl shadow-2xl p-8 border border-zinc-200 dark:border-zinc-700">
-        
+
         <div className="flex flex-col items-center text-center mb-8">
           <div className="bg-red-100 dark:bg-red-900/30 p-4 rounded-full mb-4">
             <ShieldAlert size={40} className="text-red-600 dark:text-red-400" />

@@ -236,7 +236,7 @@ export const TabReportes: React.FC<TabReportesProps> = ({
                         <span className="text-sm font-bold text-zinc-800 dark:text-zinc-100">{prod.producto_nombre}</span>
                       </div>
                       <div className="text-right">
-                        <p className="text-sm font-black text-zinc-900 dark:text-white">{prod.total_cantidad} uds.</p>
+                        <p className="text-sm font-black text-zinc-900 dark:text-white">{prod.total_cantidad} {prod.unidad_medida || 'UND.'}</p>
                         <p className="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400">S/ {(prod.total_recaudado || 0).toFixed(2)}</p>
                       </div>
                     </div>

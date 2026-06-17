@@ -86,19 +86,19 @@ export const CategoryChart: React.FC<CategoryProps> = ({ data, isPrint }) => {
           paddingAngle={5}
           dataKey="revenue"
           nameKey="category"
-          label={isPrint 
+          label={isPrint
             ? (props: any) => {
-                const { cx, cy, midAngle, outerRadius, percent } = props;
-                const RADIAN = Math.PI / 180;
-                const radius = outerRadius + 15;
-                const x = cx + radius * Math.cos(-midAngle * RADIAN);
-                const y = cy + radius * Math.sin(-midAngle * RADIAN);
-                return (
-                  <text x={x} y={y} fill="#3f3f46" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" fontSize={9} fontWeight="bold">
-                    {`${((percent || 0) * 100).toFixed(2)}%`}
-                  </text>
-                );
-              }
+              const { cx, cy, midAngle, outerRadius, percent } = props;
+              const RADIAN = Math.PI / 180;
+              const radius = outerRadius + 15;
+              const x = cx + radius * Math.cos(-midAngle * RADIAN);
+              const y = cy + radius * Math.sin(-midAngle * RADIAN);
+              return (
+                <text x={x} y={y} fill="#3f3f46" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" fontSize={9} fontWeight="bold">
+                  {`${((percent || 0) * 100).toFixed(2)}%`}
+                </text>
+              );
+            }
             : (props: any) => `${props.category || props.name} ${((props.percent || 0) * 100).toFixed(2)}%`
           }
           labelLine={isPrint ? { stroke: '#a1a1aa', strokeWidth: 1 } : true}
@@ -149,7 +149,7 @@ export const RankingProductos: React.FC<RankingProps> = ({ products, isPrint }) 
               </span>
             </div>
             <div className="text-right">
-              <span className={`text-sm font-black ${isPrint ? 'text-zinc-900' : 'text-zinc-800 dark:text-white'} block`}>{p.sales} uds.</span>
+              <span className={`text-sm font-black ${isPrint ? 'text-zinc-900' : 'text-zinc-800 dark:text-white'} block`}>{p.sales} {p.unit?.toLowerCase() || 'UND.'}</span>
               <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-tighter">S/ {p.revenue.toFixed(2)}</span>
             </div>
           </div>

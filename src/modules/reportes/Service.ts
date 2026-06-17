@@ -6,6 +6,7 @@ export interface TopProduct {
   name: string;
   sales: number;
   revenue: number;
+  unit?: string;
 }
 
 export interface MonthlyRevenue {
@@ -43,10 +44,11 @@ export const reporteService = {
     const sucursalId = config?.sucursal_id || 'LOCAL';
 
     let query = `
-      SELECT p.nombre as name, SUM(vd.cantidad) as sales, SUM(vd.subtotal) as revenue
+      SELECT p.nombre as name, SUM(vd.cantidad) as sales, SUM(vd.subtotal) as revenue, u.abreviatura as unit
       FROM ventas_detalle vd
       JOIN ventas v ON vd.venta_id = v.id
       JOIN productos p ON vd.producto_id = p.id
+      LEFT JOIN unidades_medida u ON p.unidad_id = u.id
       WHERE (v.sucursal_id = ? OR v.sucursal_id IS NULL)
     `;
     const params: any[] = [sucursalId];
