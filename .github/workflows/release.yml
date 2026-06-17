@@ -1,0 +1,94 @@
+name: Release Minimarket App
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-and-publish:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache npm and Rust
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.npm
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: ${{ runner.os }}-tauri-${{ hashFiles('**/package-lock.json', '**/Cargo.lock') }}
+
+      - name: Install Frontend Dependencies
+        run: npm ci
+
+      - name: Build Tauri App
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_PASSWORD }}
+        with:
+          tagName: app-v__VERSION__ # Solo para compilar, sin generar release aquí
+          releaseName: 'Minimarket v__VERSION__'
+          releaseBody: 'Mira los cambios en este release'
+          releaseDraft: true
+          prerelease: false
+
+      - name: Generate latest.json
+        run: |
+          $VERSION = "${{ github.ref_name }}".Substring(1)
+          
+          # Archivos generados por Tauri
+          $NSIS_ZIP = "src-tauri/target/release/bundle/nsis/minimarket-app_${VERSION}_x64-setup.nsis.zip"
+          $SIG_FILE = "${NSIS_ZIP}.sig"
+          
+          if (!(Test-Path $NSIS_ZIP) -or !(Test-Path $SIG_FILE)) {
+              Write-Error "No se encontraron los archivos de actualizacion"
+              exit 1
+          }
+
+          $SIGNATURE = Get-Content $SIG_FILE -Raw
+          $URL_DOWNLOAD = "https://github.com/DennisCa-UNJBG/MiniMarket-APP-Releases/releases/download/${{ github.ref_name }}/minimarket-app_${VERSION}_x64-setup.nsis.zip"
+          $DATE = (Get-Date).ToString("yyyy-MM-ddTHH:mm:ssZ")
+
+          # Construir el manifiesto JSON
+          $UPDATE_JSON = @{
+              version = $VERSION
+              notes = "Nueva versión $VERSION lista para descargar."
+              pub_date = $DATE
+              platforms = @{
+                  "windows-x86_64" = @{
+                      signature = $SIGNATURE.Trim()
+                      url = $URL_DOWNLOAD
+                  }
+              }
+          } | ConvertTo-Json -Depth 5
+
+          Set-Content "latest.json" $UPDATE_JSON
+
+      - name: Release to Public Repo
+        uses: softprops/action-gh-release@v2
+        with:
+          repository: DennisCa-UNJBG/MiniMarket-APP-Releases
+          token: ${{ secrets.RELEASE_GITHUB_TOKEN }}
+          tag_name: ${{ github.ref_name }}
+          name: Minimarket ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          files: |
+            latest.json
+            src-tauri/target/release/bundle/nsis/minimarket-app_*_x64-setup.nsis.zip
+            src-tauri/target/release/bundle/nsis/minimarket-app_*_x64-setup.nsis.zip.sig

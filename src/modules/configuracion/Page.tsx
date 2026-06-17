@@ -6,6 +6,7 @@ import { SecuritySection } from './components/SecuritySection';
 import { PreferencesSection } from './components/PreferencesSection';
 import { KeyboardShortcutsSection } from './components/KeyboardShortcutsSection';
 import { MenuOrderSection } from './components/MenuOrderSection';
+import { UpdaterSection } from './components/UpdaterSection';
 import { systemConfigService } from './systemConfigService';
 import { negocioService } from './negocioService';
 
@@ -46,8 +47,9 @@ export function Configuracion() {
         <SedesSection initialData={sucursalData ?? null} key={sucursalData?.ultima_sincronizacion || 'sedes'} />
         <BusinessSection initialData={negocioData!} key={negocioData?.razon_social || 'negocio'} />
         <SecuritySection />
-        <KeyboardShortcutsSection />
+        <UpdaterSection />
         <PreferencesSection />
+        <KeyboardShortcutsSection />
         <MenuOrderSection />
       </div>
     </div>

@@ -31,6 +31,12 @@
     "supabase": {
       "url": "https://ddldvhrnfsbpxgxrfcqp.supabase.co/rest/v1/licenses",
       "anon_key": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGR2aHJuZnNicHhneHJmY3FwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2ODgyMjAsImV4cCI6MjA5NzI2NDIyMH0.EsjhSuCRFNECyh1XmhNZQnOYX_eBSO8Ej3w-3UG0ipA"
+    },
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDlBMTQxNDJCRTI3MTMzOEIKUldTTE0zSGlLeFFVbXZmS0w0c1F5K0UxekhvU0ZIVWZZZlViUkdzRllFcW1nZGpod3lCYzZObDYK",
+      "endpoints": [
+        "https://github.com/DennisCa-UNJBG/MiniMarket-APP-Releases/releases/latest/download/latest.json"
+      ]
     }
   },
   "bundle": {
