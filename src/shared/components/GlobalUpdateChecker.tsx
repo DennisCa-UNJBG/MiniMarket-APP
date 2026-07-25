@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { check } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
-import { Download, RefreshCw, X } from 'lucide-react';
+import { Download, RefreshCw } from 'lucide-react';
 import { Modal } from './ui/Modal';
 import { Button } from './ui/Button';
 

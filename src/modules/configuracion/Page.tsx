@@ -1,4 +1,14 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { 
+  Building2, 
+  Store, 
+  Shield, 
+  RefreshCw, 
+  Sliders, 
+  Keyboard, 
+  Menu 
+} from 'lucide-react';
 import { Badge } from '../../shared/components/ui/Badge';
 import { SedesSection } from './components/SedesSection';
 import { BusinessSection } from './components/BusinessSection';
@@ -11,6 +21,8 @@ import { systemConfigService } from './systemConfigService';
 import { negocioService } from './negocioService';
 
 export function Configuracion() {
+  const [activeTab, setActiveTab] = useState('sedes');
+
   const { data: sucursalData, isLoading: loadingSucursal } = useQuery({
     queryKey: ['sucursal-config'],
     queryFn: () => systemConfigService.getConfig()
@@ -33,8 +45,54 @@ export function Configuracion() {
     );
   }
 
+  const tabs = [
+    {
+      id: 'sedes',
+      label: 'Sedes',
+      icon: Building2,
+      component: <SedesSection initialData={sucursalData ?? null} key={sucursalData?.ultima_sincronizacion || 'sedes'} />
+    },
+    {
+      id: 'negocio',
+      label: 'Negocio',
+      icon: Store,
+      component: <BusinessSection initialData={negocioData!} key={negocioData?.razon_social || 'negocio'} />
+    },
+    {
+      id: 'seguridad',
+      label: 'Seguridad',
+      icon: Shield,
+      component: <SecuritySection />
+    },
+    {
+      id: 'actualizaciones',
+      label: 'Actualizaciones',
+      icon: RefreshCw,
+      component: <UpdaterSection />
+    },
+    {
+      id: 'preferencias',
+      label: 'Preferencias',
+      icon: Sliders,
+      component: <PreferencesSection />
+    },
+    {
+      id: 'atajos',
+      label: 'Atajos de Teclado',
+      icon: Keyboard,
+      component: <KeyboardShortcutsSection />
+    },
+    {
+      id: 'menu',
+      label: 'Menú',
+      icon: Menu,
+      component: <MenuOrderSection />
+    }
+  ];
+
+  const currentTab = tabs.find(tab => tab.id === activeTab) || tabs[0];
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
+    <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-semibold text-zinc-800 dark:text-white tracking-tight">Configuración del Sistema</h2>
@@ -43,14 +101,46 @@ export function Configuracion() {
         <Badge label="Versión 0.8.6" variant="blue" />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <SedesSection initialData={sucursalData ?? null} key={sucursalData?.ultima_sincronizacion || 'sedes'} />
-        <BusinessSection initialData={negocioData!} key={negocioData?.razon_social || 'negocio'} />
-        <SecuritySection />
-        <UpdaterSection />
-        <PreferencesSection />
-        <KeyboardShortcutsSection />
-        <MenuOrderSection />
+      {/* Tabs Header */}
+      <div className="border-b border-zinc-100 dark:border-zinc-800 -mx-4 px-4 sm:mx-0 sm:px-0">
+        <div className="flex gap-2 overflow-x-auto scrollbar-none pb-px scroll-smooth">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = tab.id === activeTab;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-all duration-200 group relative outline-none ${
+                  isActive
+                    ? 'border-blue-500 text-blue-600 dark:text-blue-400 dark:border-blue-400'
+                    : 'border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 hover:border-zinc-200 dark:hover:border-zinc-700'
+                }`}
+              >
+                <Icon 
+                  size={16} 
+                  className={`transition-transform duration-200 ${
+                    isActive ? 'scale-110' : 'group-hover:scale-110 group-hover:text-zinc-600 dark:group-hover:text-zinc-300'
+                  }`} 
+                />
+                <span>{tab.label}</span>
+                {isActive && (
+                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500 dark:bg-blue-400 rounded-full animate-in fade-in zoom-in-95 duration-300" />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Active Tab Content */}
+      <div 
+        key={activeTab} 
+        className="animate-in fade-in slide-in-from-bottom-2 duration-300 focus:outline-none w-full"
+      >
+        <div className="w-full">
+          {currentTab.component}
+        </div>
       </div>
     </div>
   );
