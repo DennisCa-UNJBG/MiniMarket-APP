@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { 
-  Building2, 
-  Store, 
-  Shield, 
-  RefreshCw, 
-  Sliders, 
-  Keyboard, 
-  Menu 
+import {
+  Building2,
+  Store,
+  Shield,
+  RefreshCw,
+  Sliders,
+  Keyboard,
+  Menu
 } from 'lucide-react';
 import { Badge } from '../../shared/components/ui/Badge';
 import { SedesSection } from './components/SedesSection';
@@ -98,7 +98,6 @@ export function Configuracion() {
           <h2 className="text-2xl font-semibold text-zinc-800 dark:text-white tracking-tight">Configuración del Sistema</h2>
           <p className="text-sm text-zinc-500 dark:text-zinc-400">Administra los parámetros globales de tu minimarket.</p>
         </div>
-        <Badge label="Versión 0.8.6" variant="blue" />
       </div>
 
       {/* Tabs Header */}
@@ -111,17 +110,15 @@ export function Configuracion() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-all duration-200 group relative outline-none ${
-                  isActive
-                    ? 'border-blue-500 text-blue-600 dark:text-blue-400 dark:border-blue-400'
-                    : 'border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 hover:border-zinc-200 dark:hover:border-zinc-700'
-                }`}
+                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-all duration-200 group relative outline-none ${isActive
+                  ? 'border-blue-500 text-blue-600 dark:text-blue-400 dark:border-blue-400'
+                  : 'border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 hover:border-zinc-200 dark:hover:border-zinc-700'
+                  }`}
               >
-                <Icon 
-                  size={16} 
-                  className={`transition-transform duration-200 ${
-                    isActive ? 'scale-110' : 'group-hover:scale-110 group-hover:text-zinc-600 dark:group-hover:text-zinc-300'
-                  }`} 
+                <Icon
+                  size={16}
+                  className={`transition-transform duration-200 ${isActive ? 'scale-110' : 'group-hover:scale-110 group-hover:text-zinc-600 dark:group-hover:text-zinc-300'
+                    }`}
                 />
                 <span>{tab.label}</span>
                 {isActive && (
@@ -134,8 +131,8 @@ export function Configuracion() {
       </div>
 
       {/* Active Tab Content */}
-      <div 
-        key={activeTab} 
+      <div
+        key={activeTab}
         className="animate-in fade-in slide-in-from-bottom-2 duration-300 focus:outline-none w-full"
       >
         <div className="w-full">
